@@ -83,7 +83,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::612297603577:role/ocean-explorer
           aws-region: us-east-1
-      - uses: concord-consortium/s3-deploy-action@SDEPLOY-2-oidc
+      - uses: concord-consortium/s3-deploy-action@v1
         id: s3-deploy
         with:
           bucket: models-resources
