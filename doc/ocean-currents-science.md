@@ -1,4 +1,5 @@
 <!-- Google Doc: https://docs.google.com/document/d/1hVfKFXXiMNZa0qqgonue8p6yvilyh19mpfTAPjPWSPY/edit -->
+<!-- Google Doc tab: t.0 = ocean-currents-science.md -->
 <!-- Shared Drive folder: https://drive.google.com/drive/folders/1g9pp6muNR1olCRMde4nvJXMrWFyItYMV -->
 # Ocean Surface Currents: Science Reference
 
@@ -110,11 +111,9 @@ the wind direction.
 
 The Coriolis parameter is:
 
-```
-f = 2 * omega * sin(latitude)
-```
+*f* = 2Ω sin*φ*
 
-where `omega` is the planetary rotation rate. This means:
+where Ω is the planetary rotation rate. This means:
 
 - **At the equator** (`sin(0) = 0`): deflection is approximately zero regardless of rotation
   speed. Water moves roughly in the wind direction.
@@ -263,6 +262,8 @@ These factors are intentionally omitted from the prototype. Each could be added 
 
 - **Thermohaline circulation** — Deep ocean currents driven by temperature and salinity
   differences. These operate on much longer timescales and depths than surface currents.
+  See [thermohaline-future.md](thermohaline-future.md) for detailed notes on what adding
+  this would require.
 - **Tides** — Gravitational effects from the moon/sun. Important for coastal dynamics but
   not for large-scale surface current patterns.
 - **Seasonal variation** — Wind patterns shift throughout the year. We'll use a static
@@ -271,10 +272,33 @@ These factors are intentionally omitted from the prototype. Each could be added 
   currents but have less impact on surface flow.
 - **Coupled atmosphere / ENSO** — A coupled ocean-atmosphere model would allow the ocean
   to influence wind patterns (warm water heats the air, changing winds, which move the warm
-  water). This feedback loop is what produces El Niño-Southern Oscillation (ENSO), the
+  water). This feedback loop is what produces El Niño-Southern Oscillation
+  ([ENSO](https://www.ncei.noaa.gov/access/monitoring/enso/technical-discussion)), the
   largest source of year-to-year climate variability. ENSO cannot emerge with prescribed
   winds because the key mechanism is the two-way interaction between ocean temperature and
   wind patterns. Adding a coupled atmosphere is the natural path to supporting ENSO.
+
+## Related phenomena outside this simulation's scope
+
+The following are real ocean phenomena that students may ask about, but they don't drive or
+meaningfully alter the large-scale surface current patterns this simulation models. They are
+transient or localized events superimposed on top of the steady circulation, not forces that
+shape it. Simulating them would require fundamentally different approaches.
+
+- **Tsunamis** — Gravity waves caused by sudden seafloor displacement (earthquakes,
+  landslides). Water moves up and down, not in a sustained horizontal flow — there is almost
+  no net water transport. They propagate through the entire water column at high speed but
+  don't create or alter currents. At our grid resolution (~5 deg), a tsunami would be smaller
+  than a single cell.
+
+- **Storm-driven currents** — Hurricanes and cyclones temporarily drive strong local currents
+  and upwelling beneath them, but these effects are localized (tens to hundreds of km),
+  short-lived (days), and below our grid resolution. They are driven by individual weather
+  events, not the persistent wind patterns we model.
+
+- **Surface waves** — Wind-generated ocean waves (the kind you see at the beach) involve
+  circular water motion with very little net transport. They operate at scales far below our
+  grid resolution and don't contribute to large-scale circulation patterns.
 
 ## Simulation parameters
 
