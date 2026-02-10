@@ -1,3 +1,5 @@
+<!-- Google Doc: https://docs.google.com/document/d/1hVfKFXXiMNZa0qqgonue8p6yvilyh19mpfTAPjPWSPY/edit -->
+<!-- Shared Drive folder: https://drive.google.com/drive/folders/1g9pp6muNR1olCRMde4nvJXMrWFyItYMV -->
 # Ocean Surface Currents: Science Reference
 
 This document describes the physical forces that drive ocean surface currents and how they
@@ -216,6 +218,44 @@ When a user changes a parameter (adds a continent, adjusts rotation), the simula
 from its current state toward the new equilibrium. This transition is informative — you can
 see how the system adapts. For very large parameter changes, resetting to rest may produce a
 cleaner transition than evolving from the old state.
+
+## Heat transport and temperature as a passive tracer
+
+Ocean currents are one of the main mechanisms for redistributing heat on the planet. Warm
+water from the tropics is carried poleward by western boundary currents (like the Gulf
+Stream), while cold water returns equatorward along the eastern sides of basins and at depth.
+This heat transport has enormous effects on regional climates — western Europe is
+significantly warmer than it would be without the Gulf Stream system.
+
+For the simulation, the key question is whether temperature needs to feed back into the
+current dynamics, or whether it can be tracked as a **passive tracer** — carried by the
+currents but not influencing them.
+
+In the real ocean, temperature does feed back through several pathways:
+
+1. **Ocean → atmosphere → wind → currents** — Warm currents heat the air above them, which
+   modifies wind patterns, which drive the currents. Since our simulation uses a prescribed
+   wind field (not a coupled atmosphere), this loop doesn't apply.
+
+2. **Temperature → water density → pressure gradients** — Warmer water is less dense and
+   stands slightly higher, creating thermal pressure gradients. At our resolution, the
+   dominant pressure gradients come from wind-driven Ekman transport piling water up
+   mechanically, not from thermal expansion.
+
+3. **Temperature → thermohaline circulation** — The primary real-world feedback: warm water
+   carried poleward cools, becomes dense, and sinks. This is excluded from the prototype.
+
+Given these design choices, **temperature can be treated as a passive tracer** in the
+prototype. Each cell gets a temperature value that is advected (carried along) by the
+currents, with a source term from solar heating that varies with latitude. This is much
+simpler than coupling temperature into the dynamics and is physically consistent with the
+other simplifications we've already made (prescribed winds, no thermohaline circulation).
+
+> **Product owner note:** Visualizing temperature as a color layer with current vectors on top
+> directly addresses NGSS MS-ESS2-6 ("patterns of atmospheric and oceanic circulation that
+> determine regional climates"). Students can see how currents redistribute heat from equator
+> to poles. The passive-tracer approach means we get this visualization without changing the
+> simulation physics.
 
 ## What we're leaving out (for now)
 
