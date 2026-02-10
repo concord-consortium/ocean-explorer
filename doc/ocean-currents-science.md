@@ -269,6 +269,12 @@ These factors are intentionally omitted from the prototype. Each could be added 
   annual-average wind field.
 - **Ocean floor topography (bathymetry)** — Underwater ridges and trenches affect deep
   currents but have less impact on surface flow.
+- **Coupled atmosphere / ENSO** — A coupled ocean-atmosphere model would allow the ocean
+  to influence wind patterns (warm water heats the air, changing winds, which move the warm
+  water). This feedback loop is what produces El Niño-Southern Oscillation (ENSO), the
+  largest source of year-to-year climate variability. ENSO cannot emerge with prescribed
+  winds because the key mechanism is the two-way interaction between ocean temperature and
+  wind patterns. Adding a coupled atmosphere is the natural path to supporting ENSO.
 
 ## Simulation parameters
 
