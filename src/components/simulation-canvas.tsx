@@ -10,9 +10,10 @@ interface Props {
   showWind: boolean;
   showWater: boolean;
   playbackSpeed: number;
+  paused: boolean;
 }
 
-export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showWind, showWater, playbackSpeed }) => {
+export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showWind, showWater, playbackSpeed, paused }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<MapRenderer | null>(null);
   const simRef = useRef(createSimulation());
@@ -24,6 +25,8 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
   showWaterRef.current = showWater;
   const playbackSpeedRef = useRef(playbackSpeed);
   playbackSpeedRef.current = playbackSpeed;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
   const sizeRef = useRef({ width, height });
   sizeRef.current = { width, height };
 
@@ -44,12 +47,14 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
       rendererRef.current = renderer;
 
       renderer.app.ticker.add(() => {
-        stepAccumulator += playbackSpeedRef.current;
-        const stepsThisFrame = Math.floor(stepAccumulator);
-        stepAccumulator -= stepsThisFrame;
+        if (!pausedRef.current) {
+          stepAccumulator += playbackSpeedRef.current;
+          const stepsThisFrame = Math.floor(stepAccumulator);
+          stepAccumulator -= stepsThisFrame;
 
-        for (let i = 0; i < stepsThisFrame; i++) {
-          stepSimulation(sim, paramsRef.current);
+          for (let i = 0; i < stepsThisFrame; i++) {
+            stepSimulation(sim, paramsRef.current);
+          }
         }
 
         renderer.update(sim.grid, paramsRef.current, {

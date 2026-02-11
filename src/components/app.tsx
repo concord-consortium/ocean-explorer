@@ -11,6 +11,7 @@ export const App = () => {
   const [showWind, setShowWind] = useState(true);
   const [showWater, setShowWater] = useState(true);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+  const [paused, setPaused] = useState(false);
 
   const controlsRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
@@ -56,6 +57,7 @@ export const App = () => {
           <input type="range" min="0.5" max="2" step="0.1" value={tempGradientRatio}
             onChange={e => setTempGradientRatio(Number(e.target.value))} />
         </label>
+        <button onClick={() => setPaused(p => !p)}>{paused ? "Play" : "Pause"}</button>
         <label>
           Speed: {playbackSpeed}x
           <select value={playbackSpeed} onChange={e => setPlaybackSpeed(Number(e.target.value))}>
@@ -81,6 +83,7 @@ export const App = () => {
           showWind={showWind}
           showWater={showWater}
           playbackSpeed={playbackSpeed}
+          paused={paused}
         />
       </div>
     </div>

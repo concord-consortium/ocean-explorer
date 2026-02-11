@@ -169,10 +169,10 @@ T(φ) = T_avg + (temp_gradient_ratio * ΔT_earth / 2) * cos(φ)
 Where `T_avg` is a baseline average temperature and `ΔT_earth` is Earth's typical
 equator-to-pole difference (~40°C).
 
-Color uses a **fixed scale** (-30°C to 35°C) mapped to a blue-to-red gradient. The wide range
-ensures poles appear visibly blue even at Earth-like settings where polar temperatures are
-around -5°C. The scale does not auto-adjust — when the user changes the temperature gradient
-slider, the color range visibly expands or contracts against the same legend.
+Color uses a **fixed scale** (0°C to 35°C) mapped to a blue-to-red gradient. At Earth-like
+settings polar temperatures are around -5°C, which clamps to the blue end of the scale and
+appears solidly blue. The scale does not auto-adjust — when the user changes the temperature
+gradient slider, the color range visibly expands or contracts against the same legend.
 
 ### Arrow fields
 
@@ -180,13 +180,15 @@ Two layers of arrows drawn at each grid cell center:
 - **Wind arrows** — gray/white, showing the prescribed wind direction and relative speed
 - **Water arrows** — blue, showing current water velocity direction and relative speed
 
-Arrow length is proportional to speed within each field (wind arrows scaled to wind speeds,
-water arrows scaled to water speeds — they use separate scales since wind is much faster than
-water). Arrow direction shows the flow direction.
+Arrow length is proportional to speed using a **fixed scale** for each field: wind arrows use
+a reference maximum of 20 m/s (base_wind_speed × max temp_gradient_ratio), water arrows use
+2000 m/s (approximate terminal velocity at max settings). Fixed scales let the user see arrows
+grow during the transient convergence period and compare across parameter changes, rather than
+always appearing at full length.
 
-With 2,592 cells, we draw up to 2,592 arrows per layer. At 5 deg resolution on a reasonably
-sized canvas, this should be readable without subsampling. If arrows are too dense, we can
-skip every other cell.
+Arrows are drawn at every other column (every 10° of longitude) to reduce visual clutter.
+Vertical spacing (every 5° latitude, i.e., every row) is kept as-is since the wind bands
+vary with latitude.
 
 Each arrow is drawn using PixiJS Graphics — a line segment with a small triangle head. A pool
 of Graphics objects is created once at startup and updated each frame (positions and rotations)
@@ -227,6 +229,7 @@ Simple HTML inputs above the canvas:
   per rendered frame. At speeds >1x, multiple steps run per frame. At speeds <1x, steps are
   skipped (e.g., 0.1x runs 1 step every 10 frames). The timestep `dt` stays constant so
   physics are identical regardless of playback speed.
+- Play/pause toggle — pauses the simulation so the user can inspect the current state
 - Checkbox to show/hide wind arrows
 - Checkbox to show/hide water arrows
 
@@ -312,3 +315,23 @@ incorporated into the main body of this document:
 4. **Playback speed control** — Added a speed control (0.1x to 10x) that adjusts how many
    simulation steps run per frame, using an accumulator for fractional speeds. The timestep
    `dt` stays constant so physics are identical. *(Added to "Developer controls" list.)*
+
+### Revision 2: Further visual tuning
+
+1. **Play/pause button** — Added a pause toggle so the simulation can be stopped to inspect the
+   current state. *(Added to "Developer controls" list.)*
+
+2. **Static arrow scale** — Changed arrow length from dynamic (based on current max speed) to
+   a fixed scale. With max rotation and max temperature gradient, water stabilizes at ~2000 m/s,
+   so the water arrow scale uses 2000 m/s as the reference maximum. Wind uses base_wind_speed *
+   max temp_gradient_ratio (20 m/s). This makes it possible to see arrows grow during the
+   transient period rather than always appearing at full length. *(Updated "Arrow fields"
+   section.)*
+
+3. **Skip every other column for arrows** — Arrows are drawn at every other column (every 10°
+   of longitude) to reduce visual density. Vertical spacing (every 5° latitude) is kept as-is.
+   *(Updated "Arrow fields" section.)*
+
+4. **Color scale range to 0°C..35°C** — The -30°C lower bound made poles too dark/invisible.
+   Changed to 0°C which gives good blue visibility since Earth-like polar temps are around -5°C
+   (clamped to the blue end). *(Updated "Background temperature coloring" section.)*

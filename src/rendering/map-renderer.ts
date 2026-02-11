@@ -5,7 +5,7 @@ import { windU, SimParams } from "../simulation/wind";
 /** Temperature constants */
 const T_AVG = 15;         // °C baseline
 const DELTA_T_EARTH = 40; // °C equator-to-pole difference
-const COLOR_MIN = -30;    // °C (blue end of scale)
+const COLOR_MIN = 0;      // °C (blue end of scale)
 const COLOR_MAX = 35;     // °C (red end of scale)
 
 /** Returns temperature at a given latitude for the given gradient ratio. */
@@ -158,26 +158,16 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       }
     }
 
-    // Find max speeds for arrow scaling
-    let maxWindSpeed = 0;
-    let maxWaterSpeed = 0;
-    for (let r = 0; r < ROWS; r++) {
-      const lat = latitudeAtRow(r);
-      const wU = Math.abs(windU(lat, params));
-      if (wU > maxWindSpeed) maxWindSpeed = wU;
+    // Fixed arrow scale references
+    const WIND_SCALE = 20;    // m/s (base_wind_speed * max temp_gradient_ratio)
+    const WATER_SCALE = 2000; // m/s (approximate terminal velocity at max settings)
+    const maxArrowLen = Math.min(cellW * 2, cellH) * 0.9; // cellW*2 since we skip columns
 
-      for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
-        const speed = Math.sqrt(grid.waterU[i] ** 2 + grid.waterV[i] ** 2);
-        if (speed > maxWaterSpeed) maxWaterSpeed = speed;
-      }
-    }
-
-    const maxArrowLen = Math.min(cellW, cellH) * 0.9;
-
-    // Draw arrows
+    // Draw arrows (skip every other column to reduce density)
     windContainer.visible = opts.showWind;
     waterContainer.visible = opts.showWater;
+
+    let maxWaterSpeed = 0;
 
     for (let r = 0; r < ROWS; r++) {
       const lat = latitudeAtRow(r);
@@ -187,14 +177,16 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
       for (let c = 0; c < COLS; c++) {
         const arrowIdx = r * COLS + c;
-        const cx = LEFT_MARGIN + c * cellW + cellW / 2;
+        const showArrowAtCol = c % 2 === 0;
+        // Center arrow between the two cells it spans
+        const cx = LEFT_MARGIN + c * cellW + cellW;
 
         // Wind arrows
         const wg = windArrows[arrowIdx];
-        if (opts.showWind && maxWindSpeed > 0) {
+        if (opts.showWind && showArrowAtCol) {
           const windSpeed = Math.abs(wU);
           const windAngle = wU >= 0 ? 0 : Math.PI; // east or west
-          const windLen = (windSpeed / maxWindSpeed) * maxArrowLen;
+          const windLen = Math.min(windSpeed / WIND_SCALE, 1) * maxArrowLen;
           drawArrow(wg, cx, cy, windAngle, windLen, 0xcccccc);
         } else {
           wg.clear();
@@ -202,13 +194,15 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
         // Water arrows
         const wa = waterArrows[arrowIdx];
-        if (opts.showWater && maxWaterSpeed > 0) {
-          const uVal = grid.waterU[arrowIdx];
-          const vVal = grid.waterV[arrowIdx];
-          const speed = Math.sqrt(uVal ** 2 + vVal ** 2);
+        const uVal = grid.waterU[arrowIdx];
+        const vVal = grid.waterV[arrowIdx];
+        const speed = Math.sqrt(uVal ** 2 + vVal ** 2);
+        if (speed > maxWaterSpeed) maxWaterSpeed = speed;
+
+        if (opts.showWater && showArrowAtCol) {
           // atan2(-vVal, uVal): negative V because screen Y is flipped
           const angle = Math.atan2(-vVal, uVal);
-          const len = (speed / maxWaterSpeed) * maxArrowLen;
+          const len = Math.min(speed / WATER_SCALE, 1) * maxArrowLen;
           drawArrow(wa, cx, cy, angle, len, 0x4488ff);
         } else {
           wa.clear();
@@ -217,8 +211,8 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     }
 
     // Update legend text
-    windLegendText.text = opts.showWind ? `Wind max: ${maxWindSpeed.toFixed(1)} m/s` : "";
-    waterLegendText.text = opts.showWater ? `Water max: ${maxWaterSpeed.toFixed(4)} m/s` : "";
+    windLegendText.text = opts.showWind ? `Wind scale: ${WIND_SCALE} m/s` : "";
+    waterLegendText.text = opts.showWater ? `Water max: ${maxWaterSpeed.toFixed(1)} m/s` : "";
 
     // Position latitude labels
     for (const { text: label, lat } of latLabels) {
