@@ -45,6 +45,8 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
           showWater: showWaterRef.current,
         });
       });
+    }).catch((err) => {
+      console.error("Failed to initialize PixiJS renderer:", err);
     });
 
     return () => {

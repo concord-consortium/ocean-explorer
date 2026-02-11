@@ -161,6 +161,9 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     const maxArrowLen = Math.min(cellW, cellH) * 0.9;
 
     // Draw arrows
+    windContainer.visible = opts.showWind;
+    waterContainer.visible = opts.showWater;
+
     for (let r = 0; r < ROWS; r++) {
       const lat = latitudeAtRow(r);
       const wU = windU(lat, params);
@@ -173,7 +176,6 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
         // Wind arrows
         const wg = windArrows[arrowIdx];
-        windContainer.visible = opts.showWind;
         if (opts.showWind && maxWindSpeed > 0) {
           const windSpeed = Math.abs(wU);
           const windAngle = wU >= 0 ? 0 : Math.PI; // east or west
@@ -185,7 +187,6 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
         // Water arrows
         const wa = waterArrows[arrowIdx];
-        waterContainer.visible = opts.showWater;
         if (opts.showWater && maxWaterSpeed > 0) {
           const uVal = grid.waterU[arrowIdx];
           const vVal = grid.waterV[arrowIdx];
