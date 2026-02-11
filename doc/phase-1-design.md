@@ -82,21 +82,50 @@ Minimum of 1 cell.
 ### East-west wind component (zonal)
 
 ```
-u_wind(φ) = -wind_amplitude * direction * sin(n * π * |φ| / 90°)
+u_wind(φ) = -wind_amplitude * direction * band_multiplier(φ, n) * sin(n * π * |φ| / 90°)
 ```
 
 Where:
 - φ is latitude in degrees (-90 to 90)
 - `direction` = +1 for prograde rotation (Earth-like), -1 for retrograde
 - `wind_amplitude` = `base_wind_speed * temp_gradient_ratio`
+- `band_multiplier(φ, n)` scales the peak amplitude per band (see below)
 
 For Earth-like prograde rotation with n=3, this produces:
-- 0-30° latitude: easterly (trade winds)
-- 30-60° latitude: westerly
-- 60-90° latitude: easterly (polar)
+- 0-30° latitude: easterly (trade winds), moderate strength
+- 30-60° latitude: westerly, strongest
+- 60-90° latitude: easterly (polar), weakest
 
 The sinusoidal gives smooth transitions between bands with zero wind at the boundaries, which
 is physically reasonable (the boundaries are convergence/divergence zones).
+
+### Band amplitude multiplier
+
+On Earth, the three wind bands have different peak speeds: westerlies are strongest (~10-15
+m/s), trade winds are moderate (~5-6 m/s), and polar easterlies are weakest (~3-5 m/s). This
+reflects where the horizontal temperature gradient is steepest (mid-latitudes), not where the
+most total heat is. See the science doc for full discussion.
+
+Each band's peak amplitude is scaled by a multiplier that peaks at mid-latitude bands and
+tapers toward both equator and pole, with steeper polar falloff:
+
+```
+band_index  = floor(n * |φ| / 90), clamped to n-1
+t           = (band_index + 0.5) / n          # normalized band center, 0=equator, 1=pole
+raw(t)      = sin(π * t) * (1 - 0.5 * t²)
+multiplier  = raw(t) / max(raw(t) for all bands)
+```
+
+The normalization ensures the strongest band always has multiplier = 1.0, so `base_wind_speed`
+represents the peak speed of the strongest band.
+
+For Earth (n=3) this produces approximate multipliers: trades ≈ 0.56, westerlies = 1.0,
+polar ≈ 0.37. These are close to the observed ratios (~0.5, 1.0, ~0.3).
+
+For more than 3 bands (faster rotation), the same formula generalizes — bands near the
+middle of the hemisphere are strongest, tapering toward both equator and pole. This is a
+plausible modeling choice but not validated against observation (no terrestrial planets with
+more than 3 cells exist to compare against).
 
 ### North-south (meridional) component
 
@@ -335,3 +364,17 @@ incorporated into the main body of this document:
 4. **Color scale range to 0°C..35°C** — The -30°C lower bound made poles too dark/invisible.
    Changed to 0°C which gives good blue visibility since Earth-like polar temps are around -5°C
    (clamped to the blue end). *(Updated "Background temperature coloring" section.)*
+
+### Revision 3: Variable wind band amplitudes
+
+On Earth, the three wind bands have different peak speeds — westerlies are strongest, trade
+winds are moderate, polar easterlies are weakest. The previous implementation used a uniform
+sine wave giving all bands the same peak amplitude. This revision adds a per-band amplitude
+multiplier that peaks at mid-latitude bands and tapers toward equator and pole, producing
+the correct Earth pattern and generalizing to any number of bands.
+
+1. **Band amplitude multiplier** — Added `band_multiplier(φ, n)` to the wind formula. Uses
+   `sin(π * t) * (1 - 0.5 * t²)` where `t` is the normalized band center position, then
+   normalized so the strongest band = 1.0. For Earth (n=3): trades ≈ 0.56, westerlies = 1.0,
+   polar ≈ 0.37. *(Added "Band amplitude multiplier" subsection to wind field model.
+   Updated "East-west wind component" formula.)*

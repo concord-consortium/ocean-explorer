@@ -38,18 +38,67 @@ the planet's rotation.
 ### The bands
 
 - **Trade winds (0-30 deg latitude)** — Blow from east to west (and slightly toward the
-  equator). The most consistent winds. They push surface water westward across the tropics.
+  equator). The most consistent winds, with typical surface speeds of ~5-6 m/s. They push
+  surface water westward across the tropics.
 
 - **Westerlies (30-60 deg latitude)** — Blow from west to east (and slightly toward the
-  poles). These drive surface water eastward across the mid-latitudes.
+  poles). The strongest surface winds, typically ~10-15 m/s (especially in the Southern
+  Hemisphere's "Roaring Forties"). These drive surface water eastward across the
+  mid-latitudes.
 
-- **Polar easterlies (60-90 deg latitude)** — Blow from east to west again, but weaker and
-  less consistent.
+- **Polar easterlies (60-90 deg latitude)** — Blow from east to west again. The weakest
+  and least consistent of the three bands, with typical speeds of ~3-5 m/s.
 
 This alternating pattern (easterly, westerly, easterly) sets up large circular gyres in each
 ocean basin. In the northern hemisphere, the combination of trade winds pushing water west
 and westerlies pushing water east creates a clockwise loop. In the southern hemisphere, the
 same pattern produces a counter-clockwise loop.
+
+### Why the bands have different strengths
+
+The three wind bands do not have equal peak speeds. Surface wind speed is driven by
+**horizontal temperature gradients** (differences between adjacent regions), not by absolute
+temperature:
+
+- **Tropics (0-30 deg):** The region is hot but relatively uniform in temperature — the
+  horizontal gradient is small. This produces moderate, steady winds.
+- **Mid-latitudes (30-60 deg):** This is where warm subtropical air meets cold polar air,
+  creating the steepest temperature gradient on the planet (the polar front). That steep
+  gradient powers the strongest surface winds and storm systems.
+- **Polar regions (60-90 deg):** Cold everywhere with a small horizontal gradient and little
+  thermal energy available to drive circulation. The weakest winds.
+
+The resulting pattern — moderate near the equator, strongest at mid-latitudes, weakest near
+the poles — reflects where the temperature gradient peaks, not where the most heat is.
+
+On Earth, the approximate peak speed ratios relative to the westerlies are roughly:
+trades ~0.5, westerlies ~1.0, polar easterlies ~0.3.
+
+### Relative band strength for different rotation rates
+
+For Earth's three bands, the relative strengths are well established from observation. For
+planets with more bands (faster rotation), the picture is much less certain:
+
+- **No observed terrestrial planets with more than 3 cells exist.** Venus rotates very
+  slowly and has roughly one Hadley cell per hemisphere. Mars is similar. Gas giants like
+  Jupiter have many bands, but their dynamics are fundamentally different (no solid surface,
+  internal heat sources, hydrogen atmosphere), so they are not good analogs for a
+  faster-spinning rocky planet.
+
+- **GCM studies of varying rotation rates exist** (e.g., Kaspi & Showman 2015, Navarra &
+  Boccaletti 2002) but they show that jet speed changes non-monotonically with rotation
+  rate and depends on many interacting parameters (atmospheric mass, optical thickness,
+  surface gravity, stellar flux) — not just rotation rate alone. The results are too complex
+  to reduce to a simple amplitude-vs-latitude rule.
+
+**Modeling choice for the simulation:** Since the true behavior is uncertain, the simulation
+uses a plausible simplification: peak wind speed in each band is scaled by a multiplier that
+peaks at mid-latitudes and tapers toward both the equator and the pole. The physical
+reasoning is that the equator-to-pole temperature profile is roughly fixed by solar heating,
+and the steepest horizontal temperature gradient occurs at mid-latitudes regardless of how
+many bands exist. This produces the correct Earth-case pattern (moderate, strongest, weakest)
+and extends reasonably to more bands, but it is a modeling choice rather than established
+science for the >3 band case.
 
 ### How rotation shapes the wind pattern
 
