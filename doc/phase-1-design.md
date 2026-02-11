@@ -1,0 +1,276 @@
+# Phase 1 Design: Grid + Wind + Rendering
+
+## Goal
+
+Build a lat/lon grid with a prescribed wind field that pushes water, rendered on a 2D
+equirectangular map using PixiJS. Visualize both the wind field and the resulting water
+velocity so we can verify water moves in the wind direction. The simulation loop runs each
+frame: compute wind forcing, apply friction, update velocities, render.
+
+This phase proves the engine runs at interactive frame rates and the wind field looks correct.
+
+## Architecture
+
+Three main parts:
+
+1. **Simulation module** — Pure TypeScript, no rendering dependencies. Contains the grid data
+   structure, wind field computation, and velocity update logic. Unit-testable independently.
+
+2. **Renderer** — PixiJS-based. Reads the simulation state and draws the 2D equirectangular
+   map with arrow overlays for wind and water velocity.
+
+3. **React shell** — Wraps the PixiJS canvas and provides simple developer controls.
+
+The PixiJS ticker drives the loop: each frame, it calls the simulation to advance one or more
+timesteps, then the renderer reads the updated state and redraws. The simulation module
+exposes its state (grid of velocities, wind field) as readable data that the renderer
+consumes.
+
+### File structure
+
+```
+src/
+  simulation/
+    grid.ts          — Grid data structure and cell access
+    wind.ts          — Prescribed wind field computation
+    simulation.ts    — Timestep update logic (wind forcing + friction)
+  rendering/
+    map-renderer.ts  — PixiJS equirectangular map and arrow drawing
+  components/
+    app.tsx          — React shell with PixiJS canvas and dev controls
+```
+
+## Grid data structure
+
+Regular lat/lon grid at 5 deg resolution:
+- 72 columns (longitude: 0 to 355 deg, wrapping east-west)
+- 36 rows (latitude: -87.5 to 87.5 deg, centered on each band)
+- Total: 2,592 cells
+
+Each cell stores:
+- `waterU`, `waterV` — water velocity components (east-west, north-south), in m/s
+
+The wind field is **not stored per cell** — it is computed from latitude on demand since it
+only depends on latitude and the current parameter values. This keeps the grid state minimal
+and avoids stale wind data when parameters change.
+
+The grid is stored as flat `Float64Array` buffers (one for U, one for V) rather than an array
+of cell objects. This is better for cache performance during the simulation loop and makes it
+straightforward to iterate over all cells.
+
+Cell access is by `(row, col)` index. Longitude wraps: column -1 maps to column 71 and vice
+versa. Latitude does not wrap — the top and bottom rows are the polar caps. For Phase 1 (no
+Coriolis, no pressure gradients) polar rows are treated like any other row.
+
+The grid resolution (5 deg) is defined as a constant that could be changed, but we are not
+building configurability — just making it easy to modify if needed.
+
+## Wind field model
+
+The wind field is a pure function of latitude and the current parameter values.
+
+### Number of atmospheric cells per hemisphere
+
+```
+n = max(1, round(3 * sqrt(rotation_ratio)))
+```
+
+Where `rotation_ratio` = planetary rotation rate / Earth's rotation rate. At Earth's rotation
+(ratio = 1), n = 3 (Hadley, Ferrel, Polar). At 4x rotation, n = 6. At 0.25x, n = 2.
+Minimum of 1 cell.
+
+### East-west wind component (zonal)
+
+```
+u_wind(φ) = -wind_amplitude * direction * sin(n * π * |φ| / 90°)
+```
+
+Where:
+- φ is latitude in degrees (-90 to 90)
+- `direction` = +1 for prograde rotation (Earth-like), -1 for retrograde
+- `wind_amplitude` = `base_wind_speed * temp_gradient_ratio`
+
+For Earth-like prograde rotation with n=3, this produces:
+- 0-30° latitude: easterly (trade winds)
+- 30-60° latitude: westerly
+- 60-90° latitude: easterly (polar)
+
+The sinusoidal gives smooth transitions between bands with zero wind at the boundaries, which
+is physically reasonable (the boundaries are convergence/divergence zones).
+
+### North-south (meridional) component
+
+Omitted for Phase 1. The real trade winds blow slightly toward the equator and the westerlies
+slightly poleward, but the east-west pattern alone is sufficient to verify the wind bands and
+test all Phase 1 criteria.
+
+### Tunable constants
+
+- `base_wind_speed` — peak wind speed at Earth-like settings (start with ~10 m/s, tune
+  visually)
+- `temp_gradient_ratio` — equator-to-pole temperature difference relative to Earth (default
+  1.0). A higher ratio means stronger differential heating, stronger atmospheric convection,
+  and therefore stronger winds. The user slider adjusts this value.
+
+## Simulation timestep and friction model
+
+Each tick of the PixiJS ticker, we run one or more simulation timesteps. Each timestep updates
+water velocity at every cell:
+
+```
+waterU += (wind_force_U - drag * waterU) * dt
+waterV += (wind_force_V - drag * waterV) * dt
+```
+
+Where:
+- `wind_force_U/V` — force from wind on the water surface (proportional to wind speed, scaled
+  by `wind_drag_coefficient`)
+- `drag * waterU/V` — linear friction opposing water motion (Rayleigh drag)
+- `dt` — timestep size in seconds
+
+### Why linear drag works
+
+At steady state, wind force and drag balance: `wind_force = drag * water_velocity`. This
+means terminal water speed = `wind_force / drag`. We can tune `drag` and
+`wind_drag_coefficient` together to get reasonable terminal velocities (ocean surface currents
+are typically 0.1-1.0 m/s, while winds are 5-15 m/s).
+
+### Timestep size
+
+Start with `dt = 3600` seconds (1 hour). At 60fps with 1 timestep per frame, that is
+1 simulated hour per real second. The number of timesteps per frame can be increased to speed
+up convergence.
+
+### Tunable constants
+
+- `wind_drag_coefficient` — how strongly wind pushes water (start with ~0.001, tune visually)
+- `drag` — friction coefficient (start with ~1e-5 s⁻¹, tune to get reasonable terminal
+  velocity)
+- `dt` — timestep in seconds (3600)
+- `steps_per_frame` — number of simulation steps per render frame (start with 1)
+
+These values are starting guesses — they will need to be tuned once we can see the results.
+Updated values should be recorded in this document.
+
+## Rendering
+
+The renderer draws a 2D equirectangular map with arrow overlays using PixiJS.
+
+### Background temperature coloring
+
+Each cell is filled with a color representing the prescribed solar heating at that latitude.
+Temperature follows a cosine profile — warmest at equator, coldest at poles — scaled by the
+temperature gradient parameter:
+
+```
+T(φ) = T_avg + (temp_gradient_ratio * ΔT_earth / 2) * cos(φ)
+```
+
+Where `T_avg` is a baseline average temperature and `ΔT_earth` is Earth's typical
+equator-to-pole difference (~40°C).
+
+Color uses a **fixed scale** (e.g., -10°C to 35°C) mapped to a blue-to-red gradient. The
+scale does not auto-adjust — when the user changes the temperature gradient slider, the color
+range visibly expands or contracts against the same legend.
+
+### Arrow fields
+
+Two layers of arrows drawn at each grid cell center:
+- **Wind arrows** — gray/white, showing the prescribed wind direction and relative speed
+- **Water arrows** — blue, showing current water velocity direction and relative speed
+
+Arrow length is proportional to speed within each field (wind arrows scaled to wind speeds,
+water arrows scaled to water speeds — they use separate scales since wind is much faster than
+water). Arrow direction shows the flow direction.
+
+With 2,592 cells, we draw up to 2,592 arrows per layer. At 5 deg resolution on a reasonably
+sized canvas, this should be readable without subsampling. If arrows are too dense, we can
+skip every other cell.
+
+Each arrow is drawn using PixiJS Graphics — a line segment with a small triangle head. A pool
+of Graphics objects is created once at startup and updated each frame (positions and rotations)
+rather than creating/destroying objects.
+
+### Legends
+
+- **Arrow speed key** — a reference arrow with a labeled speed value for each field (wind and
+  water), positioned in the corner of the map. Shows what arrow length corresponds to what
+  speed.
+- **Temperature color scale** — a vertical or horizontal bar beside the map showing the fixed
+  blue-to-red gradient with labeled tick marks in °C.
+
+### Grid lines
+
+Faint latitude/longitude grid lines for reference. An outline of Earth's continents could be
+drawn as a static reference layer to help orient viewers, but this is optional.
+
+### Developer controls
+
+Simple HTML inputs above or beside the canvas:
+- Rotation rate slider (0.25x to 4x Earth, default 1.0)
+- Rotation direction toggle (prograde / retrograde)
+- Temperature gradient slider (0.5x to 2x Earth, default 1.0)
+- Checkbox to show/hide wind arrows
+- Checkbox to show/hide water arrows
+
+## Testing
+
+### Unit tests (jest)
+
+- Wind field function returns correct direction for known inputs (e.g., at 15° latitude with
+  prograde rotation, wind should be easterly)
+- Wind field flips direction with retrograde rotation
+- Number of wind bands changes with rotation rate (e.g., rotation_ratio=4 → n=6 cells)
+- Friction model reaches expected terminal velocity: given constant wind forcing and drag,
+  verify `water_velocity` converges to `wind_force / drag`
+
+### Steady-state snapshot tests (jest)
+
+These tests set parameters, run the simulation from rest until it stabilizes, and compare the
+resulting velocity field against expected values within a tolerance.
+
+- Set parameters (e.g., rotation_ratio=1.0, prograde, temp_gradient_ratio=1.0)
+- Run the simulation until stable (maximum velocity change across all cells drops below a
+  threshold, e.g., `max(|Δv|) < 1e-6 m/s`)
+- Include a maximum iteration count as a safety limit so tests don't hang
+- Compare the resulting velocity field against the expected field within tolerance
+- Expected field for Phase 1: direction matches wind at each cell, magnitude =
+  `wind_drag_coefficient * wind_speed / drag` at each cell
+- **Record stabilization time:** each test records the number of timesteps and simulated time
+  to reach steady state. The test asserts this is within an expected range. When parameter
+  tuning causes stabilization time to shift, the test failure reports both the old and new
+  values.
+- Run a few parameter combinations: default Earth-like, high rotation (more bands), retrograde
+  (flipped), high temperature gradient (stronger velocities)
+
+### Visual/manual tests
+
+- Wind arrows show correct latitude bands
+- Water arrows align with wind direction (no Coriolis yet)
+- Changing rotation direction flips the pattern
+- Changing rotation speed changes band count
+- Temperature background color matches latitude pattern
+- Legends are readable and accurate
+- Animation is smooth
+
+### Save/load (future)
+
+Not built in Phase 1, but the grid state is stored in simple typed arrays (`Float64Array`)
+that are trivially serializable. When we add save/load later, it is just writing/reading
+these arrays. Visual snapshot comparison (rendering two states side by side and highlighting
+differences) will be added when the need arises.
+
+## Tunable constants summary
+
+| Constant | Starting value | Description |
+|----------|---------------|-------------|
+| `base_wind_speed` | ~10 m/s | Peak wind speed at Earth-like settings |
+| `wind_drag_coefficient` | ~0.001 | How strongly wind pushes water |
+| `drag` | ~1e-5 s⁻¹ | Friction coefficient |
+| `dt` | 3600 s | Simulation timestep |
+| `steps_per_frame` | 1 | Simulation steps per render frame |
+| `T_avg` | ~15°C | Baseline average temperature |
+| `ΔT_earth` | ~40°C | Earth's equator-to-pole temperature difference |
+
+These are starting guesses. As tuning happens, update the values in this table and note what
+was tried and why.
