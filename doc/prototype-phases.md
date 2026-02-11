@@ -16,7 +16,12 @@ evaluate and give feedback on the simulation behavior.
 - Continental layouts use presets (water world, Earth-like, simple shapes), not a drawing tool
 - Target resolution starts at ~5 deg lat/lon (~2,600 cells), which may be increased if finer
   resolution is needed to produce recognizable patterns
-- Performance optimization for Chromebooks is deferred to the final phase
+- Each phase should include basic user controls for the features it introduces — they
+  don't need to be polished, just functional enough for testing and demoing. UI polish
+  is a separate concern
+- Quick Chromebook performance checks should happen after each phase to catch bottlenecks
+  early. Dedicated optimization remains the final phase, but knowing where we stand
+  throughout avoids late surprises
 - **Documenting lessons learned is critical.** Since code is generated, the real investment is
   knowledge — what worked, what didn't, what parameter values were tuned, what numerical
   approaches succeeded or failed. Each phase's detailed design doc should be updated with
@@ -32,7 +37,7 @@ evaluate and give feedback on the simulation behavior.
 | 2. Coriolis + Ekman Transport | Physics works, recognizable deflection patterns | Yes — minimum bar |
 | 3. Pressure Gradients + Geostrophic Balance | Full sim loop, steady state emerges | Yes |
 | 4. Continental Boundaries + Gyres | Realistic patterns, western intensification | Yes |
-| 5. Temperature + User Controls | Interactive demo with passive heat tracer | Yes |
+| 5. Temperature + Heat Transport | Interactive demo with passive heat tracer | Yes |
 | 6. 3D Globe Rendering | Simulation on a rotatable sphere | Yes |
 | 7. Chromebook Performance | Runs on target hardware | Yes — final validation |
 
@@ -48,6 +53,9 @@ The simulation needs a friction/drag model from the start to prevent water veloc
 growing without bound. The science reference mentions friction as a developer-tuned constant
 but doesn't specify the model. The Phase 1 detailed design doc will need to define this —
 likely a simple linear drag term that balances wind forcing at a reasonable terminal velocity.
+
+**User controls added:** Rotation rate slider, rotation direction toggle, temperature gradient
+slider. These are the wind field inputs — users can see how each affects the wind pattern.
 
 **What we learn:**
 - Can we run a compute-then-render loop at interactive frame rates?
@@ -75,6 +83,9 @@ this doesn't work, we have a fundamental rendering or architecture problem.
 from the wind direction — right in the northern hemisphere, left in the southern hemisphere
 (for Earth-like prograde rotation). The deflection angle varies with latitude: near zero at
 the equator, increasing toward the poles.
+
+**User controls added:** None new — the Phase 1 controls (rotation rate, direction,
+temperature gradient) already drive the Coriolis parameters.
 
 **What we learn:**
 - Does the Coriolis deflection produce a visible, latitude-dependent difference between wind
@@ -106,6 +117,8 @@ accumulates in some cells and depletes others, changing the surface height. Comp
 gradients from height differences between neighboring cells, and use these to drive additional
 flow. With Coriolis acting on pressure-driven flow, geostrophic balance should emerge — water
 flows parallel to height contours rather than directly downhill.
+
+**User controls added:** None new — existing controls still apply.
 
 This completes the core simulation loop from the science doc:
 1. Wind pushes water via Ekman transport
@@ -144,6 +157,9 @@ boundary, it redirects rather than passing through. The Coriolis parameter alrea
 latitude, so western boundary intensification should emerge naturally without being coded
 explicitly.
 
+**User controls added:** Continent preset selector (water world, single continent,
+Earth-like).
+
 **What we learn:**
 - Do recognizable gyre patterns form in ocean basins?
 - Does western intensification appear (faster/narrower currents on the western side of
@@ -171,13 +187,14 @@ explicitly.
 as Earth's major ocean gyres. Product owners can compare the simulation output to a real ocean
 current map and see the resemblance.
 
-## Phase 5: Temperature + User Controls
+## Phase 5: Temperature + Heat Transport
 
 **Build:** Add temperature as a passive tracer — each cell gets a temperature value that is
-advected (carried) by the currents, with a latitude-dependent solar heating source. Add user
-controls: rotation rate slider, rotation direction toggle, and temperature gradient slider.
-Add a continent preset selector to switch between layouts. Visualize temperature as a color
-layer beneath the current arrows.
+advected (carried) by the currents, with a latitude-dependent solar heating source. Visualize
+temperature as a color layer beneath the current arrows. User controls for rotation,
+temperature gradient, and continent presets were added in earlier phases — this phase focuses
+on the temperature visualization and any UI polish needed for the product owner feedback
+session.
 
 **What we learn:**
 - Does the temperature distribution show recognizable heat transport (warm water carried
@@ -209,6 +226,11 @@ This is the main feedback session that informs whether we proceed to 3D renderin
 **Build:** Replace (or supplement) the 2D map with a 3D globe that users can rotate and zoom.
 The same simulation data is rendered on the sphere surface — temperature colors, wind arrows,
 and current arrows. The simulation engine doesn't change; this is purely a rendering phase.
+
+> **Note:** Since this phase is purely rendering, it could be started earlier or worked on in
+> parallel with simulation phases if the team has capacity. Getting early feedback on globe
+> rendering — especially pole artifacts and performance — could inform whether a grid change
+> is needed before investing heavily in later simulation phases.
 
 **What we learn:**
 - Does the simulation look convincing on a sphere (do currents connect properly across the map
