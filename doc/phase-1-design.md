@@ -169,9 +169,10 @@ T(φ) = T_avg + (temp_gradient_ratio * ΔT_earth / 2) * cos(φ)
 Where `T_avg` is a baseline average temperature and `ΔT_earth` is Earth's typical
 equator-to-pole difference (~40°C).
 
-Color uses a **fixed scale** (e.g., -10°C to 35°C) mapped to a blue-to-red gradient. The
-scale does not auto-adjust — when the user changes the temperature gradient slider, the color
-range visibly expands or contracts against the same legend.
+Color uses a **fixed scale** (-30°C to 35°C) mapped to a blue-to-red gradient. The wide range
+ensures poles appear visibly blue even at Earth-like settings where polar temperatures are
+around -5°C. The scale does not auto-adjust — when the user changes the temperature gradient
+slider, the color range visibly expands or contracts against the same legend.
 
 ### Arrow fields
 
@@ -199,17 +200,33 @@ rather than creating/destroying objects.
 - **Temperature color scale** — a vertical or horizontal bar beside the map showing the fixed
   blue-to-red gradient with labeled tick marks in °C.
 
+### Latitude labels
+
+Tick marks and labels at every 30° of latitude (-90, -60, -30, 0, 30, 60, 90) along the left
+edge of the map area. These let the user verify which latitudes the wind bands fall at. The
+labels are drawn once since they are static (latitude positions don't change with parameters).
+
 ### Grid lines
 
 Faint latitude/longitude grid lines for reference. An outline of Earth's continents could be
 drawn as a static reference layer to help orient viewers, but this is optional.
 
+### Canvas sizing
+
+The PixiJS canvas fills the available browser window. The controls bar takes its natural height
+at the top, and the canvas fills the remaining space. The canvas dimensions are tracked via a
+resize listener on the window, and the PixiJS application is re-created when dimensions change.
+
 ### Developer controls
 
-Simple HTML inputs above or beside the canvas:
+Simple HTML inputs above the canvas:
 - Rotation rate slider (0.25x to 4x Earth, default 1.0)
 - Rotation direction toggle (prograde / retrograde)
 - Temperature gradient slider (0.5x to 2x Earth, default 1.0)
+- Playback speed control (0.1x to 10x, default 1x) — adjusts how many simulation steps run
+  per rendered frame. At speeds >1x, multiple steps run per frame. At speeds <1x, steps are
+  skipped (e.g., 0.1x runs 1 step every 10 frames). The timestep `dt` stays constant so
+  physics are identical regardless of playback speed.
 - Checkbox to show/hide wind arrows
 - Checkbox to show/hide water arrows
 
@@ -274,3 +291,24 @@ differences) will be added when the need arises.
 
 These are starting guesses. As tuning happens, update the values in this table and note what
 was tried and why.
+
+## Revision log
+
+### Revision 1: Visual verification feedback
+
+After the initial implementation was visually verified, the following changes were made and
+incorporated into the main body of this document:
+
+1. **Color scale range** — Changed from -10°C..35°C to -30°C..35°C so poles appear more
+   visibly blue. *(Updated in "Background temperature coloring" section.)*
+
+2. **Latitude labels** — Added labels at every 30° along the left edge of the map so the user
+   can verify which latitudes the wind bands fall at. *(Added "Latitude labels" subsection.)*
+
+3. **Canvas fills browser window** — Replaced fixed 960x480 canvas with dynamic sizing that
+   fills the available window. The PixiJS renderer is resized (not destroyed/recreated) when
+   dimensions change. *(Added "Canvas sizing" subsection.)*
+
+4. **Playback speed control** — Added a speed control (0.1x to 10x) that adjusts how many
+   simulation steps run per frame, using an accumulator for fractional speeds. The timestep
+   `dt` stays constant so physics are identical. *(Added to "Developer controls" list.)*

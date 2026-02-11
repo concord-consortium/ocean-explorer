@@ -12,6 +12,7 @@ describe("App component", () => {
     render(<App />);
     expect(screen.getByText(/Rotation rate/)).toBeDefined();
     expect(screen.getByText(/Temp gradient/)).toBeDefined();
+    expect(screen.getByText(/Speed:/)).toBeDefined();
     expect(screen.getByText(/Show wind/)).toBeDefined();
     expect(screen.getByText(/Show water/)).toBeDefined();
     expect(screen.getByTestId("simulation-canvas")).toBeDefined();

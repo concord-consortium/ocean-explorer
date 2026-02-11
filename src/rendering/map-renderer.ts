@@ -5,7 +5,7 @@ import { windU, SimParams } from "../simulation/wind";
 /** Temperature constants */
 const T_AVG = 15;         // °C baseline
 const DELTA_T_EARTH = 40; // °C equator-to-pole difference
-const COLOR_MIN = -10;    // °C (blue end of scale)
+const COLOR_MIN = -30;    // °C (blue end of scale)
 const COLOR_MAX = 35;     // °C (red end of scale)
 
 /** Returns temperature at a given latitude for the given gradient ratio. */
@@ -33,6 +33,7 @@ export interface RendererOptions {
 export interface MapRenderer {
   app: Application;
   update(grid: Grid, params: SimParams, opts: RendererOptions): void;
+  resize(width: number, height: number): void;
   destroy(): void;
 }
 
@@ -99,6 +100,18 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
   waterLegendText.position.set(8, 24);
   legendContainer.addChild(windLegendText, waterLegendText);
 
+  // Latitude labels along the left edge (every 30°)
+  const latLabelContainer = new Container();
+  legendContainer.addChild(latLabelContainer);
+  const latLabelStyle = new TextStyle({ fontSize: 10, fill: 0xcccccc, fontFamily: "monospace" });
+  const latLabels: { text: Text; lat: number }[] = [];
+  for (const lat of [-90, -60, -30, 0, 30, 60, 90]) {
+    const label = new Text({ text: `${lat}°`, style: latLabelStyle });
+    label.anchor.set(1, 0.5); // right-align, vertically centered
+    latLabelContainer.addChild(label);
+    latLabels.push({ text: label, lat });
+  }
+
   // Color scale legend elements
   const colorScaleBar = new Graphics();
   const colorScaleMinLabel = new Text({ text: `${COLOR_MIN}\u00B0C`, style: legendStyle });
@@ -122,7 +135,9 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
   }
 
   function update(grid: Grid, params: SimParams, opts: RendererOptions): void {
-    const mapWidth = opts.width - 40; // leave space for color scale
+    const LEFT_MARGIN = 32;  // space for latitude labels
+    const RIGHT_MARGIN = 40; // space for color scale
+    const mapWidth = opts.width - LEFT_MARGIN - RIGHT_MARGIN;
     const mapHeight = opts.height;
     const cellW = mapWidth / COLS;
     const cellH = mapHeight / ROWS;
@@ -139,7 +154,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
         const cellIdx = r * COLS + c;
         const bg = bgCells[cellIdx];
         bg.clear();
-        bg.rect(c * cellW, displayRow * cellH, cellW + 0.5, cellH + 0.5).fill({ color });
+        bg.rect(LEFT_MARGIN + c * cellW, displayRow * cellH, cellW + 0.5, cellH + 0.5).fill({ color });
       }
     }
 
@@ -172,7 +187,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
       for (let c = 0; c < COLS; c++) {
         const arrowIdx = r * COLS + c;
-        const cx = c * cellW + cellW / 2;
+        const cx = LEFT_MARGIN + c * cellW + cellW / 2;
 
         // Wind arrows
         const wg = windArrows[arrowIdx];
@@ -205,15 +220,27 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     windLegendText.text = opts.showWind ? `Wind max: ${maxWindSpeed.toFixed(1)} m/s` : "";
     waterLegendText.text = opts.showWater ? `Water max: ${maxWaterSpeed.toFixed(4)} m/s` : "";
 
+    // Position latitude labels
+    for (const { text: label, lat } of latLabels) {
+      // Convert latitude to Y: row = (lat + 87.5) / 5, displayRow = ROWS - 1 - row
+      const row = (lat + 87.5) / 5;
+      const displayRow = ROWS - 1 - row;
+      const y = displayRow * cellH + cellH / 2;
+      label.position.set(LEFT_MARGIN - 4, y);
+    }
+
     // Color scale
-    drawColorScale(mapWidth + 8, mapHeight);
+    drawColorScale(LEFT_MARGIN + mapWidth + 8, mapHeight);
   }
 
   return {
     app,
     update,
+    resize(w: number, h: number) {
+      app.renderer.resize(w, h);
+    },
     destroy() {
-      app.destroy(true);
+      app.destroy();
     },
   };
 }

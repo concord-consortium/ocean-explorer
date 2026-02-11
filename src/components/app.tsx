@@ -1,11 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { SimulationCanvas } from "./simulation-canvas";
 import { SimParams } from "../simulation/wind";
 
 import "./app.scss";
-
-const CANVAS_WIDTH = 960;
-const CANVAS_HEIGHT = 480;
 
 export const App = () => {
   const [rotationRatio, setRotationRatio] = useState(1.0);
@@ -13,6 +10,24 @@ export const App = () => {
   const [tempGradientRatio, setTempGradientRatio] = useState(1.0);
   const [showWind, setShowWind] = useState(true);
   const [showWater, setShowWater] = useState(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+
+  const updateCanvasSize = useCallback(() => {
+    const controlsHeight = controlsRef.current?.offsetHeight ?? 0;
+    setCanvasSize({
+      width: window.innerWidth,
+      height: window.innerHeight - controlsHeight,
+    });
+  }, []);
+
+  useEffect(() => {
+    updateCanvasSize();
+    window.addEventListener("resize", updateCanvasSize);
+    return () => window.removeEventListener("resize", updateCanvasSize);
+  }, [updateCanvasSize]);
 
   const params: SimParams = {
     rotationRatio,
@@ -21,9 +36,11 @@ export const App = () => {
     tempGradientRatio,
   };
 
+  const speedOptions = [0.1, 0.25, 0.5, 1, 2, 5, 10];
+
   return (
     <div className="app">
-      <div className="controls">
+      <div className="controls" ref={controlsRef}>
         <label>
           Rotation rate: {rotationRatio.toFixed(2)}x
           <input type="range" min="0.25" max="4" step="0.25" value={rotationRatio}
@@ -40,6 +57,12 @@ export const App = () => {
             onChange={e => setTempGradientRatio(Number(e.target.value))} />
         </label>
         <label>
+          Speed: {playbackSpeed}x
+          <select value={playbackSpeed} onChange={e => setPlaybackSpeed(Number(e.target.value))}>
+            {speedOptions.map(s => <option key={s} value={s}>{s}x</option>)}
+          </select>
+        </label>
+        <label>
           <input type="checkbox" checked={showWind}
             onChange={e => setShowWind(e.target.checked)} />
           Show wind
@@ -52,11 +75,12 @@ export const App = () => {
       </div>
       <div className="canvas-container">
         <SimulationCanvas
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
+          width={canvasSize.width}
+          height={canvasSize.height}
           params={params}
           showWind={showWind}
           showWater={showWater}
+          playbackSpeed={playbackSpeed}
         />
       </div>
     </div>
