@@ -1,5 +1,5 @@
-export const AppElements = {
-  getApp() {
-    return cy.get(".app");
+export class AppElements {
+  visit() {
+    cy.visit("/");
   }
-};
+}
