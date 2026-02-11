@@ -289,7 +289,9 @@ shape it. Simulating them would require fundamentally different approaches.
   landslides). Water moves up and down, not in a sustained horizontal flow — there is almost
   no net water transport. They propagate through the entire water column at high speed but
   don't create or alter currents. At our grid resolution (~5 deg), a tsunami would be smaller
-  than a single cell.
+  than a single cell. (Deep-ocean tsunami wavelengths are ~100-500 km, so they'd need
+  roughly 0.5-1 deg resolution to span even a few cells — but even then, they wouldn't
+  produce net currents.)
 
 - **Storm-driven currents** — Hurricanes and cyclones temporarily drive strong local currents
   and upwelling beneath them, but these effects are localized (tens to hundreds of km),
@@ -310,7 +312,8 @@ shape it. Simulating them would require fundamentally different approaches.
 ### User controls
 
 - **Rotation rate** — Affects Coriolis strength and number of wind cells. Must be non-zero
-  (no tidally locked planets in the prototype).
+  (no tidally locked planets in the prototype; see
+  [Why not tidally locked planets?](#why-not-tidally-locked-planets)).
 - **Rotation direction** — Flips Coriolis deflection direction.
 - **Temperature gradient** — Equator-to-pole difference. Affects wind strength.
 - **Continental layout** — User-drawn land masses, or preset Earth-like configuration. Users
@@ -321,6 +324,9 @@ shape it. Simulating them would require fundamentally different approaches.
 - Wind field (from rotation rate, direction, and temperature gradient)
 - Coriolis parameter at each cell (from rotation rate and latitude)
 - Ekman deflection angle at each cell (from local Coriolis parameter)
+- Boundary conditions (from continental layout — each cell is ocean or land; land cells
+  block flow and redirect currents, producing the boundary effects described in
+  [Continental boundaries and western intensification](#continental-boundaries-and-western-intensification))
 
 ### Developer-tuned constants
 
@@ -345,3 +351,15 @@ or a **cubed sphere** (six square patches projected onto a sphere).
 Starting resolution is approximately 5 deg latitude/longitude (~2,600 cells). The goal is to
 push toward finer resolution (2 deg or 1 deg) as performance allows. The simulation should
 run well on Chromebooks, so performance on slower hardware will be an important constraint.
+
+## Design decisions
+
+### Why not tidally locked planets?
+
+A tidally locked planet has zero rotation (Ω = 0), which removes the Coriolis effect
+entirely. More fundamentally, our prescribed wind model breaks down: it produces latitude
+bands from rotation-driven convection cells (Hadley, Ferrel, Polar), and this pattern
+depends on the planet rotating. A tidally locked planet has a permanent day side and night
+side, so the dominant airflow would be radial — from the hot substellar point outward —
+rather than organized into latitude bands. Supporting this scenario would require a
+fundamentally different wind field model, which is out of scope for the prototype.
