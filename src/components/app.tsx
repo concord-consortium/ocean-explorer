@@ -12,6 +12,7 @@ export const App = () => {
   const [showWater, setShowWater] = useState(true);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
   const [paused, setPaused] = useState(false);
+  const [arrowScale, setArrowScale] = useState(1.0);
 
   const controlsRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
@@ -65,6 +66,11 @@ export const App = () => {
           </select>
         </label>
         <label>
+          Arrow size: {arrowScale.toFixed(1)}x
+          <input type="range" min="0.5" max="3" step="0.1" value={arrowScale}
+            onChange={e => setArrowScale(Number(e.target.value))} />
+        </label>
+        <label>
           <input type="checkbox" checked={showWind}
             onChange={e => setShowWind(e.target.checked)} />
           Show wind
@@ -84,6 +90,7 @@ export const App = () => {
           showWater={showWater}
           playbackSpeed={playbackSpeed}
           paused={paused}
+          arrowScale={arrowScale}
         />
       </div>
     </div>

@@ -11,9 +11,10 @@ interface Props {
   showWater: boolean;
   playbackSpeed: number;
   paused: boolean;
+  arrowScale: number;
 }
 
-export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showWind, showWater, playbackSpeed, paused }) => {
+export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showWind, showWater, playbackSpeed, paused, arrowScale }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<MapRenderer | null>(null);
   const simRef = useRef(new Simulation());
@@ -27,6 +28,8 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
   playbackSpeedRef.current = playbackSpeed;
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
+  const arrowScaleRef = useRef(arrowScale);
+  arrowScaleRef.current = arrowScale;
   const sizeRef = useRef({ width, height });
   sizeRef.current = { width, height };
 
@@ -77,6 +80,7 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
           height: sizeRef.current.height,
           showWind: showWindRef.current,
           showWater: showWaterRef.current,
+          arrowScale: arrowScaleRef.current,
         });
         lastRenderedVersion = renderVersionRef.current;
       });

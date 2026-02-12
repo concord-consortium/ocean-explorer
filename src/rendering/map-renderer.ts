@@ -21,6 +21,7 @@ export interface RendererOptions {
   height: number;
   showWind: boolean;
   showWater: boolean;
+  arrowScale: number;
 }
 
 export interface MapRenderer {
@@ -159,7 +160,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     // Fixed arrow scale references
     const WIND_SCALE = 20;    // m/s (base_wind_speed * max temp_gradient_ratio)
     const WATER_SCALE = 2000; // m/s (approximate terminal velocity at max settings)
-    const maxArrowLen = Math.min(cellW * 2, cellH) * 0.9; // cellW*2 since we skip columns
+    const maxArrowLen = Math.min(cellW * 2, cellH) * 0.9 * opts.arrowScale; // cellW*2 since we skip columns
 
     // Draw arrows (skip every other column to reduce density)
     windContainer.visible = opts.showWind;
