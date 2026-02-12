@@ -1,4 +1,4 @@
-import { Application, Graphics, Container, Text, TextStyle } from "pixi.js";
+import { Application, Graphics, GraphicsContext, Container, Text, TextStyle } from "pixi.js";
 import { Grid, ROWS, COLS, latitudeAtRow } from "../simulation/grid";
 import { windU, SimParams } from "../simulation/wind";
 import { temperature } from "../simulation/temperature";
@@ -41,48 +41,47 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
   const legendContainer = new Container();
   app.stage.addChild(bgContainer, windContainer, waterContainer, legendContainer);
 
-  // Pre-allocate background cell graphics
+  // Shared arrow shape — horizontal arrow pointing right, centered at origin.
+  // Each Graphics instance shares this context and varies only by transform + tint.
+  const REF_ARROW_LEN = 20;
+  const halfLen = REF_ARROW_LEN / 2;
+  const headSize = REF_ARROW_LEN * 0.3;
+  const arrowContext = new GraphicsContext();
+  arrowContext.moveTo(-halfLen, 0).lineTo(halfLen, 0).stroke({ width: 1, color: 0xffffff });
+  arrowContext
+    .moveTo(halfLen, 0)
+    .lineTo(halfLen - headSize, -headSize * 0.5)
+    .lineTo(halfLen - headSize, headSize * 0.5)
+    .lineTo(halfLen, 0)
+    .fill({ color: 0xffffff });
+
+  // Shared background cell shape — a 1×1 white filled rect at the origin.
+  const cellContext = new GraphicsContext();
+  cellContext.rect(0, 0, 1, 1).fill({ color: 0xffffff });
+
+  // Pre-allocate background cell graphics (shared context, per-instance tint)
   const bgCells: Graphics[] = [];
   for (let i = 0; i < ROWS * COLS; i++) {
-    const g = new Graphics();
+    const g = new Graphics(cellContext);
     bgContainer.addChild(g);
     bgCells.push(g);
   }
 
-  // Pre-allocate arrow graphics
+  // Pre-allocate arrow graphics (shared context, per-instance tint)
   const windArrows: Graphics[] = [];
   const waterArrows: Graphics[] = [];
   for (let i = 0; i < ROWS * COLS; i++) {
-    const wg = new Graphics();
+    const wg = new Graphics(arrowContext);
+    wg.tint = 0xcccccc;
+    wg.visible = false;
     windContainer.addChild(wg);
     windArrows.push(wg);
 
-    const wa = new Graphics();
+    const wa = new Graphics(arrowContext);
+    wa.tint = 0x4488ff;
+    wa.visible = false;
     waterContainer.addChild(wa);
     waterArrows.push(wa);
-  }
-
-  function drawArrow(g: Graphics, cx: number, cy: number, angle: number, length: number, color: number): void {
-    g.clear();
-    if (length < 0.5) return; // skip tiny arrows
-
-    const headSize = Math.min(length * 0.3, 4);
-    const dx = Math.cos(angle);
-    const dy = Math.sin(angle);
-
-    const x0 = cx - dx * length / 2;
-    const y0 = cy - dy * length / 2;
-    const x1 = cx + dx * length / 2;
-    const y1 = cy + dy * length / 2;
-
-    g.moveTo(x0, y0).lineTo(x1, y1).stroke({ width: 1, color });
-
-    // arrowhead
-    const ax = x1 - dx * headSize - (-dy) * headSize * 0.5;
-    const ay = y1 - dy * headSize - (dx) * headSize * 0.5;
-    const bx = x1 - dx * headSize + (-dy) * headSize * 0.5;
-    const by = y1 - dy * headSize + (dx) * headSize * 0.5;
-    g.moveTo(x1, y1).lineTo(ax, ay).lineTo(bx, by).lineTo(x1, y1).fill({ color });
   }
 
   // Legend — built once, updated on each frame
@@ -104,6 +103,11 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     latLabelContainer.addChild(label);
     latLabels.push({ text: label, lat });
   }
+
+  // FPS counter
+  const fpsText = new Text({ text: "", style: legendStyle });
+  fpsText.position.set(8, 40);
+  legendContainer.addChild(fpsText);
 
   // Color scale legend elements
   const colorScaleBar = new Graphics();
@@ -146,8 +150,9 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       for (let c = 0; c < COLS; c++) {
         const cellIdx = r * COLS + c;
         const bg = bgCells[cellIdx];
-        bg.clear();
-        bg.rect(LEFT_MARGIN + c * cellW, displayRow * cellH, cellW + 0.5, cellH + 0.5).fill({ color });
+        bg.position.set(LEFT_MARGIN + c * cellW, displayRow * cellH);
+        bg.scale.set(cellW + 0.5, cellH + 0.5);
+        bg.tint = color;
       }
     }
 
@@ -178,11 +183,18 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
         const wg = windArrows[arrowIdx];
         if (opts.showWind && showArrowAtCol) {
           const windSpeed = Math.abs(wU);
-          const windAngle = wU >= 0 ? 0 : Math.PI; // east or west
           const windLen = Math.min(windSpeed / WIND_SCALE, 1) * maxArrowLen;
-          drawArrow(wg, cx, cy, windAngle, windLen, 0xcccccc);
+          if (windLen < 0.5) {
+            wg.visible = false;
+          } else {
+            const windAngle = wU >= 0 ? 0 : Math.PI; // east or west
+            wg.position.set(cx, cy);
+            wg.rotation = windAngle;
+            wg.scale.set(windLen / REF_ARROW_LEN);
+            wg.visible = true;
+          }
         } else {
-          wg.clear();
+          wg.visible = false;
         }
 
         // Water arrows
@@ -193,12 +205,19 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
         if (speed > maxWaterSpeed) maxWaterSpeed = speed;
 
         if (opts.showWater && showArrowAtCol) {
-          // atan2(-vVal, uVal): negative V because screen Y is flipped
-          const angle = Math.atan2(-vVal, uVal);
           const len = Math.min(speed / WATER_SCALE, 1) * maxArrowLen;
-          drawArrow(wa, cx, cy, angle, len, 0x4488ff);
+          if (len < 0.5) {
+            wa.visible = false;
+          } else {
+            // atan2(-vVal, uVal): negative V because screen Y is flipped
+            const angle = Math.atan2(-vVal, uVal);
+            wa.position.set(cx, cy);
+            wa.rotation = angle;
+            wa.scale.set(len / REF_ARROW_LEN);
+            wa.visible = true;
+          }
         } else {
-          wa.clear();
+          wa.visible = false;
         }
       }
     }
@@ -218,6 +237,9 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
     // Color scale
     drawColorScale(LEFT_MARGIN + mapWidth + 8, mapHeight);
+
+    // FPS counter
+    fpsText.text = `${Math.round(app.ticker.FPS)} fps`;
   }
 
   return {
@@ -227,6 +249,8 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       app.renderer.resize(w, h);
     },
     destroy() {
+      cellContext.destroy();
+      arrowContext.destroy();
       app.destroy();
     },
   };

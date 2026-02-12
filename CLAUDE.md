@@ -21,6 +21,31 @@ design doc if needed.
   argument and operate on its internal state, that object should be a class with those
   functions as methods — unless there's a measured performance reason not to.
 
+## Rendering
+
+### Optimization principle
+
+Don't optimize rendering in ways that prevent future complexity. If a visualization element
+(e.g., temperature background, wind arrows) will become per-cell variable in later phases,
+keep redrawing it every frame rather than caching or skipping it based on change detection.
+The rendering loop code should change as little as possible over time — only the model
+computations get more complex.
+
+### PixiJS shared GraphicsContext pattern
+
+For repeated shapes (background cells, arrows), use a shared `GraphicsContext` rather than
+rebuilding geometry every frame:
+
+1. **Define the shape once** — Create a `GraphicsContext` with a reference shape drawn in
+   white (e.g., a 1×1 rect for cells, a fixed-length arrow for vectors).
+2. **Share it across instances** — Pass the context to each `new Graphics(context)`.
+3. **Vary per instance via transforms** — Each frame, set `.position`, `.rotation`, `.scale`,
+   `.tint`, and `.visible` on each Graphics instance. Never call `.clear()` or redraw geometry.
+
+This eliminates per-frame geometry rebuilds while still allowing every instance to differ in
+position, size, orientation, and color each frame. An FPS counter (`app.ticker.FPS`) is
+displayed in the legend overlay to monitor performance.
+
 ## Design doc revision workflow
 
 When visual verification or testing reveals issues:
