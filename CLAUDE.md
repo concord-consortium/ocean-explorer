@@ -15,6 +15,12 @@ The design doc in `doc/` is the source of truth for *what* to build. The plan in
 is a disposable implementation guide for *how* to build it — it can be regenerated from the
 design doc if needed.
 
+## Code style
+
+- **Objects with behavior should be classes.** When functions take an object as their first
+  argument and operate on its internal state, that object should be a class with those
+  functions as methods — unless there's a measured performance reason not to.
+
 ## Design doc revision workflow
 
 When visual verification or testing reveals issues:

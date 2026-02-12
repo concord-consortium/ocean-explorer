@@ -324,6 +324,27 @@ differences) will be added when the need arises.
 These are starting guesses. As tuning happens, update the values in this table and note what
 was tried and why.
 
+## Implementation notes
+
+Lessons learned during Phase 1 implementation that don't change the spec but should guide
+any reimplementation:
+
+- **Temperature belongs in the simulation module.** The `temperature(lat, gradientRatio)`
+  function is a physical model, not a rendering concern. It should live in the simulation
+  module (e.g., `simulation/temperature.ts`) even though Phase 1 only uses it for background
+  coloring. Phase 2+ will need it for physics.
+
+- **Stop the render loop when paused.** Pausing the simulation should also stop calling
+  `renderer.update()`. Without this, the renderer redraws every frame (60 fps) even though
+  nothing has changed, causing near-100% CPU usage. A render-version counter that increments
+  on prop changes lets the ticker skip redundant renders when paused.
+
+- **Size the canvas before the first render.** The PixiJS renderer is created asynchronously.
+  If the canvas dimensions change while the renderer is initializing (e.g., the React layout
+  effect fires before the async init resolves), the renderer must be resized immediately after
+  creation to pick up the current dimensions. Otherwise the canvas stays at its initial
+  hardcoded size until the next window resize event.
+
 ## Revision log
 
 ### Revision 1: Visual verification feedback

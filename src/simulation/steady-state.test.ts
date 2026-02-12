@@ -1,5 +1,5 @@
-import { createSimulation, stepSimulation, Simulation } from "./simulation";
-import { getU, getV, ROWS, COLS, latitudeAtRow } from "./grid";
+import { Simulation } from "./simulation";
+import { ROWS, COLS, latitudeAtRow } from "./grid";
 import { windU, SimParams } from "./wind";
 
 function runToSteadyState(sim: Simulation, params: SimParams, maxIter = 500000): number {
@@ -8,7 +8,7 @@ function runToSteadyState(sim: Simulation, params: SimParams, maxIter = 500000):
     let maxDelta = 0;
     const prevU = new Float64Array(sim.grid.waterU);
 
-    stepSimulation(sim, params);
+    sim.step(params);
 
     for (let i = 0; i < prevU.length; i++) {
       const delta = Math.abs(sim.grid.waterU[i] - prevU[i]);
@@ -32,7 +32,7 @@ describe("Steady-state snapshots", () => {
       baseWindSpeed: 10,
       tempGradientRatio: 1.0,
     };
-    const sim = createSimulation();
+    const sim = new Simulation();
     const steps = runToSteadyState(sim, params);
 
     expect(steps).toBeGreaterThan(100);
@@ -43,8 +43,8 @@ describe("Steady-state snapshots", () => {
       const lat = latitudeAtRow(r);
       const expected = expectedTerminalU(sim, lat, params);
       for (let c = 0; c < COLS; c++) {
-        expect(getU(sim.grid, r, c)).toBeCloseTo(expected, 2);
-        expect(getV(sim.grid, r, c)).toBeCloseTo(0);
+        expect(sim.grid.getU(r, c)).toBeCloseTo(expected, 2);
+        expect(sim.grid.getV(r, c)).toBeCloseTo(0);
       }
     }
   });
@@ -56,7 +56,7 @@ describe("Steady-state snapshots", () => {
       baseWindSpeed: 10,
       tempGradientRatio: 1.0,
     };
-    const sim = createSimulation();
+    const sim = new Simulation();
     const steps = runToSteadyState(sim, params);
     console.log(`High-rotation steady state reached in ${steps} steps`);
 
@@ -64,7 +64,7 @@ describe("Steady-state snapshots", () => {
       const lat = latitudeAtRow(r);
       const expected = expectedTerminalU(sim, lat, params);
       for (let c = 0; c < COLS; c++) {
-        expect(getU(sim.grid, r, c)).toBeCloseTo(expected, 2);
+        expect(sim.grid.getU(r, c)).toBeCloseTo(expected, 2);
       }
     }
   });
@@ -76,7 +76,7 @@ describe("Steady-state snapshots", () => {
       baseWindSpeed: 10,
       tempGradientRatio: 1.0,
     };
-    const sim = createSimulation();
+    const sim = new Simulation();
     const steps = runToSteadyState(sim, params);
     console.log(`Retrograde steady state reached in ${steps} steps`);
 
@@ -84,7 +84,7 @@ describe("Steady-state snapshots", () => {
       const lat = latitudeAtRow(r);
       const expected = expectedTerminalU(sim, lat, params);
       for (let c = 0; c < COLS; c++) {
-        expect(getU(sim.grid, r, c)).toBeCloseTo(expected, 2);
+        expect(sim.grid.getU(r, c)).toBeCloseTo(expected, 2);
       }
     }
   });
@@ -96,7 +96,7 @@ describe("Steady-state snapshots", () => {
       baseWindSpeed: 10,
       tempGradientRatio: 2.0,
     };
-    const sim = createSimulation();
+    const sim = new Simulation();
     const steps = runToSteadyState(sim, params);
     console.log(`High-temp-gradient steady state reached in ${steps} steps`);
 
@@ -104,7 +104,7 @@ describe("Steady-state snapshots", () => {
       const lat = latitudeAtRow(r);
       const expected = expectedTerminalU(sim, lat, params);
       for (let c = 0; c < COLS; c++) {
-        expect(getU(sim.grid, r, c)).toBeCloseTo(expected, 2);
+        expect(sim.grid.getU(r, c)).toBeCloseTo(expected, 2);
       }
     }
   });

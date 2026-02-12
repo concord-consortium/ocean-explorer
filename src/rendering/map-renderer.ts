@@ -1,18 +1,11 @@
 import { Application, Graphics, Container, Text, TextStyle } from "pixi.js";
 import { Grid, ROWS, COLS, latitudeAtRow } from "../simulation/grid";
 import { windU, SimParams } from "../simulation/wind";
+import { temperature } from "../simulation/temperature";
 
-/** Temperature constants */
-const T_AVG = 15;         // °C baseline
-const DELTA_T_EARTH = 40; // °C equator-to-pole difference
+/** Color scale constants */
 const COLOR_MIN = 0;      // °C (blue end of scale)
 const COLOR_MAX = 35;     // °C (red end of scale)
-
-/** Returns temperature at a given latitude for the given gradient ratio. */
-export function temperature(latDeg: number, tempGradientRatio: number): number {
-  const phi = latDeg * Math.PI / 180;
-  return T_AVG + (tempGradientRatio * DELTA_T_EARTH / 2) * Math.cos(phi);
-}
 
 /** Maps a temperature to a 0xRRGGBB color on a blue-to-red scale. */
 export function tempToColor(t: number): number {

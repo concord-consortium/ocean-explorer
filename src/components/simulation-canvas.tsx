@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import { createMapRenderer, MapRenderer } from "../rendering/map-renderer";
-import { createSimulation, stepSimulation } from "../simulation/simulation";
+import { Simulation } from "../simulation/simulation";
 import { SimParams } from "../simulation/wind";
 
 interface Props {
@@ -16,7 +16,7 @@ interface Props {
 export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showWind, showWater, playbackSpeed, paused }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<MapRenderer | null>(null);
-  const simRef = useRef(createSimulation());
+  const simRef = useRef(new Simulation());
   const paramsRef = useRef(params);
   paramsRef.current = params;
   const showWindRef = useRef(showWind);
@@ -29,6 +29,12 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
   pausedRef.current = paused;
   const sizeRef = useRef({ width, height });
   sizeRef.current = { width, height };
+
+  // Increments on every React render (i.e., whenever any prop changes).
+  // The ticker compares this against lastRenderedVersion to skip redundant
+  // renders when paused.
+  const renderVersionRef = useRef(0);
+  renderVersionRef.current += 1;
 
   // Create renderer once on mount, destroy on unmount
   useEffect(() => {
@@ -46,6 +52,11 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
       }
       rendererRef.current = renderer;
 
+      // Apply any size changes that occurred while the async init was in flight.
+      renderer.resize(sizeRef.current.width, sizeRef.current.height);
+
+      let lastRenderedVersion = -1;
+
       renderer.app.ticker.add(() => {
         if (!pausedRef.current) {
           stepAccumulator += playbackSpeedRef.current;
@@ -53,9 +64,13 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
           stepAccumulator -= stepsThisFrame;
 
           for (let i = 0; i < stepsThisFrame; i++) {
-            stepSimulation(sim, paramsRef.current);
+            sim.step(paramsRef.current);
           }
         }
+
+        // When paused and no props have changed, skip the render entirely.
+        const propsChanged = renderVersionRef.current !== lastRenderedVersion;
+        if (pausedRef.current && !propsChanged) return;
 
         renderer.update(sim.grid, paramsRef.current, {
           width: sizeRef.current.width,
@@ -63,6 +78,7 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
           showWind: showWindRef.current,
           showWater: showWaterRef.current,
         });
+        lastRenderedVersion = renderVersionRef.current;
       });
     }).catch((err) => {
       console.error("Failed to initialize PixiJS renderer:", err);
