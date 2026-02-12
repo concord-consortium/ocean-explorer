@@ -1,13 +1,26 @@
 # Phase 1 Design: Grid + Wind + Rendering
 
-## Goal
+## Goals
 
-Build a lat/lon grid with a prescribed wind field that pushes water, rendered on a 2D
-equirectangular map using PixiJS. Visualize both the wind field and the resulting water
-velocity so we can verify water moves in the wind direction. The simulation loop runs each
-frame: compute wind forcing, apply friction, update velocities, render.
+1. **Build the simulation engine.** A lat/lon grid with a prescribed wind field that pushes
+   water via wind forcing and linear friction. The simulation loop runs each frame: compute
+   wind forcing, apply friction, update velocities, render.
 
-This phase proves the engine runs at interactive frame rates and the wind field looks correct.
+2. **Make the visualization a usable inspection tool.** Rendering alone is not enough — the
+   user must be able to *read* the state and verify correctness. This means: a color scale
+   tuned so all latitudes are distinguishable, latitude labels for locating wind bands, fixed
+   arrow scales so transient growth is visible, arrow spacing that avoids clutter, play/pause
+   for inspecting a frozen state, and speed controls for watching convergence at different
+   rates.
+
+3. **Match Earth's observed wind pattern within the simplified model.** The wind bands should
+   not just alternate direction — they should have Earth-like relative strengths (westerlies
+   strongest, trades moderate, polar easterlies weakest). The model should generalize to
+   other band counts while preserving the mid-latitude peak.
+
+4. **Sustain interactive performance.** The renderer must hit interactive frame rates *and*
+   idle efficiently when paused (no unnecessary redraws). Repeated geometry should use shared
+   PixiJS GraphicsContexts rather than per-frame rebuilds.
 
 ## Architecture
 
