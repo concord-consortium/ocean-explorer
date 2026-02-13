@@ -27,7 +27,8 @@ export class Simulation {
       for (let c = 0; c < COLS; c++) {
         const i = r * COLS + c;
         grid.waterU[i] += (windDragCoefficient * wU - drag * grid.waterU[i]) * dt;
-        // grid.waterV[i] is unchanged (windV = 0, and drag on 0 = 0)
+        // windV = 0 for Phase 1, but still apply drag to damp any existing waterV
+        grid.waterV[i] += (-drag * grid.waterV[i]) * dt;
       }
     }
   }

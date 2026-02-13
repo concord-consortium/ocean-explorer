@@ -37,7 +37,6 @@ describe("Steady-state snapshots", () => {
 
     expect(steps).toBeGreaterThan(100);
     expect(steps).toBeLessThan(500000);
-    console.log(`Earth-like steady state reached in ${steps} steps (${steps * sim.dt / 3600} hours)`);
 
     for (let r = 0; r < ROWS; r++) {
       const lat = latitudeAtRow(r);
@@ -57,8 +56,7 @@ describe("Steady-state snapshots", () => {
       tempGradientRatio: 1.0,
     };
     const sim = new Simulation();
-    const steps = runToSteadyState(sim, params);
-    console.log(`High-rotation steady state reached in ${steps} steps`);
+    runToSteadyState(sim, params);
 
     for (let r = 0; r < ROWS; r++) {
       const lat = latitudeAtRow(r);
@@ -77,8 +75,7 @@ describe("Steady-state snapshots", () => {
       tempGradientRatio: 1.0,
     };
     const sim = new Simulation();
-    const steps = runToSteadyState(sim, params);
-    console.log(`Retrograde steady state reached in ${steps} steps`);
+    runToSteadyState(sim, params);
 
     for (let r = 0; r < ROWS; r++) {
       const lat = latitudeAtRow(r);
@@ -97,8 +94,7 @@ describe("Steady-state snapshots", () => {
       tempGradientRatio: 2.0,
     };
     const sim = new Simulation();
-    const steps = runToSteadyState(sim, params);
-    console.log(`High-temp-gradient steady state reached in ${steps} steps`);
+    runToSteadyState(sim, params);
 
     for (let r = 0; r < ROWS; r++) {
       const lat = latitudeAtRow(r);

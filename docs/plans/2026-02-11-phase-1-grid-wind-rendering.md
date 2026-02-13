@@ -17,7 +17,7 @@
 
 **Step 1: Install pixi.js**
 
-Run: `cd /Users/scytacki/Development/ocean-explorer && npm install pixi.js`
+From the project root, run: `npm install pixi.js`
 
 **Step 2: Verify it installed**
 

@@ -4,7 +4,7 @@ import { windU, SimParams } from "../simulation/wind";
 import { temperature } from "../simulation/temperature";
 
 /** Color scale constants */
-const COLOR_MIN = 0;      // °C (blue end of scale)
+const COLOR_MIN = -15;      // °C (blue end of scale)
 const COLOR_MAX = 35;     // °C (red end of scale)
 
 /** Maps a temperature to a 0xRRGGBB color on a blue-to-red scale. */

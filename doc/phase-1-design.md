@@ -205,15 +205,17 @@ Temperature follows a cosine profile — warmest at equator, coldest at poles �
 temperature gradient parameter:
 
 ```
-T(φ) = T_avg + (temp_gradient_ratio * ΔT_earth / 2) * cos(φ)
+T(lat) = T_avg + (temp_gradient_ratio * ΔT_earth / 2) * cos(lat * π / 90°)
 ```
 
-Where `T_avg` is a baseline average temperature and `ΔT_earth` is Earth's typical
-equator-to-pole difference (~40°C).
+Where `lat` is latitude in degrees (-90 to 90), `T_avg` is a baseline average temperature,
+and `ΔT_earth` is Earth's typical equator-to-pole difference (~40°C). The mapping
+`lat * π / 90°` ensures `cos = 1` at the equator (warmest) and `cos = -1` at the poles
+(coldest).
 
-Color uses a **fixed scale** (0°C to 35°C) mapped to a blue-to-red gradient. At Earth-like
-settings polar temperatures are around -5°C, which clamps to the blue end of the scale and
-appears solidly blue. The scale does not auto-adjust — when the user changes the temperature
+Color uses a **fixed scale** (-15°C to 35°C) mapped to a blue-to-red gradient. At Earth-like
+settings polar temperatures are around -5°C, which falls within the visible range and shows
+a gradient between 60° and 90° latitude. The scale does not auto-adjust — when the user changes the temperature
 gradient slider, the color range visibly expands or contracts against the same legend.
 
 ### Arrow fields
@@ -395,9 +397,10 @@ incorporated into the main body of this document:
    of longitude) to reduce visual density. Vertical spacing (every 5° latitude) is kept as-is.
    *(Updated "Arrow fields" section.)*
 
-4. **Color scale range to 0°C..35°C** — The -30°C lower bound made poles too dark/invisible.
-   Changed to 0°C which gives good blue visibility since Earth-like polar temps are around -5°C
-   (clamped to the blue end). *(Updated "Background temperature coloring" section.)*
+4. **Color scale range to -15°C..35°C** — The -30°C lower bound made poles too dark/invisible.
+   Changed to -15°C which gives good blue visibility and a visible gradient between 60° and 90°
+   latitude, since the corrected temperature formula gives polar temps around -5°C. *(Updated
+   "Background temperature coloring" section.)*
 
 ### Revision 3: Variable wind band amplitudes
 

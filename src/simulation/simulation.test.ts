@@ -37,15 +37,19 @@ describe("Simulation", () => {
     const sim = new Simulation();
     const params = defaultParams;
 
-    // Run many steps to reach steady state
-    for (let i = 0; i < 100000; i++) {
-      sim.step(params);
-    }
-
     // Check a cell in the trade wind zone (row 6 = lat -57.5)
     const lat = -87.5 + 6 * 5; // -57.5
     const wU = windU(lat, params);
-    const expectedTerminalU = sim.windDragCoefficient * wU / sim.drag;
+    const expectedTerminalU = (sim.windDragCoefficient * wU) / sim.drag;
+
+    // Run steps until close to terminal velocity or hit a safety cap
+    const maxSteps = 10000;
+    const tolerance = 0.005; // match toBeCloseTo precision of 2 decimal places
+    for (let i = 0; i < maxSteps; i++) {
+      sim.step(params);
+      const currentU = sim.grid.getU(6, 0);
+      if (Math.abs(currentU - expectedTerminalU) < tolerance) break;
+    }
 
     expect(sim.grid.getU(6, 0)).toBeCloseTo(expectedTerminalU, 2);
     // V should stay zero
