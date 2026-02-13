@@ -4,7 +4,6 @@ import { windU, SimParams } from "./wind";
 export class Simulation {
   readonly grid = new Grid();
   dt = 3600;                     // 1 hour in seconds
-  stepsPerFrame = 1;
   windDragCoefficient = 0.001;
   drag = 1e-5;                   // Rayleigh drag coefficient (s^-1)
 
