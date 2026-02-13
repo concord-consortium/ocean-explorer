@@ -21,15 +21,11 @@ design doc if needed.
   argument and operate on its internal state, that object should be a class with those
   functions as methods — unless there's a measured performance reason not to.
 
-## Rendering
+## Simulation and rendering
 
-### Optimization principle
-
-Don't optimize rendering in ways that prevent future complexity. If a visualization element
-(e.g., temperature background, wind arrows) will become per-cell variable in later phases,
-keep redrawing it every frame rather than caching or skipping it based on change detection.
-The rendering loop code should change as little as possible over time — only the model
-computations get more complex.
+General principles for simulation stepping, performance metrics, frame rate management,
+and rendering are in `doc/simulation-guide.md`. The sections below cover PixiJS-specific
+implementation patterns for this project.
 
 ### PixiJS shared GraphicsContext pattern
 

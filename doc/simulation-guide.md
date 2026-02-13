@@ -1,0 +1,170 @@
+# Simulation Guide
+
+Guidance for building interactive, time-stepping science simulations. Written to be general
+enough to apply across repositories, with ocean-explorer as the reference implementation.
+
+## Architecture
+
+Structure the application as three loosely-coupled layers:
+
+1. **Simulation module** — Pure computation, no rendering dependencies. Contains the grid data
+   structure, physics stepping, and parameter models. Unit-testable independently.
+2. **Renderer** — Reads simulation state and draws it. Can be swapped (2D canvas, WebGL, 3D
+   globe) without touching physics code.
+3. **UI shell** — Framework-specific controls (React, etc.) that set parameters and pass them
+   down.
+
+Place physical models (e.g., temperature, wind) in the simulation layer even if they're only
+used for visualization in the current phase. When physics later depends on them, they're
+already in the right place.
+
+### Data structures
+
+Use flat typed arrays (`Float64Array`) rather than arrays of objects for grid data. This is
+cache-friendly during tight simulation loops and avoids garbage collection pressure.
+
+```typescript
+// Good — cache-friendly, no GC pressure
+grid.waterU[idx] = value;
+
+// Avoid — object-per-cell causes cache misses and GC churn
+grid.cells[r][c].waterU = value;
+```
+
+## Simulation stepping
+
+### Decouple steps from frame rate
+
+Express simulation speed as **target steps per second**, not steps per frame. A steps-per-frame
+model couples simulation speed to frame rate — "1x" means different things at 30fps vs 120fps,
+and speed changes silently when the machine slows down.
+
+With a steps-per-second target, the stepper uses the actual elapsed time each frame to decide
+how many steps to run:
+
+```
+stepsThisFrame = floor(accumulator + targetStepsPerSecond * deltaSeconds)
+```
+
+An accumulator carries the fractional remainder across frames so that, for example, a target
+of 30 steps/s at 60fps correctly alternates between 0 and 1 step per frame (averaging 0.5).
+
+This means:
+- The same speed setting produces the same simulation rate on all hardware.
+- If the machine can't keep up, the actual steps/s drops below the target — the simulation
+  slows gracefully rather than silently dropping frames or steps.
+- Changing the renderer's frame rate cap (e.g., from 60fps to 30fps) doesn't change how fast
+  the simulation advances, only how smoothly it's displayed.
+
+### Keep the timestep constant
+
+The physics timestep `dt` (e.g., 3600 seconds = 1 simulated hour) must not change with
+playback speed. Only the number of steps per frame changes. This ensures physics results are
+identical regardless of speed setting — important for reproducibility and for avoiding
+numerical instability at large `dt` values.
+
+## Performance metrics overlay
+
+Display real-time performance metrics in the rendering overlay:
+
+```
+30 fps | 120 steps/s | step 2.1ms (6%) | draw 1.5ms (5%)
+```
+
+| Metric | What it measures | How to compute |
+|--------|-----------------|----------------|
+| **fps** | Rendering frame rate | From the renderer's ticker (e.g., `app.ticker.FPS`) |
+| **steps/s** | Actual simulation stepping rate | Count steps per frame, divide by delta time, smooth with EMA |
+| **step Nms (P%)** | Time spent in `sim.step()` calls | `performance.now()` around the step loop; percentage = stepMs / frameMs |
+| **draw Nms (P%)** | Time spent updating the scene graph | `performance.now()` around `renderer.update()`; percentage = drawMs / frameMs |
+
+The percentages use `frameMs = 1000 / fps` as the denominator, representing what fraction of
+the frame budget each phase consumes.
+
+### Why these metrics
+
+The goal is to understand the breakdown of frame time into simulation compute, rendering, and
+idle time. We can directly measure step time and scene-graph update time. We cannot easily
+measure browser GPU compositing from JavaScript. The remainder (frame time minus step minus
+draw) is idle time plus browser rendering.
+
+To find the rendering cost empirically: run at low speed (step% near zero, fps at cap), then
+increase speed until fps drops below the cap. At that point idle time is gone, and the
+remaining non-step percentage approximates rendering cost.
+
+### Smoothing
+
+Raw per-frame timing values flicker too fast to read. Apply exponential moving average (EMA)
+smoothing to all metrics except fps (which the renderer typically smooths internally).
+
+An EMA alpha of ~0.05 at 30fps gives a time constant of roughly 660ms — smooth enough to
+read comfortably while still responding to sustained changes within a second or two.
+
+## Frame rate
+
+Cap the frame rate to the minimum needed for acceptable visual smoothness. For science
+simulations where the display updates a grid of arrows or colors, 30fps is typically
+sufficient. Lower frame rates:
+
+- Reduce CPU/GPU load, saving battery on laptops and Chromebooks.
+- Free up frame budget for more simulation steps at high speed settings.
+- Reduce heat and fan noise during extended sessions.
+
+Use the renderer's frame rate cap (e.g., `app.ticker.maxFPS = 30` in PixiJS) rather than
+manually throttling the animation loop.
+
+## Rendering
+
+### Don't optimize away future complexity
+
+If a visualization element will become per-cell variable in later phases, keep redrawing it
+every frame rather than caching or skipping it based on change detection. The rendering loop
+code should change as little as possible over time — only the model computations get more
+complex.
+
+### Pause efficiently
+
+When the simulation is paused and no UI parameters have changed, skip the render call
+entirely. Without this, the renderer redraws every frame even though nothing changed, keeping
+CPU usage near 100%. Use a render-version counter that increments on prop changes; the ticker
+skips redundant renders when paused and the version hasn't changed.
+
+### Fixed visualization scales
+
+Use fixed reference scales for arrows and color maps rather than auto-scaling to the current
+data range. Fixed scales make parameter sensitivity visible — when the user changes a
+parameter, arrows grow or shrink against the same legend, showing how the system responds.
+Auto-scaling hides this by always filling the visual range.
+
+## Testing
+
+### Physics validation
+
+Test for phenomena that should **emerge naturally** from correct physics, not be hard-coded:
+
+- Wind direction flips with rotation direction
+- Water flows in the wind direction
+- Terminal velocity matches the analytical prediction (`windForce / drag`)
+
+If expected phenomena don't appear, that's a signal something is wrong with the physics.
+
+### Steady-state convergence
+
+Run the simulation from rest until velocity changes fall below a threshold. Record the
+stabilization time (number of steps). Compare the resulting velocity field against expected
+values within tolerance. When parameter tuning shifts stabilization time, the test failure
+reports both old and new values, making regressions visible.
+
+## Parameter tuning
+
+Maintain a table of tunable constants in the design document:
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `dt` | 3600 s | Simulation timestep (1 hour) |
+| `drag` | 1e-5 s^-1 | Rayleigh friction coefficient |
+| `windDragCoefficient` | 0.001 | Wind-to-water coupling strength |
+
+When tuning, update the table with what was tried and why. This is institutional memory —
+future developers who need to re-tune or understand trade-offs shouldn't have to rediscover
+the reasoning.
