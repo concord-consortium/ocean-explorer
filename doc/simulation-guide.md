@@ -56,6 +56,18 @@ This means:
 - Changing the renderer's frame rate cap (e.g., from 60fps to 30fps) doesn't change how fast
   the simulation advances, only how smoothly it's displayed.
 
+### Clamp delta time
+
+Cap `deltaSeconds` to a reasonable maximum (e.g., 100ms) before computing steps. When a
+browser tab is backgrounded or a debugger pauses execution, the first frame back can report
+a `deltaMs` of several seconds. Without a clamp, the stepper would try to catch up all the
+missed simulation time in a single frame — potentially hundreds of steps — causing a long
+main-thread stall (the "spiral of death").
+
+With the clamp, those missed frames are simply discarded. The simulation effectively pauses
+during the background period and resumes smoothly when the tab returns, rather than lurching
+forward.
+
 ### Keep the timestep constant
 
 The physics timestep `dt` (e.g., 3600 seconds = 1 simulated hour) must not change with

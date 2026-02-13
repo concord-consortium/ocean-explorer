@@ -37,7 +37,8 @@ export class SimulationStepper {
       return;
     }
 
-    const deltaSeconds = deltaMs / 1000;
+    // Cap at 100ms to prevent catch-up stalls after background tabs or debugger pauses.
+    const deltaSeconds = Math.min(deltaMs / 1000, 0.1);
     if (deltaSeconds <= 0) return;
 
     this.accumulator += this.targetStepsPerSecond * deltaSeconds;
