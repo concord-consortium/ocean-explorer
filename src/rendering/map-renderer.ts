@@ -248,17 +248,18 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     drawColorScale(LEFT_MARGIN + mapWidth + 8, mapHeight);
 
     // Performance metrics
-    const frameMs = 1000 / app.ticker.FPS;
-    const stepPct = (opts.stepTimeMs / frameMs * 100).toFixed(0);
-    const drawPct = (lastSceneUpdateTimeMs / frameMs * 100).toFixed(0);
+    const fps = app.ticker.FPS;
+    const frameMs = fps > 0 ? 1000 / fps : 0;
+    const stepPct = frameMs > 0 ? (opts.stepTimeMs / frameMs * 100).toFixed(0) : "0";
+    const drawPct = frameMs > 0 ? (lastSceneUpdateTimeMs / frameMs * 100).toFixed(0) : "0";
     const parts = [
-      `${Math.round(app.ticker.FPS)} fps`,
+      `${Math.round(fps)} fps`,
       `${Math.round(opts.actualStepsPerSecond)} steps/s`,
       `step ${opts.stepTimeMs.toFixed(1)}ms (${stepPct}%)`,
       `draw ${lastSceneUpdateTimeMs.toFixed(1)}ms (${drawPct}%)`,
     ];
     if (opts.benchLoadTimeMs > 0) {
-      const benchPct = (opts.benchLoadTimeMs / frameMs * 100).toFixed(0);
+      const benchPct = frameMs > 0 ? (opts.benchLoadTimeMs / frameMs * 100).toFixed(0) : "0";
       parts.push(`bench ${opts.benchLoadTimeMs.toFixed(1)}ms (${benchPct}%)`);
     }
     fpsText.text = parts.join(" | ");

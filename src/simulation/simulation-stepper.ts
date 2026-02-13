@@ -36,6 +36,8 @@ export class SimulationStepper {
     }
 
     const deltaSeconds = deltaMs / 1000;
+    if (deltaSeconds <= 0) return;
+
     this.accumulator += this.targetStepsPerSecond * deltaSeconds;
     const stepsThisFrame = Math.floor(this.accumulator);
     this.accumulator -= stepsThisFrame;
