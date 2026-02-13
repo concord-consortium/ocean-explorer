@@ -1,3 +1,5 @@
+import { POLAR_ATTEN } from "../constants";
+
 export interface SimParams {
   rotationRatio: number;      // planetary rotation / Earth rotation
   prograde: boolean;          // true = Earth-like prograde
@@ -12,8 +14,6 @@ export interface SimParams {
 export function windBandCount(rotationRatio: number): number {
   return Math.max(1, Math.round(3 * Math.sqrt(rotationRatio)));
 }
-
-import { POLAR_ATTEN } from "../constants";
 
 /**
  * Raw (unnormalized) amplitude for a given band index.
