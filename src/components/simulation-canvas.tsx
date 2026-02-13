@@ -17,7 +17,9 @@ interface Props {
   benchmarkRef?: React.RefObject<FrameHeadroomBenchmark | null>;
 }
 
-export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showWind, showWater, targetStepsPerSecond, paused, arrowScale, benchmarkRef }) => {
+export const SimulationCanvas: React.FC<Props> = ({
+  width, height, params, showWind, showWater, targetStepsPerSecond, paused, arrowScale, benchmarkRef,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<MapRenderer | null>(null);
   const simRef = useRef(new Simulation());

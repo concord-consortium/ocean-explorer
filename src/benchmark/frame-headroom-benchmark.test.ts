@@ -8,6 +8,7 @@ describe("FrameHeadroomBenchmark", () => {
 
   it("transitions to running on start()", () => {
     const bench = new FrameHeadroomBenchmark();
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     bench.start(30, () => {});
     expect(bench.isRunning).toBe(true);
   });

@@ -15,6 +15,11 @@ The design doc in `doc/` is the source of truth for *what* to build. The plan in
 is a disposable implementation guide for *how* to build it — it can be regenerated from the
 design doc if needed.
 
+## Verification
+
+After modifying source files, run `npm run lint:build` and fix all errors **and warnings**
+before considering the change complete. This is the same lint configuration used by CI.
+
 ## Code style
 
 - **Objects with behavior should be classes.** When functions take an object as their first
