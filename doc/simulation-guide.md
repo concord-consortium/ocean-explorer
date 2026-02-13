@@ -156,6 +156,26 @@ of steps). Compare the resulting field against expected values within tolerance.
 tuning shifts stabilization time, the test failure reports both old and new values, making
 regressions visible.
 
+### Visual output
+
+Text and graphics rendered on the simulation canvas (e.g., performance metrics, legend
+overlays) are not accessible to DOM-based test tools like Playwright. This creates a gap:
+the simulation's visual output — the thing the user actually sees — is the hardest part to
+test automatically.
+
+Unit tests can verify the simulation model produces correct values, and component tests can
+verify that DOM controls render. But verifying that the renderer correctly displays those
+values on screen currently requires manual inspection. Possible future approaches:
+
+- Expose key rendered values to the DOM (e.g., via data attributes on the canvas container)
+  so E2E tests can read them without parsing pixels.
+- Screenshot comparison against reference images, using a paused/deterministic state to avoid
+  timing sensitivity.
+- Injecting a test hook that reads values directly from the renderer's scene graph.
+
+Until one of these is implemented, treat visual verification as a manual step after changes
+to the rendering layer.
+
 ## Parameter tuning
 
 Maintain a table of tunable constants in the design document. For example:
