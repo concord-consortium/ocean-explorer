@@ -31,6 +31,7 @@ jobs:
         with:
           flags: playwright
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: test-results/coverage/coverage.lcov
       - uses: concord-consortium/s3-deploy-action/deploy-path@v1
         if: always()
         id: s3-deploy-path

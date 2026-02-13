@@ -27,11 +27,14 @@ async function findDevServerPort(): Promise<string> {
       timer = setTimeout(() => {
         browser.stop();
         resolve(null);
-      }, 1000);
+      }, 3000);
     });
 
     if (!service) {
-      throw new Error("No http dev server found. Run `npm start` to start the dev server.");
+      const name = process.env.REPOSITORY_NAME;
+      throw new Error(
+        `No Bonjour service found with name '${name}'. Run \`npm start\` to start the dev server.`
+      );
     }
 
     return service.port.toString();
