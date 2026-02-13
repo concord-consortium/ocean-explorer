@@ -22,11 +22,14 @@ export interface RendererOptions {
   showWind: boolean;
   showWater: boolean;
   arrowScale: number;
+  stepTimeMs: number;
+  actualStepsPerSecond: number;
 }
 
 export interface MapRenderer {
   app: Application;
   update(grid: Grid, params: SimParams, opts: RendererOptions): void;
+  setSceneUpdateTimeMs(ms: number): void;
   resize(width: number, height: number): void;
   destroy(): void;
 }
@@ -109,6 +112,9 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
   const fpsText = new Text({ text: "", style: legendStyle });
   fpsText.position.set(8, 40);
   legendContainer.addChild(fpsText);
+
+  // Scene-update timing from the previous frame (set after update() returns)
+  let lastSceneUpdateTimeMs = 0;
 
   // Color scale legend elements
   const colorScaleBar = new Graphics();
@@ -239,13 +245,24 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     // Color scale
     drawColorScale(LEFT_MARGIN + mapWidth + 8, mapHeight);
 
-    // FPS counter
-    fpsText.text = `${Math.round(app.ticker.FPS)} fps`;
+    // Performance metrics
+    const frameMs = 1000 / app.ticker.FPS;
+    const stepPct = (opts.stepTimeMs / frameMs * 100).toFixed(0);
+    const drawPct = (lastSceneUpdateTimeMs / frameMs * 100).toFixed(0);
+    fpsText.text = [
+      `${Math.round(app.ticker.FPS)} fps`,
+      `${Math.round(opts.actualStepsPerSecond)} steps/s`,
+      `step ${opts.stepTimeMs.toFixed(1)}ms (${stepPct}%)`,
+      `draw ${lastSceneUpdateTimeMs.toFixed(1)}ms (${drawPct}%)`,
+    ].join(" | ");
   }
 
   return {
     app,
     update,
+    setSceneUpdateTimeMs(ms: number) {
+      lastSceneUpdateTimeMs = ms;
+    },
     resize(w: number, h: number) {
       app.renderer.resize(w, h);
     },

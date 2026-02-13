@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import { createMapRenderer, MapRenderer } from "../rendering/map-renderer";
 import { Simulation } from "../simulation/simulation";
+import { SimulationStepper } from "../simulation/simulation-stepper";
 import { SimParams } from "../simulation/wind";
 
 interface Props {
@@ -9,12 +10,12 @@ interface Props {
   params: SimParams;
   showWind: boolean;
   showWater: boolean;
-  playbackSpeed: number;
+  targetStepsPerSecond: number;
   paused: boolean;
   arrowScale: number;
 }
 
-export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showWind, showWater, playbackSpeed, paused, arrowScale }) => {
+export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showWind, showWater, targetStepsPerSecond, paused, arrowScale }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<MapRenderer | null>(null);
   const simRef = useRef(new Simulation());
@@ -24,8 +25,8 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
   showWindRef.current = showWind;
   const showWaterRef = useRef(showWater);
   showWaterRef.current = showWater;
-  const playbackSpeedRef = useRef(playbackSpeed);
-  playbackSpeedRef.current = playbackSpeed;
+  const targetStepsPerSecondRef = useRef(targetStepsPerSecond);
+  targetStepsPerSecondRef.current = targetStepsPerSecond;
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
   const arrowScaleRef = useRef(arrowScale);
@@ -46,7 +47,7 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
 
     let destroyed = false;
     const sim = simRef.current;
-    let stepAccumulator = 0;
+    const stepper = new SimulationStepper(() => sim.step(paramsRef.current));
 
     createMapRenderer(canvas, sizeRef.current.width, sizeRef.current.height).then((renderer) => {
       if (destroyed) {
@@ -61,27 +62,25 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
       let lastRenderedVersion = -1;
 
       renderer.app.ticker.add(() => {
-        if (!pausedRef.current) {
-          stepAccumulator += playbackSpeedRef.current;
-          const stepsThisFrame = Math.floor(stepAccumulator);
-          stepAccumulator -= stepsThisFrame;
-
-          for (let i = 0; i < stepsThisFrame; i++) {
-            sim.step(paramsRef.current);
-          }
-        }
+        stepper.paused = pausedRef.current;
+        stepper.targetStepsPerSecond = targetStepsPerSecondRef.current;
+        stepper.advance(renderer.app.ticker.deltaMS);
 
         // When paused and no props have changed, skip the render entirely.
         const propsChanged = renderVersionRef.current !== lastRenderedVersion;
         if (pausedRef.current && !propsChanged) return;
 
+        const sceneT0 = performance.now();
         renderer.update(sim.grid, paramsRef.current, {
           width: sizeRef.current.width,
           height: sizeRef.current.height,
           showWind: showWindRef.current,
           showWater: showWaterRef.current,
           arrowScale: arrowScaleRef.current,
+          stepTimeMs: stepper.stepTimeMs,
+          actualStepsPerSecond: stepper.actualStepsPerSecond,
         });
+        renderer.setSceneUpdateTimeMs(performance.now() - sceneT0);
         lastRenderedVersion = renderVersionRef.current;
       });
     }).catch((err) => {

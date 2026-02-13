@@ -10,7 +10,7 @@ export const App = () => {
   const [tempGradientRatio, setTempGradientRatio] = useState(1.0);
   const [showWind, setShowWind] = useState(true);
   const [showWater, setShowWater] = useState(true);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+  const [targetStepsPerSecond, setTargetStepsPerSecond] = useState(60);
   const [paused, setPaused] = useState(false);
   const [arrowScale, setArrowScale] = useState(1.0);
 
@@ -38,7 +38,7 @@ export const App = () => {
     tempGradientRatio,
   };
 
-  const speedOptions = [0.1, 0.25, 0.5, 1, 2, 5, 10];
+  const speedOptions = [6, 15, 30, 60, 120, 300, 600];
 
   return (
     <div className="app">
@@ -60,9 +60,9 @@ export const App = () => {
         </label>
         <button onClick={() => setPaused(p => !p)}>{paused ? "Play" : "Pause"}</button>
         <label>
-          Speed: {playbackSpeed}x
-          <select value={playbackSpeed} onChange={e => setPlaybackSpeed(Number(e.target.value))}>
-            {speedOptions.map(s => <option key={s} value={s}>{s}x</option>)}
+          Speed: {targetStepsPerSecond} steps/s
+          <select value={targetStepsPerSecond} onChange={e => setTargetStepsPerSecond(Number(e.target.value))}>
+            {speedOptions.map(s => <option key={s} value={s}>{s} steps/s</option>)}
           </select>
         </label>
         <label>
@@ -88,7 +88,7 @@ export const App = () => {
           params={params}
           showWind={showWind}
           showWater={showWater}
-          playbackSpeed={playbackSpeed}
+          targetStepsPerSecond={targetStepsPerSecond}
           paused={paused}
           arrowScale={arrowScale}
         />
