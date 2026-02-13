@@ -25,10 +25,10 @@ cache-friendly during tight simulation loops and avoids garbage collection press
 
 ```typescript
 // Good — cache-friendly, no GC pressure
-grid.waterU[idx] = value;
+grid.velocity[idx] = value;
 
 // Avoid — object-per-cell causes cache misses and GC churn
-grid.cells[r][c].waterU = value;
+grid.cells[r][c].velocity = value;
 ```
 
 ## Simulation stepping
@@ -140,30 +140,31 @@ Auto-scaling hides this by always filling the visual range.
 
 ### Physics validation
 
-Test for phenomena that should **emerge naturally** from correct physics, not be hard-coded:
-
-- Wind direction flips with rotation direction
-- Water flows in the wind direction
-- Terminal velocity matches the analytical prediction (`windForce / drag`)
+Test for phenomena that should **emerge naturally** from correct physics, not be hard-coded.
+For example, in an ocean circulation model you might test that wind direction flips with
+rotation direction, that water flows downwind, or that terminal velocity matches the
+analytical prediction (`force / drag`). In a heat diffusion model you might test that
+temperature gradients smooth out over time.
 
 If expected phenomena don't appear, that's a signal something is wrong with the physics.
 
 ### Steady-state convergence
 
-Run the simulation from rest until velocity changes fall below a threshold. Record the
-stabilization time (number of steps). Compare the resulting velocity field against expected
-values within tolerance. When parameter tuning shifts stabilization time, the test failure
-reports both old and new values, making regressions visible.
+For simulations with constant forcing, run from rest until the rate of change falls below a
+threshold (e.g., max velocity change < 1e-6 per step). Record the stabilization time (number
+of steps). Compare the resulting field against expected values within tolerance. When parameter
+tuning shifts stabilization time, the test failure reports both old and new values, making
+regressions visible.
 
 ## Parameter tuning
 
-Maintain a table of tunable constants in the design document:
+Maintain a table of tunable constants in the design document. For example:
 
 | Constant | Value | Description |
 |----------|-------|-------------|
-| `dt` | 3600 s | Simulation timestep (1 hour) |
-| `drag` | 1e-5 s^-1 | Rayleigh friction coefficient |
-| `windDragCoefficient` | 0.001 | Wind-to-water coupling strength |
+| `dt` | 3600 s | Simulation timestep |
+| `frictionCoefficient` | 1e-5 s^-1 | Damping rate |
+| `forcingStrength` | 0.001 | Coupling between driving force and state variable |
 
 When tuning, update the table with what was tried and why. This is institutional memory —
 future developers who need to re-tune or understand trade-offs shouldn't have to rediscover
