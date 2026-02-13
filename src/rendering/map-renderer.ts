@@ -261,7 +261,8 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     app,
     update,
     setSceneUpdateTimeMs(ms: number) {
-      lastSceneUpdateTimeMs = ms;
+      const alpha = 0.05;
+      lastSceneUpdateTimeMs = alpha * ms + (1 - alpha) * lastSceneUpdateTimeMs;
     },
     resize(w: number, h: number) {
       app.renderer.resize(w, h);

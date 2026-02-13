@@ -9,14 +9,14 @@ export class SimulationStepper {
   /** EMA-smoothed actual steps per second. */
   actualStepsPerSecond = 0;
 
-  /** Time spent in step() calls during the last advance(), in ms. */
+  /** EMA-smoothed time spent in step() calls per frame, in ms. */
   stepTimeMs = 0;
 
   private accumulator = 0;
   private readonly stepFn: () => void;
 
-  /** EMA smoothing factor (higher = more responsive, noisier). */
-  private readonly emaAlpha = 0.1;
+  /** EMA smoothing factor — ~0.05 at 60fps gives a ~330ms time constant. */
+  private readonly emaAlpha = 0.05;
 
   constructor(stepFn: () => void) {
     this.stepFn = stepFn;
@@ -44,7 +44,10 @@ export class SimulationStepper {
     for (let i = 0; i < stepsThisFrame; i++) {
       this.stepFn();
     }
-    this.stepTimeMs = performance.now() - t0;
+    const rawStepTimeMs = performance.now() - t0;
+    this.stepTimeMs =
+      this.emaAlpha * rawStepTimeMs +
+      (1 - this.emaAlpha) * this.stepTimeMs;
 
     // Update EMA of actual steps/s
     const instantStepsPerSecond = stepsThisFrame / deltaSeconds;

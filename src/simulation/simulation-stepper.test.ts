@@ -60,8 +60,8 @@ describe("SimulationStepper", () => {
     const stepper = new SimulationStepper(stepFn);
     stepper.targetStepsPerSecond = 60;
 
-    // Run several frames to let the EMA settle
-    for (let i = 0; i < 30; i++) {
+    // Run enough frames to let the EMA settle (alpha=0.05, ~60 frames to stabilize)
+    for (let i = 0; i < 120; i++) {
       stepper.advance(16.67);
     }
     // Should be approximately 60 steps/s (1 step per 16.67ms frame)
