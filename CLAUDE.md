@@ -17,9 +17,9 @@ design doc if needed.
 
 ## Verification
 
-After modifying source files, run `npm run lint:build` and `npm test` and fix all errors
-**and warnings** before considering the change complete. `lint:build` is the same lint
-configuration used by CI.
+After modifying source files, run `npm run lint:build`, `npm test`, and `npm run test:playwright`
+and fix all errors **and warnings** before considering the change complete. `lint:build` is
+the same lint configuration used by CI.
 
 ## Code style
 

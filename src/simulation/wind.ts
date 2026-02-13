@@ -13,8 +13,7 @@ export function windBandCount(rotationRatio: number): number {
   return Math.max(1, Math.round(3 * Math.sqrt(rotationRatio)));
 }
 
-/** Polar attenuation factor for band amplitude envelope. */
-const POLAR_ATTEN = 0.5;
+import { POLAR_ATTEN } from "../constants";
 
 /**
  * Raw (unnormalized) amplitude for a given band index.

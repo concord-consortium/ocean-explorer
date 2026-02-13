@@ -1,9 +1,11 @@
+import { DEFAULT_STEPS_PER_SECOND } from "../constants";
+
 /**
  * Manages simulation stepping with a target steps-per-second rate,
  * independent of frame rate. Tracks performance metrics.
  */
 export class SimulationStepper {
-  targetStepsPerSecond = 60;
+  targetStepsPerSecond = DEFAULT_STEPS_PER_SECOND;
   paused = false;
 
   /** EMA-smoothed actual steps per second. */

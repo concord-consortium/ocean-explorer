@@ -1,11 +1,8 @@
 import { Application, Graphics, GraphicsContext, Container, Text, TextStyle } from "pixi.js";
 import { Grid, ROWS, COLS, latitudeAtRow } from "../simulation/grid";
+import { TARGET_FPS, COLOR_MIN, COLOR_MAX, WIND_SCALE, WATER_SCALE } from "../constants";
 import { windU, SimParams } from "../simulation/wind";
 import { temperature } from "../simulation/temperature";
-
-/** Color scale constants */
-const COLOR_MIN = -15;      // °C (blue end of scale)
-const COLOR_MAX = 35;     // °C (red end of scale)
 
 /** Maps a temperature to a 0xRRGGBB color on a blue-to-red scale. */
 export function tempToColor(t: number): number {
@@ -39,7 +36,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     Promise<MapRenderer> {
   const app = new Application();
   await app.init({ canvas, width, height, background: 0x111111 });
-  app.ticker.maxFPS = 30;
+  app.ticker.maxFPS = TARGET_FPS;
 
   const bgContainer = new Container();
   const windContainer = new Container();
@@ -165,9 +162,6 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       }
     }
 
-    // Fixed arrow scale references
-    const WIND_SCALE = 20;    // m/s (base_wind_speed * max temp_gradient_ratio)
-    const WATER_SCALE = 2000; // m/s (approximate terminal velocity at max settings)
     const maxArrowLen = Math.min(cellW * 2, cellH) * 0.9 * opts.arrowScale; // cellW*2 since we skip columns
 
     // Draw arrows (skip every other column to reduce density)

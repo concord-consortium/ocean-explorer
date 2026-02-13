@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { SimulationCanvas } from "./simulation-canvas";
 import { SimParams } from "../simulation/wind";
 import { FrameHeadroomBenchmark, BenchmarkResult } from "../benchmark/frame-headroom-benchmark";
+import { TARGET_FPS, DEFAULT_STEPS_PER_SECOND } from "../constants";
 
 import "./app.scss";
 
@@ -11,7 +12,7 @@ export const App = () => {
   const [tempGradientRatio, setTempGradientRatio] = useState(1.0);
   const [showWind, setShowWind] = useState(true);
   const [showWater, setShowWater] = useState(true);
-  const [targetStepsPerSecond, setTargetStepsPerSecond] = useState(60);
+  const [targetStepsPerSecond, setTargetStepsPerSecond] = useState(DEFAULT_STEPS_PER_SECOND);
   const [paused, setPaused] = useState(true);
   const [arrowScale, setArrowScale] = useState(1.0);
 
@@ -89,7 +90,7 @@ export const App = () => {
             if (benchmarkRef.current && !benchmarkRunning) {
               setBenchmarkRunning(true);
               setBenchmarkResult(null);
-              benchmarkRef.current.start(30, (result) => {
+              benchmarkRef.current.start(TARGET_FPS, (result) => {
                 setBenchmarkResult(result);
                 setBenchmarkRunning(false);
               });
