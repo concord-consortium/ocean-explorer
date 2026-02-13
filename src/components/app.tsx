@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { SimulationCanvas } from "./simulation-canvas";
 import { SimParams } from "../simulation/wind";
+import { FrameHeadroomBenchmark, BenchmarkResult } from "../benchmark/frame-headroom-benchmark";
 
 import "./app.scss";
 
@@ -11,10 +12,13 @@ export const App = () => {
   const [showWind, setShowWind] = useState(true);
   const [showWater, setShowWater] = useState(true);
   const [targetStepsPerSecond, setTargetStepsPerSecond] = useState(60);
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(true);
   const [arrowScale, setArrowScale] = useState(1.0);
 
   const controlsRef = useRef<HTMLDivElement>(null);
+  const benchmarkRef = useRef<FrameHeadroomBenchmark | null>(null);
+  const [benchmarkRunning, setBenchmarkRunning] = useState(false);
+  const [benchmarkResult, setBenchmarkResult] = useState<BenchmarkResult | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
   const updateCanvasSize = useCallback(() => {
@@ -80,6 +84,24 @@ export const App = () => {
             onChange={e => setShowWater(e.target.checked)} />
           Show water
         </label>
+        <button
+          onClick={() => {
+            if (benchmarkRef.current && !benchmarkRunning) {
+              setBenchmarkRunning(true);
+              setBenchmarkResult(null);
+              benchmarkRef.current.start(30, (result) => {
+                setBenchmarkResult(result);
+                setBenchmarkRunning(false);
+              });
+            }
+          }}
+          disabled={benchmarkRunning}
+        >
+          {benchmarkRunning ? "Benchmarking..." : "Benchmark"}
+        </button>
+        {benchmarkResult && (
+          <span>Headroom: {benchmarkResult.headroomMs.toFixed(1)}ms</span>
+        )}
       </div>
       <div className="canvas-container">
         <SimulationCanvas
@@ -91,6 +113,7 @@ export const App = () => {
           targetStepsPerSecond={targetStepsPerSecond}
           paused={paused}
           arrowScale={arrowScale}
+          benchmarkRef={benchmarkRef}
         />
       </div>
     </div>

@@ -24,6 +24,7 @@ export interface RendererOptions {
   arrowScale: number;
   stepTimeMs: number;
   actualStepsPerSecond: number;
+  benchLoadTimeMs: number;
 }
 
 export interface MapRenderer {
@@ -250,12 +251,17 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     const frameMs = 1000 / app.ticker.FPS;
     const stepPct = (opts.stepTimeMs / frameMs * 100).toFixed(0);
     const drawPct = (lastSceneUpdateTimeMs / frameMs * 100).toFixed(0);
-    fpsText.text = [
+    const parts = [
       `${Math.round(app.ticker.FPS)} fps`,
       `${Math.round(opts.actualStepsPerSecond)} steps/s`,
       `step ${opts.stepTimeMs.toFixed(1)}ms (${stepPct}%)`,
       `draw ${lastSceneUpdateTimeMs.toFixed(1)}ms (${drawPct}%)`,
-    ].join(" | ");
+    ];
+    if (opts.benchLoadTimeMs > 0) {
+      const benchPct = (opts.benchLoadTimeMs / frameMs * 100).toFixed(0);
+      parts.push(`bench ${opts.benchLoadTimeMs.toFixed(1)}ms (${benchPct}%)`);
+    }
+    fpsText.text = parts.join(" | ");
   }
 
   return {

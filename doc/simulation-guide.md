@@ -71,12 +71,19 @@ Display real-time performance metrics in the rendering overlay:
 30 fps | 120 steps/s | step 2.1ms (6%) | draw 1.5ms (5%)
 ```
 
+During a benchmark run, an additional metric appears:
+
+```
+30 fps | 60 steps/s | step 0.5ms (2%) | draw 1.5ms (5%) | bench 24.1ms (72%)
+```
+
 | Metric | What it measures | How to compute |
 |--------|-----------------|----------------|
 | **fps** | Rendering frame rate | From the renderer's ticker (e.g., `app.ticker.FPS`) |
 | **steps/s** | Actual simulation stepping rate | Count steps per frame, divide by delta time, smooth with EMA |
 | **step Nms (P%)** | Time spent in `sim.step()` calls | `performance.now()` around the step loop; percentage = stepMs / frameMs |
 | **draw Nms (P%)** | Time spent updating the scene graph | `performance.now()` around `renderer.update()`; percentage = drawMs / frameMs |
+| **bench Nms (P%)** | Artificial load from headroom benchmark | `performance.now()` around the busy-loop; only shown while benchmark is running |
 
 The percentages use `frameMs = 1000 / fps` as the denominator, representing what fraction of
 the frame budget each phase consumes.
@@ -91,6 +98,26 @@ draw) is idle time plus browser rendering.
 To find the rendering cost empirically: run at low speed (step% near zero, fps at cap), then
 increase speed until fps drops below the cap. At that point idle time is gone, and the
 remaining non-step percentage approximates rendering cost.
+
+### Automated frame headroom benchmark
+
+Rather than manually ramping speed to find the rendering cost, provide a benchmark button that
+measures headroom automatically. The benchmark injects an artificial CPU-burning busy-loop into
+each frame (after simulation stepping and rendering) and ramps iterations until FPS drops below
+the target. It then oscillates a few times around the threshold to refine the estimate, and
+reports the result in milliseconds.
+
+During the benchmark, an extra metric appears in the overlay (e.g., `bench 24.1ms (72%)`)
+showing the current busy-loop time and its share of the frame budget. This gives real-time
+feedback on what the benchmark is doing.
+
+The busy-loop uses chained `Math.sin()` calls where each iteration depends on the previous
+result, preventing JIT elimination. The final headroom value is computed by timing the
+busy-loop at the threshold iteration count, not by FPS math, so it's a direct measurement.
+
+The result tells you how much additional per-frame work you can add before the frame rate
+starts dropping. For example, a headroom of 30ms at 30fps (33.3ms budget) means the current
+simulation + rendering work takes roughly 3ms and there's room to grow.
 
 ### Smoothing
 
@@ -121,6 +148,12 @@ If a visualization element will become per-cell variable in later phases, keep r
 every frame rather than caching or skipping it based on change detection. The rendering loop
 code should change as little as possible over time — only the model computations get more
 complex.
+
+### Start paused
+
+Load the simulation in a paused state so the user sees the initial conditions before anything
+moves. This lets them observe the full evolution from rest when they press Play, and avoids
+consuming CPU/battery on a background tab or before the user is ready.
 
 ### Pause efficiently
 

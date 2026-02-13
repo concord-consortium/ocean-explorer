@@ -17,16 +17,17 @@ pressure gradients yet — water simply flows in the direction the wind pushes i
 | **Prograde rotation** (checkbox) | Toggles wind direction. Unchecked = retrograde, which flips all wind bands east/west. |
 | **Temp gradient** (0.5x–2x) | Scales wind strength. Higher gradient = stronger winds = faster water. |
 | **Play / Pause** | Stops the simulation so you can inspect the current state. |
-| **Speed** (0.1x–10x) | How fast simulated time passes. At 1x, each rendered frame advances 1 hour. |
+| **Speed** (6–600 steps/s) | How many simulation steps run per second. Higher values advance simulated time faster. The default (60 steps/s) runs 2 steps per rendered frame at 30fps. |
 | **Arrow size** (0.5x–3x) | Scales the visual length of all arrows. Useful for seeing small arrows. |
 | **Show wind / Show water** | Toggle arrow layers on and off. |
+| **Benchmark** | Measures how many milliseconds of frame-time headroom remain. Runs an automated test that gradually loads each frame until FPS drops, then reports the result (e.g., "Headroom: 30.2ms"). The button shows "Benchmarking..." while running. |
 
 ## What to try
 
-**Watch convergence from rest.** Load the page and watch the blue water arrows grow from
-nothing. At 1x speed this takes several seconds. Increase speed to 10x to see it happen
-faster. Pause partway through to see the transient state where water hasn't reached full
-speed yet.
+**Watch convergence from rest.** The simulation loads paused at initial conditions (zero
+water velocity). Press Play and watch the blue water arrows grow from nothing. Increase the
+speed setting to see convergence happen faster. Pause partway through to see the transient
+state where water hasn't reached full speed yet.
 
 **Verify wind bands.** Toggle "Show water" off so only wind arrows are visible. At 1x
 rotation you should see three bands per hemisphere: trade winds (0–30°, blowing west),
@@ -48,7 +49,7 @@ the temperature colors stretch further toward the poles. At 0.5x everything weak
 - **Gray/white arrows** — wind (prescribed, not simulated)
 - **Blue arrows** — water velocity (simulated)
 - **Color background** — temperature by latitude (prescribed, used for coloring only in Phase 1)
-- **Top-left text** — arrow scale references and FPS counter
+- **Top-left text** — arrow scale references and performance metrics: fps, actual steps/s, step time, and draw time (each with ms and percentage of frame budget). During a benchmark run, a "bench" metric also appears showing the artificial load being injected.
 - **Left edge** — latitude labels every 30°
 - **Right edge** — temperature color scale (0°C to 35°C)
 

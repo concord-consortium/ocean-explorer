@@ -3,6 +3,7 @@ import { createMapRenderer, MapRenderer } from "../rendering/map-renderer";
 import { Simulation } from "../simulation/simulation";
 import { SimulationStepper } from "../simulation/simulation-stepper";
 import { SimParams } from "../simulation/wind";
+import { FrameHeadroomBenchmark } from "../benchmark/frame-headroom-benchmark";
 
 interface Props {
   width: number;
@@ -13,9 +14,10 @@ interface Props {
   targetStepsPerSecond: number;
   paused: boolean;
   arrowScale: number;
+  benchmarkRef?: React.RefObject<FrameHeadroomBenchmark | null>;
 }
 
-export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showWind, showWater, targetStepsPerSecond, paused, arrowScale }) => {
+export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showWind, showWater, targetStepsPerSecond, paused, arrowScale, benchmarkRef }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<MapRenderer | null>(null);
   const simRef = useRef(new Simulation());
@@ -31,6 +33,8 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
   pausedRef.current = paused;
   const arrowScaleRef = useRef(arrowScale);
   arrowScaleRef.current = arrowScale;
+  const benchmarkRefProp = useRef(benchmarkRef);
+  benchmarkRefProp.current = benchmarkRef;
   const sizeRef = useRef({ width, height });
   sizeRef.current = { width, height };
 
@@ -48,6 +52,10 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
     let destroyed = false;
     const sim = simRef.current;
     const stepper = new SimulationStepper(() => sim.step(paramsRef.current));
+    const benchmark = new FrameHeadroomBenchmark();
+    if (benchmarkRefProp.current) {
+      benchmarkRefProp.current.current = benchmark;
+    }
 
     createMapRenderer(canvas, sizeRef.current.width, sizeRef.current.height).then((renderer) => {
       if (destroyed) {
@@ -79,9 +87,12 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
           arrowScale: arrowScaleRef.current,
           stepTimeMs: stepper.stepTimeMs,
           actualStepsPerSecond: stepper.actualStepsPerSecond,
+          benchLoadTimeMs: benchmark.loadTimeMs,
         });
         renderer.setSceneUpdateTimeMs(performance.now() - sceneT0);
         lastRenderedVersion = renderVersionRef.current;
+
+        benchmark.onFrame(renderer.app.ticker.FPS);
       });
     }).catch((err) => {
       console.error("Failed to initialize PixiJS renderer:", err);
@@ -91,6 +102,9 @@ export const SimulationCanvas: React.FC<Props> = ({ width, height, params, showW
       destroyed = true;
       rendererRef.current?.destroy();
       rendererRef.current = null;
+      if (benchmarkRefProp.current) {
+        benchmarkRefProp.current.current = null;
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
