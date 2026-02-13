@@ -38,6 +38,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     Promise<MapRenderer> {
   const app = new Application();
   await app.init({ canvas, width, height, background: 0x111111 });
+  app.ticker.maxFPS = 30;
 
   const bgContainer = new Container();
   const windContainer = new Container();
