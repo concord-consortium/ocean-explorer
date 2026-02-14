@@ -22,7 +22,7 @@ evaluate and give feedback on the simulation behavior.
 - Quick Chromebook performance checks should happen after each phase to catch bottlenecks
   early. Dedicated optimization remains the final phase, but knowing where we stand
   throughout avoids late surprises
-- Follow `doc/simulation-guide.md` for simulation stepping, performance metrics, frame rate
+- Follow `doc/general-simulation-guide.md` for simulation stepping, performance metrics, frame rate
   management, and rendering patterns. These should be implemented during Phase 1 as part of
   the engine foundation
 - **Documenting lessons learned is critical.** Since code is generated, the real investment is

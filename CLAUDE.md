@@ -30,7 +30,7 @@ the same lint configuration used by CI.
 ## Simulation and rendering
 
 General principles for simulation stepping, performance metrics, frame rate management,
-and rendering are in `doc/simulation-guide.md`. The sections below cover PixiJS-specific
+and rendering are in `doc/general-simulation-guide.md`. The sections below cover PixiJS-specific
 implementation patterns for this project.
 
 ### PixiJS shared GraphicsContext pattern

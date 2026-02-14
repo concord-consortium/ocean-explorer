@@ -327,11 +327,10 @@ once we can see the results visually. Updated values should be recorded in this 
   code variable names should be updated to match.
 
 - **Create `doc/simulation-notes.md` for project-specific parameter documentation.** The
-  existing `doc/simulation-guide.md` is a generic guide for building simulations like this.
-  Per-parameter explanations (like the DRAG discussion above), tuning history, and
+  existing `doc/general-simulation-guide.md` is a generic guide for building simulations like
+  this. Per-parameter explanations (like the DRAG discussion above), tuning history, and
   project-specific numerical decisions should go in a separate `doc/simulation-notes.md`.
-  Rename `doc/simulation-guide.md` to `doc/general-simulation-guide.md` to clarify the
-  distinction.
+  (Renamed from `doc/simulation-guide.md` to clarify the distinction.)
 
 - **Add semi-implicit integration analysis to `doc/general-simulation-guide.md`.** The
   numerical analysis of why explicit Euler fails for Coriolis and why the semi-implicit
