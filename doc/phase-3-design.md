@@ -35,6 +35,9 @@ src/
     spatial.ts       — NEW: finite difference operators for gradients and divergence
   rendering/
     map-renderer.ts  — MODIFIED: SSH color overlay toggle
+  components/
+    simulation-canvas.tsx — MODIFIED: thread backgroundMode prop
+    app.tsx               — MODIFIED: backgroundMode state + dropdown control
   constants.ts       — MODIFIED: new constants (G, R_EARTH)
 ```
 
@@ -159,6 +162,11 @@ t_adjust ≈ 10^7 / 22 ≈ 450,000 s ≈ 125 hours simulated
 At 60 steps/s, the initial gravity wave adjustment takes ~2 seconds of real time. The full
 Sverdrup balance (involving the beta effect — variation of f with latitude) may take longer
 to develop, as it requires Rossby wave propagation across the domain.
+
+**C-grid note:** The 4-point Coriolis averaging couples adjacent latitudes, so the per-row
+analytical terminal velocity formula from Phase 2 (which assumes each row is independent) is
+not valid on the C-grid. Observed differences are ~20%. Tests should verify convergence
+behavior (velocity stops changing) rather than matching a specific analytical value.
 
 ### Polar boundary conditions
 
@@ -322,6 +330,11 @@ Where `v_avg` and `u_avg` are the 4-point averages, `accel_rhs_u` includes wind 
 gradient accelerations, and `dragFactor`, `coriolisFactor`, `determinant` are the same as
 Phase 2.
 
+**Note on startup lag:** Because the Coriolis term uses old (pre-step) cross-velocities, the
+v-update sees zero Coriolis on the very first step when starting from rest (oldU = 0
+everywhere). Cross-wind flow only appears after 2+ steps. This is inherent to the staggered
+C-grid time-stepping.
+
 ### Wind forcing on a C-grid
 
 Wind acceleration is purely zonal (u-direction), so it applies at u-points. Since wind depends
@@ -364,13 +377,14 @@ drawing code. The arrow rendering itself is unchanged.
 - `simulation.test.ts` — Update for new grid layout and pressure gradient tests
 - `steady-state.test.ts` — Update for new convergence criteria (η must also stabilize)
 - `constants.ts` — New constants
+- `simulation-canvas.tsx` — Thread new `backgroundMode` prop to renderer
+- `app.tsx` — Add `backgroundMode` state and dropdown control
 
 **Files unchanged:**
 - `coriolis.ts` — `coriolisParameter()` is a pure function of latitude, unchanged
 - `wind.ts` — `windU()` is a pure function of latitude, unchanged
 - `temperature.ts` — Unchanged
 - `simulation-stepper.ts` — Unchanged (calls `step()`, doesn't care about internals)
-- `simulation-canvas.tsx` — Unchanged (passes params, receives grid for rendering)
 
 ## SSH Visualization
 
@@ -396,7 +410,9 @@ The toggle is added to the existing controls panel. No other rendering changes a
 
 ### Unit tests (continuity / divergence)
 
-- Uniform velocity field with zero divergence: η doesn't change after a step
+- Uniform u with v=0 has zero divergence: η doesn't change after a step. (Note: uniform
+  nonzero v is NOT divergence-free on a sphere — meridians converge toward poles, so the
+  `∂(v·cosφ)/∂φ` term is nonzero even when v is constant.)
 - Converging velocity field (u decreasing eastward): η increases
 - Diverging velocity field: η decreases
 - Metric terms: divergence computation accounts for cos(φ) correctly
@@ -419,11 +435,20 @@ The toggle is added to the existing controls panel. No other rendering changes a
 
 ### Geostrophic balance validation
 
-- At steady state, compute the geostrophic residual: `r_u = f·v + G·∂η/∂x` and
-  `r_v = -f·u + G·∂η/∂y`. These should be small compared to the individual terms (the
-  residual is the ageostrophic component, driven by wind and friction)
-- Away from the equator and polar boundaries, the geostrophic residual should be a small
-  fraction of the pressure gradient magnitude
+On a water world with zonally uniform wind, the SSH pattern is also zonally uniform — ∂η/∂x
+is zero everywhere. The geostrophic balance therefore appears only in the v-equation:
+
+```
+f·u_avg + G·∂η/∂y ≈ 0
+```
+
+The Coriolis force on zonal flow (f·u) balances the meridional pressure gradient (G·∂η/∂y).
+The u-equation has no pressure gradient to balance.
+
+With the current drag coefficient (drag ≈ f at mid-latitudes), the ageostrophic component is
+significant — the balance is partial, not tight. The test checks that `f·u_avg` and `G·∂η/∂y`
+have opposite signs at >60% of mid-latitude v-points, confirming partial geostrophic
+cancellation rather than requiring a small residual.
 
 ### Visual/manual tests
 
@@ -497,4 +522,42 @@ tuning.
 
 ## Revision log
 
-(No revisions yet.)
+### Revision 1 — C-grid Coriolis has a 1-step lag from rest
+
+On the C-grid, the v-update uses oldU for the 4-point Coriolis average. When starting from
+rest (all velocities zero), oldU = 0 everywhere, so the Coriolis contribution to v is zero on
+the first step. Cross-wind flow only appears after 2+ steps. This is expected behavior from
+the staggered time-stepping, not a bug. Added note to "Coriolis on a C-grid" section.
+
+### Revision 2 — Per-row analytical terminal velocity formula invalid on C-grid
+
+The 4-point Coriolis averaging couples adjacent latitudes, so the per-row analytical
+steady-state formula from Phase 2 (which assumes each row is independent) diverges ~20% from
+the actual C-grid steady state. Tests should verify convergence behavior rather than matching
+analytical values. Added note to "Steady-state convergence" section.
+
+### Revision 3 — Uniform v has nonzero divergence on a sphere
+
+On a sphere, uniform nonzero v produces divergence because meridians converge toward the
+poles — the `∂(v·cosφ)/∂φ` term is nonzero even when v is constant. Only uniform u (with
+v=0) is divergence-free. Updated the divergence test description.
+
+### Revision 4 — Geostrophic balance is purely meridional on a water world
+
+On a water world with zonally uniform wind, the SSH pattern is also zonally uniform, so
+∂η/∂x = 0 everywhere. Geostrophic balance appears only in the v-equation:
+`f·u_avg + G·∂η/∂y ≈ 0`. The u-equation has zero pressure gradient. Updated the geostrophic
+validation section.
+
+### Revision 5 — Ageostrophic fraction is large with current drag
+
+With drag ≈ f at mid-latitudes, the ageostrophic component is significant (~40%+). The
+geostrophic test checks that Coriolis and pressure gradient terms have opposite signs (partial
+cancellation) at >60% of mid-latitude v-points, rather than requiring a small residual.
+Updated the geostrophic validation section.
+
+### Revision 6 — simulation-canvas.tsx and app.tsx do change
+
+Both files need modifications for the background mode toggle: simulation-canvas.tsx threads
+the new `backgroundMode` prop, and app.tsx manages the state and renders the dropdown control.
+Moved from "Files unchanged" to "Files that change".
