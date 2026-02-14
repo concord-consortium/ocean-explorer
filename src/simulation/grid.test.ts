@@ -35,6 +35,28 @@ describe("Grid", () => {
     expect(grid.getU(5, 72)).toBe(7.0);
   });
 
+  it("initializes eta to zero", () => {
+    const grid = new Grid();
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        expect(grid.getEta(r, c)).toBe(0);
+      }
+    }
+  });
+
+  it("can set and get eta values", () => {
+    const grid = new Grid();
+    grid.setEta(10, 20, 5.0);
+    expect(grid.getEta(10, 20)).toBe(5.0);
+    expect(grid.getEta(0, 0)).toBe(0);
+  });
+
+  it("eta wraps longitude", () => {
+    const grid = new Grid();
+    grid.setEta(5, 71, 3.0);
+    expect(grid.getEta(5, -1)).toBe(3.0);
+  });
+
   it("provides latitude in degrees for a given row", () => {
     // Row 0 is the southernmost band: centered at -87.5
     expect(latitudeAtRow(0)).toBe(-87.5);
