@@ -112,12 +112,13 @@ We use a value between these extremes that gives good numerical behavior:
 
 | G | Wave speed √G | CFL number | SSH scale (geostrophic η) |
 |---|--------------|-----------|--------------------------|
-| 200 | 14 m/s | 0.09 | ~50 m |
-| 500 | 22 m/s | 0.14 | ~20 m |
-| 1000 | 32 m/s | 0.21 | ~10 m |
+| 200 | 14 m/s | 0.09 | ~0.15 m |
+| 500 | 22 m/s | 0.14 | ~0.06 m |
+| 1000 | 32 m/s | 0.21 | ~0.03 m |
 
 The SSH scale is estimated from geostrophic balance: `η ≈ f·u·L / G` with `f = 1e-4`,
-`u = 0.3 m/s`, `L = 500 km`.
+`u = 0.1 m/s`, `L = 3000 km`. (The original estimates of ~10–50 m were incorrect — see
+Revision 1.)
 
 **Starting value: G = 500 m²/s².** This gives comfortable CFL margin, ~20 m SSH
 perturbations, and a reasonable geostrophic adjustment timescale. Like `DRAG` in Phase 2,
@@ -157,8 +158,8 @@ t_adjust ≈ 10^7 / 22 ≈ 450,000 s ≈ 125 hours simulated
 ```
 
 At 60 steps/s, the initial gravity wave adjustment takes ~2 seconds of real time. The full
-Sverdrup balance (involving the beta effect — variation of f with latitude) may take longer
-to develop, as it requires Rossby wave propagation across the domain.
+geostrophic equilibrium takes ~6300 iterations (~6300 simulated hours ≈ 263 days) to converge
+to a threshold of 1e-6 in max |Δu|, |Δv|, |Δη| per step.
 
 ### Polar boundary conditions
 
@@ -222,6 +223,9 @@ dη/dt = -∇·(u, v) + κ·∇²η
 
 Where `κ` is a small diffusion coefficient. This damps the checkerboard without significantly
 affecting the large-scale physics. Only add this if needed — start without it.
+
+**Result:** No checkerboard instability was observed in Approach A. Laplacian diffusion was
+not needed.
 
 ### Simulation step changes
 
@@ -396,7 +400,9 @@ The toggle is added to the existing controls panel. No other rendering changes a
 
 ### Unit tests (continuity / divergence)
 
-- Uniform velocity field with zero divergence: η doesn't change after a step
+- Uniform zonal velocity field (v=0) has zero divergence: η doesn't change after a step
+  (Note: uniform meridional velocity v≠0 IS divergent on a sphere due to meridian convergence,
+  so this test must use u-only flow)
 - Converging velocity field (u decreasing eastward): η increases
 - Diverging velocity field: η decreases
 - Metric terms: divergence computation accounts for cos(φ) correctly
@@ -419,9 +425,10 @@ The toggle is added to the existing controls panel. No other rendering changes a
 
 ### Geostrophic balance validation
 
-- At steady state, compute the geostrophic residual: `r_u = f·v + G·∂η/∂x` and
-  `r_v = -f·u + G·∂η/∂y`. These should be small compared to the individual terms (the
-  residual is the ageostrophic component, driven by wind and friction)
+- With zonally-symmetric forcing (water world, no continents), η is constant across all
+  longitudes, so ∂η/∂x = 0 everywhere. The zonal balance `f·v = G·∂η/∂x` is trivially
+  satisfied and untestable. The meaningful check is the meridional balance:
+  `f·u ≈ -G·∂η/∂y`, which holds to within ~2% at mid-latitudes.
 - Away from the equator and polar boundaries, the geostrophic residual should be a small
   fraction of the pressure gradient magnitude
 
@@ -454,7 +461,7 @@ The toggle is added to the existing controls panel. No other rendering changes a
 | `WATER_SCALE` | 1.0 m/s | unchanged | Arrow reference scale |
 | `dt` | 3600 s | unchanged | Simulation timestep |
 | `base_wind_speed` | ~10 m/s | unchanged | Peak wind speed |
-| `κ` (diffusion) | 0 (or small) | NEW, Approach A only | Laplacian diffusion on η |
+| `κ` (diffusion) | 0 | not needed | Laplacian diffusion on η (no checkerboard observed) |
 
 ### How G affects behavior
 
@@ -465,7 +472,7 @@ The toggle is added to the existing controls panel. No other rendering changes a
 
 2. **SSH perturbation scale.** From geostrophic balance, `η ≈ f·u·L / G`. Higher G means
    smaller height perturbations for the same currents. With G = 500, typical perturbations
-   are ~20 m.
+   are ~0.05–0.08 m (see Revision 1).
 
 3. **Pressure gradient force.** The acceleration from a given height slope is `G·∂η/∂x`.
    Higher G means a stronger restoring force, so the system resists water piling up more
@@ -497,4 +504,29 @@ tuning.
 
 ## Revision log
 
-(No revisions yet.)
+### Revision 1 — Approach A implementation findings (2026-02-14)
+
+Findings from implementing Approach A (collocated grid) on branch `OE-2-phase-3`:
+
+1. **SSH scale estimates were wrong.** The table estimated ~20 m perturbations for G=500,
+   but actual steady-state η values are ~0.05–0.08 m. The original estimate likely used
+   an incorrect L value. Corrected the table and formula parameters.
+
+2. **Geostrophic balance is only testable in the meridional direction.** With zonally-
+   symmetric forcing (water world), η is constant across longitudes, so ∂η/∂x = 0
+   everywhere. The zonal balance f·v = G·∂η/∂x is trivially zero. The meaningful check
+   is f·u ≈ -G·∂η/∂y, which holds to within ~2% at mid-latitudes.
+
+3. **Uniform meridional velocity is divergent on a sphere.** The divergence test
+   "uniform velocity with zero divergence" must use u-only flow (v=0), because uniform v
+   is divergent due to ∂(v·cosφ)/∂φ ≠ 0 from meridian convergence.
+
+4. **No checkerboard instability.** The collocated grid (Approach A) did not exhibit
+   checkerboard artifacts in η. Laplacian diffusion was not needed.
+
+5. **Convergence takes ~6300 iterations** (~263 simulated days), longer than the ~125
+   hours estimated for gravity wave adjustment alone. The full geostrophic equilibrium
+   requires slower Rossby-wave-like adjustment.
+
+6. **Max water speed increased to ~0.5 m/s** (from ~0.1 m/s in Phase 2), due to pressure
+   gradient forcing adding a geostrophic component to the wind-driven flow.
