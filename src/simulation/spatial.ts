@@ -24,19 +24,34 @@ export function pressureGradient(grid: Grid): { dEtaDx: Float64Array; dEtaDy: Fl
     for (let c = 0; c < COLS; c++) {
       const i = r * COLS + c;
 
-      // East-west gradient (longitude wraps)
-      dEtaDx[i] = (grid.getEta(r, c + 1) - grid.getEta(r, c - 1)) / dxFactor;
+      // Skip land cells — no pressure gradient needed
+      if (grid.isLand(r, c)) continue;
 
-      // North-south gradient
+      // East-west gradient: zero-gradient into land neighbors
+      const etaHere = grid.getEta(r, c);
+      const etaE = grid.isLand(r, c + 1) ? etaHere : grid.getEta(r, c + 1);
+      const etaW = grid.isLand(r, c - 1) ? etaHere : grid.getEta(r, c - 1);
+      dEtaDx[i] = (etaE - etaW) / dxFactor;
+
+      // North-south gradient: handle land AND polar boundaries
       if (r === 0) {
-        // South pole: forward difference
-        dEtaDy[i] = (grid.getEta(r + 1, c) - grid.getEta(r, c)) / (R_EARTH * DELTA_RAD);
+        const etaN = grid.isLand(r + 1, c) ? etaHere : grid.getEta(r + 1, c);
+        dEtaDy[i] = (etaN - etaHere) / (R_EARTH * DELTA_RAD);
       } else if (r === ROWS - 1) {
-        // North pole: backward difference
-        dEtaDy[i] = (grid.getEta(r, c) - grid.getEta(r - 1, c)) / (R_EARTH * DELTA_RAD);
+        const etaS = grid.isLand(r - 1, c) ? etaHere : grid.getEta(r - 1, c);
+        dEtaDy[i] = (etaHere - etaS) / (R_EARTH * DELTA_RAD);
       } else {
-        // Interior: central difference
-        dEtaDy[i] = (grid.getEta(r + 1, c) - grid.getEta(r - 1, c)) / (2 * R_EARTH * DELTA_RAD);
+        const northIsLand = grid.isLand(r + 1, c);
+        const southIsLand = grid.isLand(r - 1, c);
+        if (northIsLand && southIsLand) {
+          dEtaDy[i] = 0;
+        } else if (northIsLand) {
+          dEtaDy[i] = (etaHere - grid.getEta(r - 1, c)) / (R_EARTH * DELTA_RAD);
+        } else if (southIsLand) {
+          dEtaDy[i] = (grid.getEta(r + 1, c) - etaHere) / (R_EARTH * DELTA_RAD);
+        } else {
+          dEtaDy[i] = (grid.getEta(r + 1, c) - grid.getEta(r - 1, c)) / (2 * R_EARTH * DELTA_RAD);
+        }
       }
     }
   }

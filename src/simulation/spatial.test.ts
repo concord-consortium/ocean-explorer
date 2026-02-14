@@ -69,6 +69,51 @@ describe("pressureGradient", () => {
   });
 });
 
+describe("pressureGradient with land", () => {
+  it("returns zero gradient for land cells", () => {
+    const grid = new Grid();
+    grid.landMask[18 * COLS + 36] = 1;
+    grid.setEta(18, 36, 5.0);
+    grid.setEta(18, 37, 10.0);
+
+    const { dEtaDx, dEtaDy } = pressureGradient(grid);
+    expect(dEtaDx[18 * COLS + 36]).toBe(0);
+    expect(dEtaDy[18 * COLS + 36]).toBe(0);
+  });
+
+  it("uses zero-gradient at east land boundary", () => {
+    const grid = new Grid();
+    // Water cell at (18, 36), land at (18, 37)
+    grid.landMask[18 * COLS + 37] = 1;
+    grid.setEta(18, 35, 1.0);
+    grid.setEta(18, 36, 2.0);
+    grid.setEta(18, 37, 99.0);  // should be ignored
+
+    const { dEtaDx } = pressureGradient(grid);
+    // East neighbor is land → treat as eta=2.0 (same as current cell)
+    // dEtaDx = (2.0 - 1.0) / (2 * R * cos(lat) * delta)
+    const lat = latitudeAtRow(18);
+    const cosLat = Math.cos(lat * Math.PI / 180);
+    const expected = (2.0 - 1.0) / (2 * R_EARTH * cosLat * DELTA_RAD);
+    expect(dEtaDx[18 * COLS + 36]).toBeCloseTo(expected, 10);
+  });
+
+  it("uses zero-gradient at north land boundary", () => {
+    const grid = new Grid();
+    // Water cell at (18, 36), land at (19, 36)
+    grid.landMask[19 * COLS + 36] = 1;
+    grid.setEta(17, 36, 1.0);
+    grid.setEta(18, 36, 2.0);
+    grid.setEta(19, 36, 99.0);  // should be ignored
+
+    const { dEtaDy } = pressureGradient(grid);
+    // North neighbor is land → one-sided backward difference
+    // dEtaDy = (etaHere - etaSouth) / (R * delta)
+    const expected = (2.0 - 1.0) / (R_EARTH * DELTA_RAD);
+    expect(dEtaDy[18 * COLS + 36]).toBeCloseTo(expected, 10);
+  });
+});
+
 describe("divergence", () => {
   it("returns zero for uniform zonal velocity with zero meridional", () => {
     const grid = new Grid();
