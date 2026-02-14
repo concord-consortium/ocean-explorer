@@ -159,3 +159,29 @@ describe("divergence", () => {
     expect(div[i]).toBeLessThan(0);
   });
 });
+
+describe("divergence with land", () => {
+  it("returns zero divergence for land cells", () => {
+    const grid = new Grid();
+    grid.landMask[18 * COLS + 36] = 1;
+    grid.setU(18, 36, 1.0);
+
+    const div = divergence(grid);
+    expect(div[18 * COLS + 36]).toBe(0);
+  });
+
+  it("treats land neighbor velocity as zero for flux", () => {
+    const grid = new Grid();
+    // Land at (18, 37), water at (18, 36) and (18, 35)
+    grid.landMask[18 * COLS + 37] = 1;
+    grid.setU(18, 35, 0.5);
+    grid.setU(18, 36, 0.5);
+    grid.setU(18, 37, 10.0);  // land cell — should be treated as 0
+
+    const div = divergence(grid);
+    // At (18, 36): east neighbor is land (u=0), west neighbor has u=0.5
+    // du/dlam = (0 - 0.5) / (2 * DELTA_RAD) = negative
+    const i = 18 * COLS + 36;
+    expect(div[i]).toBeLessThan(0);  // converging (water piling up against coast)
+  });
+});

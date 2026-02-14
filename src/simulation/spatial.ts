@@ -78,22 +78,31 @@ export function divergence(grid: Grid): Float64Array {
     for (let c = 0; c < COLS; c++) {
       const i = r * COLS + c;
 
-      // ∂u/∂λ (longitude wraps)
-      const duDlam = (grid.getU(r, c + 1) - grid.getU(r, c - 1)) / (2 * DELTA_RAD);
+      // Skip land cells
+      if (grid.isLand(r, c)) continue;
 
-      // ∂(v·cosφ)/∂φ
+      // ∂u/∂λ: treat land neighbor u as 0 (no flux through land boundary)
+      const uE = grid.isLand(r, c + 1) ? 0 : grid.getU(r, c + 1);
+      const uW = grid.isLand(r, c - 1) ? 0 : grid.getU(r, c - 1);
+      const duDlam = (uE - uW) / (2 * DELTA_RAD);
+
+      // ∂(v·cosφ)/∂φ: handle land AND polar boundaries
       let dvCosDphi: number;
       if (r === 0) {
-        const vCosN = grid.getV(r + 1, c) * Math.cos(latitudeAtRow(r + 1) * Math.PI / 180);
+        const vCosN = grid.isLand(r + 1, c) ? 0 :
+          grid.getV(r + 1, c) * Math.cos(latitudeAtRow(r + 1) * Math.PI / 180);
         const vCosHere = grid.getV(r, c) * cosLat;
         dvCosDphi = (vCosN - vCosHere) / DELTA_RAD;
       } else if (r === ROWS - 1) {
         const vCosHere = grid.getV(r, c) * cosLat;
-        const vCosS = grid.getV(r - 1, c) * Math.cos(latitudeAtRow(r - 1) * Math.PI / 180);
+        const vCosS = grid.isLand(r - 1, c) ? 0 :
+          grid.getV(r - 1, c) * Math.cos(latitudeAtRow(r - 1) * Math.PI / 180);
         dvCosDphi = (vCosHere - vCosS) / DELTA_RAD;
       } else {
-        const vCosN = grid.getV(r + 1, c) * Math.cos(latitudeAtRow(r + 1) * Math.PI / 180);
-        const vCosS = grid.getV(r - 1, c) * Math.cos(latitudeAtRow(r - 1) * Math.PI / 180);
+        const vCosN = grid.isLand(r + 1, c) ? 0 :
+          grid.getV(r + 1, c) * Math.cos(latitudeAtRow(r + 1) * Math.PI / 180);
+        const vCosS = grid.isLand(r - 1, c) ? 0 :
+          grid.getV(r - 1, c) * Math.cos(latitudeAtRow(r - 1) * Math.PI / 180);
         dvCosDphi = (vCosN - vCosS) / (2 * DELTA_RAD);
       }
 
