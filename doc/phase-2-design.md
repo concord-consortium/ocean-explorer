@@ -295,6 +295,8 @@ Parameter combinations to test:
 - Deflection is to the right in the northern hemisphere, left in the southern
 - Reversing rotation direction flips the deflection
 - Increasing rotation speed increases deflection at a given latitude
+- Increasing rotation speed reduces steady-state water speed (Water max drops) — stronger
+  Coriolis deflection rotates flow sideways, increasing the effective drag
 - Arrow lengths are reasonable (~0.5 m/s scale, visible against 1.0 m/s reference)
 - Smooth spin-up animation from rest to steady state (~3 seconds real time)
 
@@ -369,3 +371,18 @@ speed is ~0.35 m/s at ±45°, not 0.50 m/s.
 
 **Why:** Visual verification showed max water speed of ~0.3 m/s, not the 0.5 m/s the doc
 claimed. The original table was misleading because it ignored the wind band structure entirely.
+
+## Findings
+
+- **Semi-implicit integration is essential for Coriolis.** Explicit Euler is unconditionally
+  unstable when Coriolis couples the u and v velocity components — it amplifies the velocity
+  magnitude every step, spiraling outward. A semi-implicit scheme that solves the coupled
+  Coriolis+drag system as a 2×2 linear system is unconditionally stable at any timestep,
+  rotation rate, or latitude. The numerical analysis is documented in
+  `doc/general-simulation-guide.md`.
+- **Coriolis deflection reduces water speed, not just direction.** Stronger Coriolis (higher
+  rotation rate or higher latitude) reduces the steady-state water speed because the
+  `coriolisParam²` term appears in the denominator of the steady-state speed formula:
+  `speed = WindAccel / sqrt(drag² + coriolisParam²)`. This was not in the original spec but
+  is a direct consequence of the physics — worth calling out to users.
+- **Chromebook performance check still pending.** Carried over from Phase 1.

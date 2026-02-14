@@ -662,7 +662,7 @@ In `CLAUDE.md`, update the reference from `doc/simulation-guide.md` to
 
 In `doc/phase-1-design.md`, if it references `simulation-guide.md`, update that too.
 
-In `doc/prototype-phases.md`, update the reference.
+In `doc/roadmap.md`, update the reference.
 
 **Step 3: Create doc/simulation-notes.md**
 
