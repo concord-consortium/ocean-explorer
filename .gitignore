@@ -7,6 +7,9 @@ top-test
 test-results
 playwright-report
 
+# Worktrees
+.worktrees
+
 # Editors
 .idea
 
