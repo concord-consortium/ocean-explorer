@@ -163,7 +163,7 @@ must produce realistic speeds before adding Coriolis.
 
 | Constant | Phase 1 | Phase 2 | Rationale |
 |----------|---------|---------|-----------|
-| `WIND_DRAG_COEFFICIENT` | 0.001 | 5e-6 | Scaled down for ~0.5 m/s terminal velocity |
+| `WIND_DRAG_COEFFICIENT` | 0.001 | 5e-6 | Scaled down for ~0.35 m/s peak terminal velocity |
 | `DRAG` | 1e-5 s⁻¹ | 1e-4 s⁻¹ | ~46° deflection at 45° lat, ~2.8 hr convergence time |
 | `WATER_SCALE` | 2000 m/s | 1.0 m/s | Arrow reference scale matches new terminal speeds |
 
@@ -190,16 +190,23 @@ must produce realistic speeds before adding Coriolis.
 
 ### Expected results at steady state (Earth-like defaults)
 
-| Latitude | Speed | Deflection angle |
-|----------|-------|-----------------|
-| Equator (0°) | 0.50 m/s | 0° |
-| 30° | 0.40 m/s | 36° |
-| 45° | 0.35 m/s | 46° |
-| 60° | 0.30 m/s | 52° |
+The wind model produces three bands per hemisphere with sinusoidal variation within each
+band. Wind speed is zero at band boundaries (0°, ±30°, ±60°) and peaks at mid-band
+latitudes. The table below shows values at band centers where flow is strongest:
 
-Speed decreases with latitude because Coriolis diverts energy into the cross-wind direction,
-and the combined drag on both components is stronger. Deflection increases with latitude
-because `|coriolisParam|` increases toward the poles.
+| Latitude | Band | Wind (m/s) | Water speed | Deflection |
+|----------|------|-----------|-------------|------------|
+| ±15° | Trade winds | 5.6 | 0.26 m/s | 21° |
+| ±45° | Westerlies | 10.0 | 0.35 m/s | 46° |
+| ±75° | Polar easterlies | 3.7 | 0.11 m/s | 55° |
+
+Peak water speed is ~0.35 m/s at ±45° (westerly band center). The trade winds are weaker
+(band amplitude multiplier ~0.56) so produce lower speeds despite being at lower latitude.
+Band boundaries (0°, ±30°, ±60°) are dead zones with zero wind and zero water velocity.
+
+Deflection angle depends only on latitude and drag, not wind speed:
+`θ = atan(|coriolisParam| / drag)`. It increases from 0° at the equator toward ~55° near
+the poles.
 
 ## Relationship to the Ekman spiral
 
@@ -351,3 +358,14 @@ direction for both prograde and retrograde. The bug was invisible in tests becau
 helpers used the same unsigned formula — expected and actual values agreed on the wrong answer.
 Visual verification caught it: retrograde planets were deflecting right in the NH instead of
 left.
+
+### Revision 2: Fix steady-state table to account for wind bands
+
+**What changed:** Replaced the "Expected results at steady state" table. The original table
+assumed uniform wind at all latitudes, giving 0.50 m/s at the equator. The actual wind model
+has zero wind at band boundaries (0°, ±30°, ±60°), so the equator and 30° are dead zones.
+The new table shows values at band centers (±15°, ±45°, ±75°) where flow is strongest. Peak
+speed is ~0.35 m/s at ±45°, not 0.50 m/s.
+
+**Why:** Visual verification showed max water speed of ~0.3 m/s, not the 0.5 m/s the doc
+claimed. The original table was misleading because it ignored the wind band structure entirely.

@@ -27,7 +27,7 @@ velocity: `terminal = WIND_DRAG_COEFFICIENT * windSpeed / DRAG`.
 
 | Constant | Phase 1 | Phase 2 | Rationale |
 |----------|---------|---------|-----------|
-| `WIND_DRAG_COEFFICIENT` | 0.001 | 5e-6 | Scaled down for ~0.5 m/s terminal velocity |
+| `WIND_DRAG_COEFFICIENT` | 0.001 | 5e-6 | Peak terminal velocity ~0.35 m/s (at ±45° westerly band center) |
 | `DRAG` | 1e-5 s⁻¹ | 1e-4 s⁻¹ | ~46° deflection at 45° lat, ~2.8 hr convergence time |
 | `WATER_SCALE` | 2000 m/s | 1.0 m/s | Arrow scale matches new terminal speeds |
 
