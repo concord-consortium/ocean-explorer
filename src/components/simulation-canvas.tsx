@@ -3,6 +3,7 @@ import { createMapRenderer, MapRenderer } from "../rendering/map-renderer";
 import { Simulation } from "../simulation/simulation";
 import { SimulationStepper } from "../simulation/simulation-stepper";
 import { SimParams } from "../simulation/wind";
+import { LandPreset, createLandMask } from "../simulation/land-presets";
 import { FrameHeadroomBenchmark } from "../benchmark/frame-headroom-benchmark";
 
 interface Props {
@@ -15,11 +16,13 @@ interface Props {
   paused: boolean;
   arrowScale: number;
   backgroundMode: "temperature" | "ssh";
+  landPreset: LandPreset;
   benchmarkRef?: React.RefObject<FrameHeadroomBenchmark | null>;
 }
 
 export const SimulationCanvas: React.FC<Props> = ({
-  width, height, params, showWind, showWater, targetStepsPerSecond, paused, arrowScale, backgroundMode, benchmarkRef,
+  width, height, params, showWind, showWater, targetStepsPerSecond,
+  paused, arrowScale, backgroundMode, landPreset, benchmarkRef,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<MapRenderer | null>(null);
@@ -114,6 +117,15 @@ export const SimulationCanvas: React.FC<Props> = ({
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Reset simulation when land preset changes
+  useEffect(() => {
+    const sim = simRef.current;
+    sim.grid.waterU.fill(0);
+    sim.grid.waterV.fill(0);
+    sim.grid.eta.fill(0);
+    sim.grid.landMask.set(createLandMask(landPreset));
+  }, [landPreset]);
 
   // Resize the PixiJS renderer when dimensions change (no destroy/recreate)
   useEffect(() => {
