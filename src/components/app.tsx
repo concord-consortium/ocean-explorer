@@ -3,6 +3,7 @@ import { SimulationCanvas } from "./simulation-canvas";
 import { SimParams } from "../simulation/wind";
 import { FrameHeadroomBenchmark, BenchmarkResult } from "../benchmark/frame-headroom-benchmark";
 import { TARGET_FPS, DEFAULT_STEPS_PER_SECOND } from "../constants";
+import { BackgroundMode } from "../rendering/map-renderer";
 
 import "./app.scss";
 
@@ -15,6 +16,7 @@ export const App = () => {
   const [targetStepsPerSecond, setTargetStepsPerSecond] = useState(DEFAULT_STEPS_PER_SECOND);
   const [paused, setPaused] = useState(true);
   const [arrowScale, setArrowScale] = useState(1.0);
+  const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>("temperature");
 
   const controlsRef = useRef<HTMLDivElement>(null);
   const benchmarkRef = useRef<FrameHeadroomBenchmark | null>(null);
@@ -76,6 +78,13 @@ export const App = () => {
             onChange={e => setArrowScale(Number(e.target.value))} />
         </label>
         <label>
+          Background:
+          <select value={backgroundMode} onChange={e => setBackgroundMode(e.target.value as BackgroundMode)}>
+            <option value="temperature">Temperature</option>
+            <option value="ssh">SSH</option>
+          </select>
+        </label>
+        <label>
           <input type="checkbox" checked={showWind}
             onChange={e => setShowWind(e.target.checked)} />
           Show wind
@@ -114,6 +123,7 @@ export const App = () => {
           targetStepsPerSecond={targetStepsPerSecond}
           paused={paused}
           arrowScale={arrowScale}
+          backgroundMode={backgroundMode}
           benchmarkRef={benchmarkRef}
         />
       </div>
