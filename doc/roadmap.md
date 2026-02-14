@@ -42,8 +42,12 @@ Each phase follows the same workflow:
 
 2. **Write a detailed design doc.** Use the `brainstorming` skill to create
    `doc/phase-N-design.md`. Follow the structure of the existing design docs
-   (`doc/phase-1-design.md`, `doc/phase-2-design.md`). The design doc must be reviewed and
-   approved before moving on — it is the source of truth for what to build.
+   (`doc/phase-1-design.md`, `doc/phase-2-design.md`). The design doc must include a
+   "User guide updates" section describing what changes to `doc/user-guide.md` are needed —
+   new controls, new observable behaviors, updated known limitations, and corrections to
+   any values that changed (e.g., steady-state speeds). This ensures user guide updates are
+   captured in the implementation plan. The design doc must be reviewed and approved before
+   moving on — it is the source of truth for what to build.
 
 3. **Create an implementation plan.** Use the `writing-plans` skill to produce a step-by-step
    plan in `docs/plans/`. The plan breaks the design into discrete tasks with test-first
