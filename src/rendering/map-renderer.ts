@@ -13,6 +13,31 @@ export function tempToColor(t: number): number {
   return r * 65536 + g * 256 + b;
 }
 
+/** Maps SSH value to a diverging blue-white-red color. frac is in [0,1] where 0.5 = zero. */
+export function sshToColor(eta: number, minEta: number, maxEta: number): number {
+  const range = Math.max(Math.abs(minEta), Math.abs(maxEta), 1e-10);
+  // Map [-range, +range] → [0, 1]
+  const frac = Math.max(0, Math.min(1, (eta + range) / (2 * range)));
+  // Blue (depression) → White (zero) → Red (mound)
+  if (frac < 0.5) {
+    // Blue to white: frac 0→0.5 maps to blue→white
+    const t = frac * 2; // 0→1
+    const r = Math.round(255 * t);
+    const g = Math.round(255 * t);
+    const b = 255;
+    return r * 65536 + g * 256 + b;
+  } else {
+    // White to red: frac 0.5→1 maps to white→red
+    const t = (frac - 0.5) * 2; // 0→1
+    const r = 255;
+    const g = Math.round(255 * (1 - t));
+    const b = Math.round(255 * (1 - t));
+    return r * 65536 + g * 256 + b;
+  }
+}
+
+export type BackgroundMode = "temperature" | "ssh";
+
 export interface RendererOptions {
   width: number;
   height: number;
@@ -22,6 +47,7 @@ export interface RendererOptions {
   stepTimeMs: number;
   actualStepsPerSecond: number;
   benchLoadTimeMs: number;
+  backgroundMode: BackgroundMode;
 }
 
 export interface MapRenderer {
@@ -133,7 +159,29 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       const t = COLOR_MIN + frac * (COLOR_MAX - COLOR_MIN);
       colorScaleBar.rect(x, barY + i * stepHeight, barWidth, stepHeight + 1).fill({ color: tempToColor(t) });
     }
+    colorScaleMaxLabel.text = `${COLOR_MAX}\u00B0C`;
     colorScaleMaxLabel.position.set(x, barY - 16);
+    colorScaleMinLabel.text = `${COLOR_MIN}\u00B0C`;
+    colorScaleMinLabel.position.set(x, barY + barHeight + 4);
+  }
+
+  function drawSshColorScale(x: number, mapHeight: number, minEta: number, maxEta: number): void {
+    const barWidth = 15;
+    const barHeight = mapHeight * 0.6;
+    const barY = (mapHeight - barHeight) / 2;
+    colorScaleBar.clear();
+    const steps = 50;
+    const stepHeight = barHeight / steps;
+    const range = Math.max(Math.abs(minEta), Math.abs(maxEta), 1e-10);
+    for (let i = 0; i < steps; i++) {
+      const frac = 1 - i / steps; // top = positive (red)
+      const eta = (frac * 2 - 1) * range; // map [1,0] to [+range, -range]
+      colorScaleBar.rect(x, barY + i * stepHeight, barWidth, stepHeight + 1)
+        .fill({ color: sshToColor(eta, -range, range) });
+    }
+    colorScaleMaxLabel.text = `+${range.toFixed(1)} m`;
+    colorScaleMaxLabel.position.set(x, barY - 16);
+    colorScaleMinLabel.text = `-${range.toFixed(1)} m`;
     colorScaleMinLabel.position.set(x, barY + barHeight + 4);
   }
 
@@ -145,12 +193,19 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     const cellW = mapWidth / COLS;
     const cellH = mapHeight / ROWS;
 
-    // Draw background temperature cells
+    // Draw background cells
+    let sshMin = 0;
+    let sshMax = 0;
+    if (opts.backgroundMode === "ssh") {
+      for (let i = 0; i < ROWS * COLS; i++) {
+        const eta = grid.eta[i];
+        if (eta < sshMin) sshMin = eta;
+        if (eta > sshMax) sshMax = eta;
+      }
+    }
+
     for (let r = 0; r < ROWS; r++) {
       const lat = latitudeAtRow(r);
-      const t = temperature(lat, params.tempGradientRatio);
-      const color = tempToColor(t);
-      // Render row 0 (south pole) at bottom, row 35 (north pole) at top
       const displayRow = ROWS - 1 - r;
 
       for (let c = 0; c < COLS; c++) {
@@ -158,7 +213,13 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
         const bg = bgCells[cellIdx];
         bg.position.set(LEFT_MARGIN + c * cellW, displayRow * cellH);
         bg.scale.set(cellW + 0.5, cellH + 0.5);
-        bg.tint = color;
+
+        if (opts.backgroundMode === "ssh") {
+          bg.tint = sshToColor(grid.eta[cellIdx], sshMin, sshMax);
+        } else {
+          const t = temperature(lat, params.tempGradientRatio);
+          bg.tint = tempToColor(t);
+        }
       }
     }
 
@@ -200,11 +261,15 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
           wg.visible = false;
         }
 
-        // Water arrows
+        // Water arrows — interpolate from faces to cell centers
         const wa = waterArrows[arrowIdx];
-        const uVal = grid.waterU[arrowIdx];
-        const vVal = grid.waterV[arrowIdx];
-        const speed = Math.sqrt(uVal ** 2 + vVal ** 2);
+        // u_center = average of east face of (r,c-1) and east face of (r,c)
+        const uCenter = 0.5 * (grid.getU(r, c) + grid.getU(r, c - 1));
+        // v_center = average of north face of (r-1,c) and north face of (r,c)
+        const vCenter = r > 0
+          ? 0.5 * (grid.getV(r, c) + grid.getV(r - 1, c))
+          : grid.getV(r, c);
+        const speed = Math.sqrt(uCenter ** 2 + vCenter ** 2);
         if (speed > maxWaterSpeed) maxWaterSpeed = speed;
 
         if (opts.showWater && showArrowAtCol) {
@@ -212,8 +277,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
           if (len < 0.5) {
             wa.visible = false;
           } else {
-            // atan2(-vVal, uVal): negative V because screen Y is flipped
-            const angle = Math.atan2(-vVal, uVal);
+            const angle = Math.atan2(-vCenter, uCenter);
             wa.position.set(cx, cy);
             wa.rotation = angle;
             wa.scale.set(len / REF_ARROW_LEN);
@@ -239,7 +303,11 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     }
 
     // Color scale
-    drawColorScale(LEFT_MARGIN + mapWidth + 8, mapHeight);
+    if (opts.backgroundMode === "ssh") {
+      drawSshColorScale(LEFT_MARGIN + mapWidth + 8, mapHeight, sshMin, sshMax);
+    } else {
+      drawColorScale(LEFT_MARGIN + mapWidth + 8, mapHeight);
+    }
 
     // Performance metrics
     const fps = app.ticker.FPS;

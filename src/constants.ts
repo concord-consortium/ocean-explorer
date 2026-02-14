@@ -51,3 +51,14 @@ export const WIND_SCALE = 20;
 
 /** Reference water speed in m/s used to normalize arrow lengths. */
 export const WATER_SCALE = 1.0;
+
+// ── Phase 3: Pressure gradients ──
+
+/** Gravity wave stiffness G = g·H_eff (m²/s²). Controls pressure gradient strength. */
+export const G_STIFFNESS = 500;
+
+/** Earth's mean radius in meters. Used for lat-lon metric terms. */
+export const R_EARTH = 6.371e6;
+
+/** Grid spacing in radians (5° converted). */
+export const DELTA_RAD = RESOLUTION_DEG * Math.PI / 180;

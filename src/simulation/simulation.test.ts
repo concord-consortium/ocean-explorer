@@ -1,7 +1,6 @@
 import { Simulation } from "./simulation";
 import { ROWS, COLS } from "./grid";
 import { windU, SimParams } from "./wind";
-import { coriolisParameter } from "./coriolis";
 
 const defaultParams: SimParams = {
   rotationRatio: 1.0,
@@ -17,6 +16,7 @@ describe("Simulation", () => {
       for (let c = 0; c < COLS; c++) {
         expect(sim.grid.getU(r, c)).toBe(0);
         expect(sim.grid.getV(r, c)).toBe(0);
+        expect(sim.grid.getEta(r, c)).toBe(0);
       }
     }
   });
@@ -33,38 +33,42 @@ describe("Simulation", () => {
     // With Coriolis, V is no longer zero at non-equatorial latitudes
   });
 
-  it("reaches terminal velocity: waterU converges to Coriolis steady-state", () => {
+  it("reaches terminal velocity: waterU converges", () => {
     const sim = new Simulation();
     const params = defaultParams;
 
-    // Check a cell in the trade wind zone (row 6 = lat -57.5)
-    const lat = -87.5 + 6 * 5; // -57.5
-    const windAccelU = sim.windDragCoefficient * windU(lat, params);
-    const f = coriolisParameter(lat, params.rotationRatio);
-    const denom = sim.drag * sim.drag + f * f;
-    const expectedU = windAccelU * sim.drag / denom;
-    const expectedV = -windAccelU * f / denom;
-
-    // Run steps until close to terminal velocity or hit a safety cap
-    // With drag = 1e-4, time constant = 10,000 steps (vs 100,000 at old drag)
+    // On the C-grid, the analytical per-row formula doesn't apply because
+    // 4-point Coriolis averaging couples adjacent latitudes. Instead, verify
+    // that the simulation converges (velocity stops changing).
     const maxSteps = 5000;
-    const tolerance = 0.00005; // match toBeCloseTo precision of 4
+    const convergenceThreshold = 1e-6;
+    let converged = false;
     for (let i = 0; i < maxSteps; i++) {
+      const prevU = sim.grid.getU(6, 0);
+      const prevV = sim.grid.getV(6, 0);
       sim.step(params);
-      const deltaU = Math.abs(sim.grid.getU(6, 0) - expectedU);
-      const deltaV = Math.abs(sim.grid.getV(6, 0) - expectedV);
-      if (deltaU < tolerance && deltaV < tolerance) break;
+      const deltaU = Math.abs(sim.grid.getU(6, 0) - prevU);
+      const deltaV = Math.abs(sim.grid.getV(6, 0) - prevV);
+      if (deltaU < convergenceThreshold && deltaV < convergenceThreshold) {
+        converged = true;
+        break;
+      }
     }
 
-    expect(sim.grid.getU(6, 0)).toBeCloseTo(expectedU, 4);
-    expect(sim.grid.getV(6, 0)).toBeCloseTo(expectedV, 4);
+    expect(converged).toBe(true);
+    // Terminal velocity should be nonzero and in the wind direction
+    const lat = -87.5 + 6 * 5; // -57.5
+    const expectedWindDir = windU(lat, params);
+    expect(Math.sign(sim.grid.getU(6, 0))).toBe(Math.sign(expectedWindDir));
+    expect(sim.grid.getV(6, 0)).not.toBe(0);
   });
 
-  it("Coriolis creates cross-wind flow after one step (waterV nonzero)", () => {
+  it("Coriolis creates cross-wind flow after two steps (waterV nonzero)", () => {
     const sim = new Simulation();
+    // On C-grid, after step 1 v is still zero because oldU was zero.
+    // After step 2, u is nonzero so Coriolis produces nonzero v.
     sim.step(defaultParams);
-    // At mid-latitude (row 24 = lat 32.5°N)
-    // With Coriolis, wind pushing east should create nonzero V
+    sim.step(defaultParams);
     const row = 24; // lat = 32.5°N
     expect(sim.grid.getV(row, 0)).not.toBe(0);
   });
@@ -129,5 +133,32 @@ describe("Simulation", () => {
     // Compare to mid-latitude deflection
     const midLatV = Math.abs(sim.grid.getV(24, 0));
     expect(nearEquatorV).toBeLessThan(midLatV * 0.2);
+  });
+});
+
+describe("Pressure gradient integration", () => {
+  it("pressure gradient drives flow from SSH mound", () => {
+    const sim = new Simulation();
+    sim.grid.setEta(18, 36, 10.0);
+    const params = { ...defaultParams, rotationRatio: 0.01 };
+    sim.step(params);
+    // Flow should move away from the mound
+    // u at east face of mound cell should be positive (eastward)
+    expect(sim.grid.getU(18, 36)).toBeGreaterThan(0);
+    // u at west face (east face of cell to the left) should be negative
+    expect(sim.grid.getU(18, 35)).toBeLessThan(0);
+  });
+
+  it("eta changes from velocity divergence", () => {
+    const sim = new Simulation();
+    // Converging u field
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        sim.grid.setU(r, c, -c * 0.001);
+      }
+    }
+    const params = { ...defaultParams, rotationRatio: 0.01, tempGradientRatio: 0 };
+    sim.step(params);
+    expect(sim.grid.getEta(18, 36)).not.toBe(0);
   });
 });

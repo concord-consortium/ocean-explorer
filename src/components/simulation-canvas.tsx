@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { createMapRenderer, MapRenderer } from "../rendering/map-renderer";
+import { createMapRenderer, MapRenderer, BackgroundMode } from "../rendering/map-renderer";
 import { Simulation } from "../simulation/simulation";
 import { SimulationStepper } from "../simulation/simulation-stepper";
 import { SimParams } from "../simulation/wind";
@@ -14,11 +14,12 @@ interface Props {
   targetStepsPerSecond: number;
   paused: boolean;
   arrowScale: number;
+  backgroundMode: BackgroundMode;
   benchmarkRef?: React.RefObject<FrameHeadroomBenchmark | null>;
 }
 
 export const SimulationCanvas: React.FC<Props> = ({
-  width, height, params, showWind, showWater, targetStepsPerSecond, paused, arrowScale, benchmarkRef,
+  width, height, params, showWind, showWater, targetStepsPerSecond, paused, arrowScale, backgroundMode, benchmarkRef,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<MapRenderer | null>(null);
@@ -35,6 +36,8 @@ export const SimulationCanvas: React.FC<Props> = ({
   pausedRef.current = paused;
   const arrowScaleRef = useRef(arrowScale);
   arrowScaleRef.current = arrowScale;
+  const backgroundModeRef = useRef(backgroundMode);
+  backgroundModeRef.current = backgroundMode;
   const benchmarkRefProp = useRef(benchmarkRef);
   benchmarkRefProp.current = benchmarkRef;
   const sizeRef = useRef({ width, height });
@@ -89,6 +92,7 @@ export const SimulationCanvas: React.FC<Props> = ({
           arrowScale: arrowScaleRef.current,
           stepTimeMs: stepper.stepTimeMs,
           actualStepsPerSecond: stepper.actualStepsPerSecond,
+          backgroundMode: backgroundModeRef.current,
           benchLoadTimeMs: benchmark.loadTimeMs,
         });
         renderer.setSceneUpdateTimeMs(performance.now() - sceneT0);

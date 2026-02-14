@@ -5,34 +5,53 @@ function wrapCol(c: number): number {
   return ((c % COLS) + COLS) % COLS;
 }
 
+/**
+ * Arakawa C-grid: u at east faces, v at north faces, eta at cell centers.
+ *
+ * u[r, c] = eastward velocity on the east face of cell (r, c)
+ * v[r, c] = northward velocity on the north face of cell (r, c)
+ * eta[r, c] = sea surface height perturbation at cell center (r, c)
+ *
+ * Longitude wraps periodically. Latitude does not wrap.
+ */
 export class Grid {
-  readonly waterU: Float64Array;
-  readonly waterV: Float64Array;
+  readonly u: Float64Array;
+  readonly v: Float64Array;
+  readonly eta: Float64Array;
 
   constructor() {
     const size = ROWS * COLS;
-    this.waterU = new Float64Array(size);
-    this.waterV = new Float64Array(size);
+    this.u = new Float64Array(size);
+    this.v = new Float64Array(size);
+    this.eta = new Float64Array(size);
   }
 
-  private idx(r: number, c: number): number {
+  idx(r: number, c: number): number {
     return r * COLS + wrapCol(c);
   }
 
   getU(r: number, c: number): number {
-    return this.waterU[this.idx(r, c)];
+    return this.u[this.idx(r, c)];
   }
 
   getV(r: number, c: number): number {
-    return this.waterV[this.idx(r, c)];
+    return this.v[this.idx(r, c)];
   }
 
   setU(r: number, c: number, val: number): void {
-    this.waterU[this.idx(r, c)] = val;
+    this.u[this.idx(r, c)] = val;
   }
 
   setV(r: number, c: number, val: number): void {
-    this.waterV[this.idx(r, c)] = val;
+    this.v[this.idx(r, c)] = val;
+  }
+
+  getEta(r: number, c: number): number {
+    return this.eta[this.idx(r, c)];
+  }
+
+  setEta(r: number, c: number, val: number): void {
+    this.eta[this.idx(r, c)] = val;
   }
 }
 
