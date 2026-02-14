@@ -132,6 +132,34 @@ describe("Simulation", () => {
   });
 });
 
+describe("Land masking in simulation step", () => {
+  it("land cells have zero velocity after step even with wind forcing", () => {
+    const sim = new Simulation();
+    // Mark a cell as land
+    sim.grid.landMask[18 * COLS + 36] = 1;
+    sim.step(defaultParams);
+    expect(sim.grid.getU(18, 36)).toBe(0);
+    expect(sim.grid.getV(18, 36)).toBe(0);
+  });
+
+  it("land cells have zero eta after step", () => {
+    const sim = new Simulation();
+    sim.grid.landMask[18 * COLS + 36] = 1;
+    // Give it initial eta to verify it gets cleared
+    sim.grid.setEta(18, 36, 5.0);
+    sim.step(defaultParams);
+    expect(sim.grid.getEta(18, 36)).toBe(0);
+  });
+
+  it("water cells adjacent to land still evolve", () => {
+    const sim = new Simulation();
+    sim.grid.landMask[18 * COLS + 37] = 1;
+    sim.step(defaultParams);
+    // Water cell at (18, 36) should still have nonzero velocity from wind
+    expect(sim.grid.getU(18, 36)).not.toBe(0);
+  });
+});
+
 describe("Pressure gradient integration", () => {
   it("pressure gradient drives flow from SSH mound after one step", () => {
     const sim = new Simulation();
