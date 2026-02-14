@@ -36,18 +36,24 @@ evaluate and give feedback on the simulation behavior.
 
 Each phase follows the same workflow:
 
-1. **Create a branch.** Branch from the current main branch. Name it with the Jira story
-   prefix and the phase name (e.g., `OE-2-phase-2`). The Jira story may change between
-   phases — use the active story at the time.
+1. **Create a branch.** Branch from the **previous phase's branch** (not main). Name it with
+   the Jira story prefix and the phase name (e.g., `OE-2-phase-3` branching from
+   `OE-2-phase-2`). Phase 1 branches from main. The Jira story may change between phases —
+   use the active story at the time. When creating a PR, target the previous phase's branch
+   as the base so the diff shows only the current phase's changes.
 
 2. **Write a detailed design doc.** Use the `brainstorming` skill to create
    `doc/phase-N-design.md`. Follow the structure of the existing design docs
-   (`doc/phase-1-design.md`, `doc/phase-2-design.md`). The design doc must include a
-   "User guide updates" section describing what changes to `doc/user-guide.md` are needed —
-   new controls, new observable behaviors, updated known limitations, and corrections to
-   any values that changed (e.g., steady-state speeds). This ensures user guide updates are
-   captured in the implementation plan. The design doc must be reviewed and approved before
-   moving on — it is the source of truth for what to build.
+   (`doc/phase-1-design.md`, `doc/phase-2-design.md`). The design doc must include:
+   - A "User guide updates" section describing what changes to `doc/user-guide.md` are
+     needed — new controls, new observable behaviors, updated known limitations, and
+     corrections to any values that changed (e.g., steady-state speeds).
+   - A "Branch and PR" section stating which branch to branch from and which branch to
+     target when creating a PR (the previous phase's branch, per step 1).
+
+   These sections ensure user guide updates and PR workflow are captured in the
+   implementation plan. The design doc must be reviewed and approved before moving on — it
+   is the source of truth for what to build.
 
 3. **Create an implementation plan.** Use the `writing-plans` skill to produce a step-by-step
    plan in `docs/plans/`. The plan breaks the design into discrete tasks with test-first
