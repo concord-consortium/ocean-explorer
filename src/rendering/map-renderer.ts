@@ -151,7 +151,29 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       const t = COLOR_MIN + frac * (COLOR_MAX - COLOR_MIN);
       colorScaleBar.rect(x, barY + i * stepHeight, barWidth, stepHeight + 1).fill({ color: tempToColor(t) });
     }
+    colorScaleMaxLabel.text = `${COLOR_MAX}\u00B0C`;
     colorScaleMaxLabel.position.set(x, barY - 16);
+    colorScaleMinLabel.text = `${COLOR_MIN}\u00B0C`;
+    colorScaleMinLabel.position.set(x, barY + barHeight + 4);
+  }
+
+  function drawSshColorScale(x: number, mapHeight: number, minEta: number, maxEta: number): void {
+    const barWidth = 15;
+    const barHeight = mapHeight * 0.6;
+    const barY = (mapHeight - barHeight) / 2;
+    colorScaleBar.clear();
+    const steps = 50;
+    const stepHeight = barHeight / steps;
+    const range = Math.max(Math.abs(minEta), Math.abs(maxEta), 1e-10);
+    for (let i = 0; i < steps; i++) {
+      const frac = 1 - i / steps; // top = positive (red)
+      const eta = (frac * 2 - 1) * range; // map [1,0] to [+range, -range]
+      colorScaleBar.rect(x, barY + i * stepHeight, barWidth, stepHeight + 1)
+        .fill({ color: sshToColor(eta, -range, range) });
+    }
+    colorScaleMaxLabel.text = `+${range.toFixed(2)} m`;
+    colorScaleMaxLabel.position.set(x, barY - 16);
+    colorScaleMinLabel.text = `-${range.toFixed(2)} m`;
     colorScaleMinLabel.position.set(x, barY + barHeight + 4);
   }
 
@@ -269,7 +291,11 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     }
 
     // Color scale
-    drawColorScale(LEFT_MARGIN + mapWidth + 8, mapHeight);
+    if (opts.backgroundMode === "ssh") {
+      drawSshColorScale(LEFT_MARGIN + mapWidth + 8, mapHeight, minEta, maxEta);
+    } else {
+      drawColorScale(LEFT_MARGIN + mapWidth + 8, mapHeight);
+    }
 
     // Performance metrics
     const fps = app.ticker.FPS;

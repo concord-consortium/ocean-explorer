@@ -502,6 +502,61 @@ tuning.
   develop, options include: tuning drag to increase deflection, reducing G to amplify the
   height response, or accepting a qualitatively correct but weaker pattern.
 
+## Approach comparison and decision
+
+Both approaches were implemented in parallel on separate branches (`OE-2-phase-3` for
+Approach A, `OE-2-phase-3-cgrid` for Approach B) and produced visually comparable SSH
+patterns at steady state.
+
+### Results summary
+
+| Criterion | Approach A (collocated) | Approach B (C-grid) |
+|-----------|------------------------|---------------------|
+| Visual SSH pattern | Subtropical highs, equatorial/polar lows | Same qualitative pattern |
+| Geostrophic balance | ~2% residual at mid-latitudes | Partial (~60% of v-points show cancellation) |
+| Checkerboard artifacts | None observed | N/A (eliminated by construction) |
+| Convergence | ~6300 iterations | Similar |
+| Code complexity | Single velocity loop, no averaging | Separate u/v loops, 4-point Coriolis averaging, face-to-center interpolation |
+| Coriolis coupling | Local (u and v at same point) | Cross-latitude (4-point average couples adjacent rows, ~20% deviation from per-row analytical formula) |
+| Startup behavior | Clean | 1-step lag (Coriolis sees zero cross-velocity on first step from rest) |
+
+### Decision: Approach A (collocated grid)
+
+The collocated grid is the better choice for this project:
+
+1. **Simpler code for equivalent visual results.** The collocated approach requires no
+   Coriolis averaging, no face-to-center interpolation for rendering, and a single velocity
+   update loop. This reduces both code complexity and the surface area for bugs.
+
+2. **Better geostrophic balance.** The collocated grid achieves ~2% residual in the
+   meridional geostrophic balance (f·u ≈ -G·∂η/∂y), while the C-grid only achieves
+   partial cancellation. The C-grid's 4-point Coriolis averaging introduces cross-latitude
+   coupling that degrades the balance.
+
+3. **No practical checkerboard problem.** The theoretical advantage of the C-grid
+   (eliminating the checkerboard mode) was not needed — Approach A showed no checkerboard
+   artifacts in practice.
+
+4. **Preserves Phase 2 code structure.** The collocated grid keeps `waterU`/`waterV` at
+   cell centers and the single-loop stepping pattern from Phase 2, minimizing refactoring.
+
+The C-grid branch (`OE-2-phase-3-cgrid`) is preserved for reference but not merged.
+
+### C-grid implementation findings (from Approach B)
+
+The following findings from the C-grid implementation are recorded here for reference.
+Findings that apply to both approaches have been integrated into Revision 1 below.
+
+- **Coriolis 1-step lag from rest.** On the C-grid, the v-update uses old u-values for the
+  4-point average. Starting from rest (all zeros), Coriolis contributes nothing on the first
+  step. Cross-wind flow only appears after 2+ steps.
+- **Per-row analytical formula invalid.** The 4-point Coriolis averaging couples adjacent
+  latitudes, so the per-row analytical terminal velocity formula from Phase 2 (which assumes
+  each row is independent) diverges ~20% from the actual C-grid steady state.
+- **Ageostrophic fraction is large with current drag.** With drag ≈ f at mid-latitudes, the
+  ageostrophic component on the C-grid was ~40%+. The collocated grid fared better (~2%
+  residual), likely because it avoids the cross-latitude averaging that smears the balance.
+
 ## Revision log
 
 ### Revision 1 — Approach A implementation findings (2026-02-14)
@@ -530,3 +585,9 @@ Findings from implementing Approach A (collocated grid) on branch `OE-2-phase-3`
 
 6. **Max water speed increased to ~0.5 m/s** (from ~0.1 m/s in Phase 2), due to pressure
    gradient forcing adding a geostrophic component to the wind-driven flow.
+
+### Revision 2 — SSH scale bar added to visualization (2026-02-14)
+
+When the background mode is set to SSH, the color scale bar now shows the SSH range
+(e.g., "+0.06 m" / "-0.06 m") instead of the temperature scale. This was ported from
+the C-grid implementation after the approach comparison.
