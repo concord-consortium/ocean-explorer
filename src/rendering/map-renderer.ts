@@ -200,11 +200,15 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
           wg.visible = false;
         }
 
-        // Water arrows
+        // Water arrows — interpolate from faces to cell centers
         const wa = waterArrows[arrowIdx];
-        const uVal = grid.waterU[arrowIdx];
-        const vVal = grid.waterV[arrowIdx];
-        const speed = Math.sqrt(uVal ** 2 + vVal ** 2);
+        // u_center = average of east face of (r,c-1) and east face of (r,c)
+        const uCenter = 0.5 * (grid.getU(r, c) + grid.getU(r, c - 1));
+        // v_center = average of north face of (r-1,c) and north face of (r,c)
+        const vCenter = r > 0
+          ? 0.5 * (grid.getV(r, c) + grid.getV(r - 1, c))
+          : grid.getV(r, c);
+        const speed = Math.sqrt(uCenter ** 2 + vCenter ** 2);
         if (speed > maxWaterSpeed) maxWaterSpeed = speed;
 
         if (opts.showWater && showArrowAtCol) {
@@ -212,8 +216,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
           if (len < 0.5) {
             wa.visible = false;
           } else {
-            // atan2(-vVal, uVal): negative V because screen Y is flipped
-            const angle = Math.atan2(-vVal, uVal);
+            const angle = Math.atan2(-vCenter, uCenter);
             wa.position.set(cx, cy);
             wa.rotation = angle;
             wa.scale.set(len / REF_ARROW_LEN);

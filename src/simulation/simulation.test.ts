@@ -1,7 +1,6 @@
 import { Simulation } from "./simulation";
 import { ROWS, COLS } from "./grid";
 import { windU, SimParams } from "./wind";
-import { coriolisParameter } from "./coriolis";
 
 const defaultParams: SimParams = {
   rotationRatio: 1.0,
