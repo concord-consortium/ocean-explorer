@@ -74,3 +74,29 @@ describe("createLandMask", () => {
     expect(landCount).toBe(6);
   });
 });
+
+describe("earth-like preset", () => {
+  it("has a reasonable number of land cells (20-50% of total)", () => {
+    const mask = createLandMask("earth-like");
+    let landCount = 0;
+    for (const val of mask) {
+      if (val === 1) landCount++;
+    }
+    const pct = landCount / mask.length;
+    // Real Earth is ~29% land, but at 5° resolution it varies
+    expect(pct).toBeGreaterThan(0.15);
+    expect(pct).toBeLessThan(0.50);
+  });
+
+  it("has land at Africa location (equator, ~20deg E)", () => {
+    const mask = createLandMask("earth-like");
+    // Row 18 = lat 2.5°, col 4 = lon 22.5° → should be land (central Africa)
+    expect(mask[18 * COLS + 4]).toBe(1);
+  });
+
+  it("has water at mid-Pacific", () => {
+    const mask = createLandMask("earth-like");
+    // Row 18 = lat 2.5°, col 36 = lon 182.5° → should be water (Pacific)
+    expect(mask[18 * COLS + 36]).toBe(0);
+  });
+});

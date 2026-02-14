@@ -1,4 +1,5 @@
 import { ROWS, COLS, latitudeAtRow } from "./grid";
+import { EARTH_MASK_ROWS } from "./earth-land-mask";
 
 export type LandPreset = "water-world" | "equatorial-continent" | "north-south-continent" | "earth-like";
 
@@ -60,12 +61,16 @@ function fillNorthSouthContinent(mask: Uint8Array): void {
 }
 
 /**
- * Earth-like continental layout sampled from real-world data.
- * Placeholder — populated by Task 9 (generate-earth-mask script).
+ * Earth-like continental layout sampled from Natural Earth 110m data.
+ * See scripts/generate-earth-mask.ts for the generation process.
  */
 function fillEarthLike(mask: Uint8Array): void {
-  // Placeholder: will be replaced with real data in Task 9.
-  // For now, use the north-south continent as a stand-in so the
-  // preset is selectable without errors.
-  fillNorthSouthContinent(mask);
+  for (let r = 0; r < ROWS; r++) {
+    const row = EARTH_MASK_ROWS[r];
+    for (let c = 0; c < COLS; c++) {
+      if (row[c] === "1") {
+        mask[r * COLS + c] = 1;
+      }
+    }
+  }
 }
