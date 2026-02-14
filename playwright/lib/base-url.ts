@@ -18,7 +18,7 @@ async function findDevServerPort(): Promise<string> {
       // eslint-disable-next-line prefer-const
       let timer: NodeJS.Timeout;
       const browser = bonjour.find({type: "http"}, _service => {
-        if (_service.name === process.env.REPOSITORY_NAME) {
+        if (_service.name === process.env.BONJOUR_SERVICE_NAME) {
           if (timer !== undefined) clearTimeout(timer);
           browser.stop();
           resolve(_service);
@@ -31,7 +31,7 @@ async function findDevServerPort(): Promise<string> {
     });
 
     if (!service) {
-      const name = process.env.REPOSITORY_NAME;
+      const name = process.env.BONJOUR_SERVICE_NAME;
       throw new Error(
         `No Bonjour service found with name '${name}'. Run \`npm start\` to start the dev server.`
       );

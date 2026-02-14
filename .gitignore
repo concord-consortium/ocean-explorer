@@ -10,6 +10,9 @@ playwright-report
 # Worktrees
 .worktrees
 
+# Environment overrides (worktree-specific, not committed)
+.env
+
 # Editors
 .idea
 

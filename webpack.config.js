@@ -5,7 +5,17 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const ESLintPlugin = require('eslint-webpack-plugin');
+const fs = require('fs');
 const os = require('os');
+
+// Load .env if present (used to override BONJOUR_SERVICE_NAME in worktrees)
+try {
+  const envFile = fs.readFileSync(path.join(__dirname, '.env'), 'utf8');
+  for (const line of envFile.split('\n')) {
+    const match = line.match(/^([A-Z_]+)=(.+)$/);
+    if (match && !(match[1] in process.env)) process.env[match[1]] = match[2].trim();
+  }
+} catch { /* .env is optional */ }
 
 // DEPLOY_PATH is set by the s3-deploy-action its value will be:
 // `branch/[branch-name]/` or `version/[tag-name]/`
@@ -37,7 +47,7 @@ module.exports = (env, argv) => {
         },
       },
       bonjour: {
-        name: 'ocean-explorer',
+        name: process.env.BONJOUR_SERVICE_NAME || 'ocean-explorer',
       },
     },
     devtool: devMode ? 'eval-cheap-module-source-map' : 'source-map',
