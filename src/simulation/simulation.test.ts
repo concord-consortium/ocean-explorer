@@ -135,3 +135,30 @@ describe("Simulation", () => {
     expect(nearEquatorV).toBeLessThan(midLatV * 0.2);
   });
 });
+
+describe("Pressure gradient integration", () => {
+  it("pressure gradient drives flow from SSH mound", () => {
+    const sim = new Simulation();
+    sim.grid.setEta(18, 36, 10.0);
+    const params = { ...defaultParams, rotationRatio: 0.01 };
+    sim.step(params);
+    // Flow should move away from the mound
+    // u at east face of mound cell should be positive (eastward)
+    expect(sim.grid.getU(18, 36)).toBeGreaterThan(0);
+    // u at west face (east face of cell to the left) should be negative
+    expect(sim.grid.getU(18, 35)).toBeLessThan(0);
+  });
+
+  it("eta changes from velocity divergence", () => {
+    const sim = new Simulation();
+    // Converging u field
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        sim.grid.setU(r, c, -c * 0.001);
+      }
+    }
+    const params = { ...defaultParams, rotationRatio: 0.01, tempGradientRatio: 0 };
+    sim.step(params);
+    expect(sim.grid.getEta(18, 36)).not.toBe(0);
+  });
+});
