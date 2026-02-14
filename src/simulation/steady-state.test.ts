@@ -11,14 +11,14 @@ function runToSteadyState(sim: Simulation, params: SimParams, maxIter = 50000): 
   const threshold = 1e-6;
   for (let iter = 1; iter <= maxIter; iter++) {
     let maxDelta = 0;
-    const prevU = new Float64Array(sim.grid.waterU);
-    const prevV = new Float64Array(sim.grid.waterV);
+    const prevU = new Float64Array(sim.grid.u);
+    const prevV = new Float64Array(sim.grid.v);
 
     sim.step(params);
 
     for (let i = 0; i < prevU.length; i++) {
-      const deltaU = Math.abs(sim.grid.waterU[i] - prevU[i]);
-      const deltaV = Math.abs(sim.grid.waterV[i] - prevV[i]);
+      const deltaU = Math.abs(sim.grid.u[i] - prevU[i]);
+      const deltaV = Math.abs(sim.grid.v[i] - prevV[i]);
       if (deltaU > maxDelta) maxDelta = deltaU;
       if (deltaV > maxDelta) maxDelta = deltaV;
     }
