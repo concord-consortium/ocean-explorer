@@ -15,6 +15,7 @@ export const App = () => {
   const [targetStepsPerSecond, setTargetStepsPerSecond] = useState(DEFAULT_STEPS_PER_SECOND);
   const [paused, setPaused] = useState(true);
   const [arrowScale, setArrowScale] = useState(1.0);
+  const [backgroundMode, setBackgroundMode] = useState<"temperature" | "ssh">("temperature");
 
   const controlsRef = useRef<HTMLDivElement>(null);
   const benchmarkRef = useRef<FrameHeadroomBenchmark | null>(null);
@@ -85,6 +86,13 @@ export const App = () => {
             onChange={e => setShowWater(e.target.checked)} />
           Show water
         </label>
+        <label>
+          Background:
+          <select value={backgroundMode} onChange={e => setBackgroundMode(e.target.value as "temperature" | "ssh")}>
+            <option value="temperature">Temperature</option>
+            <option value="ssh">Sea Surface Height</option>
+          </select>
+        </label>
         <button
           onClick={() => {
             if (benchmarkRef.current && !benchmarkRunning) {
@@ -114,6 +122,7 @@ export const App = () => {
           targetStepsPerSecond={targetStepsPerSecond}
           paused={paused}
           arrowScale={arrowScale}
+          backgroundMode={backgroundMode}
           benchmarkRef={benchmarkRef}
         />
       </div>
