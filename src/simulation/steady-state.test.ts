@@ -3,6 +3,7 @@ import { ROWS, COLS, latitudeAtRow } from "./grid";
 import { SimParams } from "./wind";
 import { coriolisParameter } from "./coriolis";
 import { divergence, pressureGradient } from "./spatial";
+import { createLandMask } from "./land-presets";
 
 /**
  * Run simulation from rest until U, V, and eta all converge.
@@ -113,5 +114,30 @@ describe("Steady-state with pressure gradients", () => {
     expect(checked).toBeGreaterThan(0);
     // Worst-case residual should be within 5% (diagnostic showed < 2%)
     expect(worstResidualRatio).toBeLessThan(0.05);
+  });
+});
+
+describe("Phase 4 regression: water world unchanged", () => {
+  it("water world produces identical steady state to no land mask", () => {
+    const params = { ...defaultParams };
+
+    // Run without any land mask changes (Phase 3 behavior)
+    const simBaseline = new Simulation();
+    const baselineSteps = runToSteadyState(simBaseline, params);
+
+    // Run with explicit water-world preset
+    const simWaterWorld = new Simulation();
+    simWaterWorld.grid.landMask.set(createLandMask("water-world"));
+    const waterWorldSteps = runToSteadyState(simWaterWorld, params);
+
+    // Should converge in exactly the same number of steps
+    expect(waterWorldSteps).toBe(baselineSteps);
+
+    // Final state should be identical
+    for (let i = 0; i < ROWS * COLS; i++) {
+      expect(simWaterWorld.grid.waterU[i]).toBe(simBaseline.grid.waterU[i]);
+      expect(simWaterWorld.grid.waterV[i]).toBe(simBaseline.grid.waterV[i]);
+      expect(simWaterWorld.grid.eta[i]).toBe(simBaseline.grid.eta[i]);
+    }
   });
 });
