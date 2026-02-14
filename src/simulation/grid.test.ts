@@ -6,23 +6,25 @@ describe("Grid", () => {
     expect(ROWS).toBe(36);
   });
 
-  it("initializes all velocities to zero", () => {
+  it("initializes all fields to zero", () => {
     const grid = new Grid();
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         expect(grid.getU(r, c)).toBe(0);
         expect(grid.getV(r, c)).toBe(0);
+        expect(grid.getEta(r, c)).toBe(0);
       }
     }
   });
 
-  it("can set and get cell velocities", () => {
+  it("can set and get cell values", () => {
     const grid = new Grid();
     grid.setU(10, 20, 1.5);
     grid.setV(10, 20, -0.5);
+    grid.setEta(10, 20, 5.0);
     expect(grid.getU(10, 20)).toBe(1.5);
     expect(grid.getV(10, 20)).toBe(-0.5);
-    // other cells remain zero
+    expect(grid.getEta(10, 20)).toBe(5.0);
     expect(grid.getU(0, 0)).toBe(0);
   });
 
@@ -36,11 +38,8 @@ describe("Grid", () => {
   });
 
   it("provides latitude in degrees for a given row", () => {
-    // Row 0 is the southernmost band: centered at -87.5
     expect(latitudeAtRow(0)).toBe(-87.5);
-    // Row 35 is the northernmost band: centered at 87.5
     expect(latitudeAtRow(35)).toBe(87.5);
-    // Middle row 18 should be 2.5 (just north of equator)
     expect(latitudeAtRow(18)).toBe(2.5);
   });
 });
