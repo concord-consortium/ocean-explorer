@@ -25,7 +25,8 @@ export class Simulation {
       const windAccelU = windDragCoefficient * windU(lat, params);
       // windAccelV = 0 (no meridional wind)
 
-      const coriolisParam = coriolisParameter(lat, params.rotationRatio);
+      const effectiveRotation = params.prograde ? params.rotationRatio : -params.rotationRatio;
+      const coriolisParam = coriolisParameter(lat, effectiveRotation);
       const dragFactor = 1 + drag * dt;
       const coriolisFactor = coriolisParam * dt;
       const determinant = dragFactor * dragFactor + coriolisFactor * coriolisFactor;

@@ -111,10 +111,13 @@ describe("Simulation", () => {
       simRetro.step(retroParams);
     }
     const row = 24;
-    const vPro = simPro.grid.getV(row, 0);
-    const vRetro = simRetro.grid.getV(row, 0);
-    // V values should have opposite signs
-    expect(Math.sign(vPro)).toBe(-Math.sign(vRetro));
+    // Deflection direction relative to flow (v/u ratio) should flip with retrograde
+    // Prograde NH: rightward deflection → v/u < 0
+    // Retrograde NH: leftward deflection → v/u > 0
+    const ratioPrograde = simPro.grid.getV(row, 0) / simPro.grid.getU(row, 0);
+    const ratioRetrograde = simRetro.grid.getV(row, 0) / simRetro.grid.getU(row, 0);
+    expect(ratioPrograde).toBeLessThan(0);
+    expect(ratioRetrograde).toBeGreaterThan(0);
   });
 
   it("equator has near-zero deflection", () => {
