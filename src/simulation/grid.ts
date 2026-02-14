@@ -9,12 +9,14 @@ export class Grid {
   readonly waterU: Float64Array;
   readonly waterV: Float64Array;
   readonly eta: Float64Array;
+  readonly landMask: Uint8Array;
 
   constructor() {
     const size = ROWS * COLS;
     this.waterU = new Float64Array(size);
     this.waterV = new Float64Array(size);
     this.eta = new Float64Array(size);
+    this.landMask = new Uint8Array(size);
   }
 
   private idx(r: number, c: number): number {
@@ -43,6 +45,10 @@ export class Grid {
 
   setEta(r: number, c: number, val: number): void {
     this.eta[this.idx(r, c)] = val;
+  }
+
+  isLand(r: number, c: number): boolean {
+    return this.landMask[this.idx(r, c)] === 1;
   }
 }
 
