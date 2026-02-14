@@ -43,3 +43,48 @@ export function pressureGradient(grid: Grid): { dEtaDx: Float64Array; dEtaDy: Fl
 
   return { dEtaDx, dEtaDy };
 }
+
+/**
+ * Compute velocity divergence ∇·v at every cell center.
+ *
+ * ∇·v = (1/(R·cosφ)) · ∂u/∂λ + (1/(R·cosφ)) · ∂(v·cosφ)/∂φ
+ *
+ * Central differences in interior, one-sided at polar boundaries.
+ */
+export function divergence(grid: Grid): Float64Array {
+  const size = ROWS * COLS;
+  const div = new Float64Array(size);
+
+  for (let r = 0; r < ROWS; r++) {
+    const lat = latitudeAtRow(r);
+    const cosLat = Math.cos(lat * Math.PI / 180);
+    const invRcosLat = 1 / (R_EARTH * cosLat);
+
+    for (let c = 0; c < COLS; c++) {
+      const i = r * COLS + c;
+
+      // ∂u/∂λ (longitude wraps)
+      const duDlam = (grid.getU(r, c + 1) - grid.getU(r, c - 1)) / (2 * DELTA_RAD);
+
+      // ∂(v·cosφ)/∂φ
+      let dvCosDphi: number;
+      if (r === 0) {
+        const vCosN = grid.getV(r + 1, c) * Math.cos(latitudeAtRow(r + 1) * Math.PI / 180);
+        const vCosHere = grid.getV(r, c) * cosLat;
+        dvCosDphi = (vCosN - vCosHere) / DELTA_RAD;
+      } else if (r === ROWS - 1) {
+        const vCosHere = grid.getV(r, c) * cosLat;
+        const vCosS = grid.getV(r - 1, c) * Math.cos(latitudeAtRow(r - 1) * Math.PI / 180);
+        dvCosDphi = (vCosHere - vCosS) / DELTA_RAD;
+      } else {
+        const vCosN = grid.getV(r + 1, c) * Math.cos(latitudeAtRow(r + 1) * Math.PI / 180);
+        const vCosS = grid.getV(r - 1, c) * Math.cos(latitudeAtRow(r - 1) * Math.PI / 180);
+        dvCosDphi = (vCosN - vCosS) / (2 * DELTA_RAD);
+      }
+
+      div[i] = invRcosLat * (duDlam + dvCosDphi);
+    }
+  }
+
+  return div;
+}

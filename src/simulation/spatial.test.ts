@@ -1,4 +1,4 @@
-import { pressureGradient } from "./spatial";
+import { pressureGradient, divergence } from "./spatial";
 import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
 import { R_EARTH, DELTA_RAD } from "../constants";
 
@@ -66,5 +66,51 @@ describe("pressureGradient", () => {
     // Check interior row (not boundary)
     const i = 18 * COLS + 0;
     expect(dEtaDy[i]).toBeCloseTo(expectedGrad, 10);
+  });
+});
+
+describe("divergence", () => {
+  it("returns zero for uniform zonal velocity with zero meridional", () => {
+    const grid = new Grid();
+    // Uniform u, v=0: ∂u/∂λ=0 and v·cosφ terms are zero → div=0
+    for (let i = 0; i < ROWS * COLS; i++) {
+      grid.waterU[i] = 5.0;
+    }
+
+    const div = divergence(grid);
+    for (let r = 1; r < ROWS - 1; r++) {
+      for (let c = 0; c < COLS; c++) {
+        expect(Math.abs(div[r * COLS + c])).toBeLessThan(1e-10);
+      }
+    }
+  });
+
+  it("positive u-gradient produces positive divergence", () => {
+    const grid = new Grid();
+    // u increases eastward: u = c * 0.01
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        grid.setU(r, c, c * 0.01);
+      }
+    }
+
+    const div = divergence(grid);
+    // Interior cells should have positive divergence
+    const i = 18 * COLS + 36;
+    expect(div[i]).toBeGreaterThan(0);
+  });
+
+  it("converging v-field produces negative divergence", () => {
+    const grid = new Grid();
+    // v points inward toward equator
+    for (let r = 0; r < ROWS; r++) {
+      const lat = latitudeAtRow(r);
+      grid.setV(r, 0, lat > 0 ? -0.1 : 0.1);
+    }
+
+    const div = divergence(grid);
+    // Near equator: v changes from positive (south) to negative (north) → converging
+    const i = 18 * COLS + 0;
+    expect(div[i]).toBeLessThan(0);
   });
 });
