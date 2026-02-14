@@ -75,34 +75,43 @@ describe("Steady-state with pressure gradients", () => {
     expect(maxDiv).toBeLessThan(1e-4);
   });
 
-  it("geostrophic balance: f·v ≈ -G·∂η/∂x at mid-latitudes", () => {
+  it("geostrophic balance: f·u ≈ -G·∂η/∂y at mid-latitudes", () => {
     const params = { ...defaultParams };
     const sim = new Simulation();
     runToSteadyState(sim, params);
 
-    const { dEtaDx } = pressureGradient(sim.grid);
+    // With zonally-symmetric wind forcing, eta varies only by latitude,
+    // so ∂η/∂x ≈ 0 and the zonal balance is trivial. The meaningful check
+    // is the meridional geostrophic balance: f·u = -G·∂η/∂y.
+    const { dEtaDy } = pressureGradient(sim.grid);
 
-    // Check several mid-latitude rows (away from equator and poles)
+    // Check several mid-latitude rows (away from equator and poles).
+    // Collect worst relative residual across all cells with significant signal.
+    let worstResidualRatio = 0;
+    let checked = 0;
+
     for (const r of [12, 15, 21, 24, 27]) {
       const lat = latitudeAtRow(r);
       const f = coriolisParameter(lat, params.rotationRatio);
       if (Math.abs(f) < 1e-6) continue;
 
-      for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
-        const fv = f * sim.grid.waterV[i];
-        const gDeta = -sim.g * dEtaDx[i];
+      const i = r * COLS + 0; // any column (zonally symmetric)
+      const fu = f * sim.grid.waterU[i];
+      const gDedy = -sim.g * dEtaDy[i];
 
-        // These won't be exactly equal (ageostrophic wind-driven component remains)
-        // but the geostrophic component should be a significant fraction
-        // Just check they have the same sign and similar magnitude
-        if (Math.abs(gDeta) > 1e-8) {
-          // Residual should be smaller than the terms themselves
-          const residual = Math.abs(fv - gDeta);
-          const scale = Math.max(Math.abs(fv), Math.abs(gDeta));
-          expect(residual / scale).toBeLessThan(0.5); // within 50%
-        }
-      }
+      // Skip rows with negligible pressure gradient signal
+      if (Math.abs(gDedy) <= 1e-8) continue;
+
+      const residual = Math.abs(fu - gDedy);
+      const scale = Math.max(Math.abs(fu), Math.abs(gDedy));
+      const ratio = residual / scale;
+      if (ratio > worstResidualRatio) worstResidualRatio = ratio;
+      checked++;
     }
+
+    // Ensure we actually checked some rows
+    expect(checked).toBeGreaterThan(0);
+    // Worst-case residual should be within 5% (diagnostic showed < 2%)
+    expect(worstResidualRatio).toBeLessThan(0.05);
   });
 });
