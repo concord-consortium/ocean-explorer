@@ -2,7 +2,7 @@ import { Simulation } from "./simulation";
 import { ROWS, COLS, latitudeAtRow } from "./grid";
 import { windU, SimParams } from "./wind";
 
-function runToSteadyState(sim: Simulation, params: SimParams, maxIter = 500000): number {
+function runToSteadyState(sim: Simulation, params: SimParams, maxIter = 50000): number {
   const threshold = 1e-6;
   for (let iter = 1; iter <= maxIter; iter++) {
     let maxDelta = 0;
@@ -35,8 +35,8 @@ describe("Steady-state snapshots", () => {
     const sim = new Simulation();
     const steps = runToSteadyState(sim, params);
 
-    expect(steps).toBeGreaterThan(100);
-    expect(steps).toBeLessThan(500000);
+    expect(steps).toBeGreaterThan(10);
+    expect(steps).toBeLessThan(50000);
 
     for (let r = 0; r < ROWS; r++) {
       const lat = latitudeAtRow(r);

@@ -33,7 +33,7 @@ describe("Simulation", () => {
     expect(sim.grid.getV(3, 0)).toBe(0);
   });
 
-  it("reaches terminal velocity: waterU converges to windForce / drag", () => {
+  it("reaches terminal velocity: waterU converges to windAccel / drag", () => {
     const sim = new Simulation();
     const params = defaultParams;
 
@@ -43,15 +43,16 @@ describe("Simulation", () => {
     const expectedTerminalU = (sim.windDragCoefficient * wU) / sim.drag;
 
     // Run steps until close to terminal velocity or hit a safety cap
-    const maxSteps = 10000;
-    const tolerance = 0.005; // match toBeCloseTo precision of 2 decimal places
+    // With drag = 1e-4, time constant = 10,000 steps (vs 100,000 at old drag)
+    const maxSteps = 5000;
+    const tolerance = 0.00005; // match toBeCloseTo precision of 4
     for (let i = 0; i < maxSteps; i++) {
       sim.step(params);
       const currentU = sim.grid.getU(6, 0);
       if (Math.abs(currentU - expectedTerminalU) < tolerance) break;
     }
 
-    expect(sim.grid.getU(6, 0)).toBeCloseTo(expectedTerminalU, 2);
+    expect(sim.grid.getU(6, 0)).toBeCloseTo(expectedTerminalU, 4);
     // V should stay zero
     expect(sim.grid.getV(6, 0)).toBeCloseTo(0);
   });
