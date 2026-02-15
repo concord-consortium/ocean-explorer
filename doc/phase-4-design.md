@@ -52,6 +52,13 @@ Add a `landMask: Uint8Array` to the grid (0 = water, 1 = land). The mask is set 
 preset is selected and does not change during simulation. It has the same dimensions as the
 existing velocity and SSH arrays (`ROWS x COLS`).
 
+After filling the raw mask from the preset definition, a post-processing step (`fillDeadEnds`)
+converts dead-end water cells to land. A dead-end cell has 3 or more orthogonal land neighbors,
+meaning water can only flow through one opening. These cells are numerically unstable on a
+collocated grid (see "Collocated grid constraint" below) and are not physically meaningful at
+5° resolution. The filling repeats iteratively until no more dead-ends exist (filling one cell
+can create new dead-ends). For the earth-like preset, this fills 45 cells (33.9% → 35.6% land).
+
 ## Continental presets
 
 Four presets, selectable via a dropdown control:
@@ -146,6 +153,29 @@ The simplest implementation: compute the full physics step as today (ignoring la
 out velocity and η on all land cells as a post-step mask. The pressure gradient and divergence
 operators in `spatial.ts` need modification to handle land neighbors, but the rest of the
 physics code is unchanged.
+
+### CFL constraint
+
+Adding land boundaries requires reducing the simulation timestep. On a lat-lon grid, zonal
+cell width shrinks toward the poles as `dx = R·cos(lat)·Δλ`. In water world, zonal symmetry
+means no zonal pressure gradients, so the zonal CFL number doesn't matter. But land boundaries
+break zonal symmetry, and at ±87.5° the zonal cell width is only ~24 km. The CFL condition
+`c·dt/dx < 1` (where `c = sqrt(G_STIFFNESS) ≈ 22.4 m/s`) requires `dt < ~1080 s` at those
+latitudes. DT was reduced from 3600s to 900s (CFL = 0.83 at the poles).
+
+### Collocated grid constraint
+
+On a collocated grid (velocities and SSH at cell centers), water cells in narrow pockets
+(1-2 cells wide, bounded by land) develop numerical instabilities. The divergence at each cell
+depends on *neighbor* velocities, while drag acts on the cell's *own* velocity. In a narrow
+pocket both cells are driven by the same pressure gradient, and the divergence pumps SSH in
+opposite directions — a positive feedback loop that drag cannot counteract because it acts on
+the wrong variable.
+
+A staggered Arakawa C-grid would not have this problem (velocity at the cell interface directly
+couples pressure to divergence at the same location). The practical fix for our collocated grid
+is to fill dead-end cells (see "Land mask" above), eliminating pockets narrower than 2 cells
+in any direction.
 
 ## Rendering
 
@@ -276,27 +306,41 @@ Entries to add:
 
 ## Findings
 
+### Numerical stability fixes
+
+Two numerical instabilities were discovered during visual testing:
+
+1. **CFL violation at high latitudes.** With dt=3600s, the explicit gravity wave CFL number
+   at polar rows (lat ±87.5°) is c·dt/dx ≈ 3.3 — well above the stability limit of 1.0.
+   In water world this doesn't matter (no zonal gradients), but land boundaries create zonal
+   pressure gradients that trigger the instability. **Fix:** Reduced dt from 3600s to 900s
+   (CFL = 0.83 at the poles).
+
+2. **Collocated grid instability in narrow channels.** Water cells with 3+ land neighbors
+   (dead-end pockets) develop runaway SSH growth. On a collocated grid, divergence depends on
+   neighbor velocities while drag acts on the cell's own velocity — in a 1-2 cell pocket, this
+   creates a positive feedback loop that drag can't counteract. **Fix:** Added `fillDeadEnds()`
+   that converts dead-end water cells to land during mask creation (45 cells filled in the
+   earth-like mask).
+
+3. **False convergence in tests.** The convergence test checked `maxDelta < threshold`, but
+   when values overflowed to Infinity/NaN, `NaN > threshold` evaluates to `false`, so
+   `maxDelta` stayed at 0 and the test passed vacuously. **Fix:** Added explicit
+   `isFinite(maxDelta)` check before the convergence test.
+
 ### Convergence times
+
+With dt=900s and dead-end filling:
 
 | Preset | Steps to converge | Threshold |
 |--------|--------------------|-----------|
-| Water world | 6,303 | 1e-6 |
-| Equatorial continent | 458 | 1e-6 |
-| North-south continent | 440 | 1e-6 |
-| Earth-like | 739 | 1e-5 |
+| Water world | 11,112 | 1e-6 |
+| Equatorial continent | 27,347 | 1e-6 |
+| North-south continent | 27,892 | 1e-6 |
+| Earth-like | 15,106 | 1e-5 |
 
-The continent presets converge much faster than water world because land boundaries constrain
-flow into enclosed basins, reducing the degrees of freedom. Earth-like requires a looser
-threshold (1e-5 instead of 1e-6) — see Drake Passage note below.
-
-### Drake Passage convergence issue
-
-The Earth-like preset does not converge at the standard 1e-6 threshold even after 100,000+
-iterations. Diagnostic investigation identified 6 water cells in the Drake Passage (the narrow
-channel between South America and Antarctica) where eta drifts monotonically at ~4.1e-6 per
-step. Velocities in these cells converge to ~1e-11, but the eta drift persists due to residual
-divergence in the confined 1–2 cell wide channel geometry. The 1e-5 threshold provides an
-order of magnitude of headroom above this drift rate.
+Earth-like requires a looser threshold (1e-5) due to residual eta drift in narrow channels
+(e.g., Drake Passage area).
 
 ### Plan correction: one-sided vs central difference
 
@@ -306,26 +350,6 @@ backward difference (`R_EARTH * DELTA_RAD`) when the north neighbor is land. The
 corrected during implementation to match the one-sided difference that the code correctly
 produces. The plan's pressure gradient implementation code was correct — only the test
 assertion had the wrong denominator.
-
-### Visual observations
-
-Visual smoke testing confirmed:
-
-- **Gyres form as expected.** The north-south continent preset produces clear clockwise
-  circulation in the northern hemisphere and counter-clockwise in the southern, matching
-  real-world gyre patterns.
-- **Western intensification is visible but broad.** In both the north-south continent and
-  Earth-like presets, flow along the western boundary is faster than the eastern return flow.
-  As predicted by the design doc, the effect is diffuse (~5,000 km boundary layer width from
-  Rayleigh drag) rather than a narrow jet. This is consistent with the Stommel model.
-- **Earth-like continents are recognizable.** At 5° resolution the major landmasses (Americas,
-  Africa, Eurasia, Australia, Antarctica) are identifiable. Coastlines are blocky but
-  sufficient for generating multiple distinct ocean basins.
-- **Land rendering works correctly.** Land cells display as gray-brown, wind arrows are visible
-  over land, water arrows are suppressed on land. SSH mode correctly excludes land from the
-  color range calculation.
-- **Preset switching resets cleanly.** Changing the dropdown resets velocity, SSH, and the land
-  mask, then simulation resumes from rest with the new configuration.
 
 ### Recommendation
 
@@ -338,3 +362,25 @@ lateral viscosity unless sharper boundary currents become a priority.
 
 - Branch from `OE-2-phase-3`
 - Target `OE-2-phase-3` when creating the PR (so the diff shows only Phase 4 changes)
+
+## Revision log
+
+### Revision 1: Numerical stability fixes
+
+Visual testing revealed two numerical instabilities not anticipated by the original design:
+
+1. **CFL violation at high latitudes** — Land boundaries create zonal pressure gradients that
+   were previously zero (water world is zonally symmetric). At polar rows, zonal cells are
+   ~24 km wide, giving CFL ≈ 3.3 with dt=3600s. Fix: reduced DT to 900s.
+
+2. **Collocated grid instability in narrow channels** — Dead-end water cells (3+ land neighbors)
+   develop runaway SSH growth because the divergence feedback bypasses local drag damping.
+   Fix: added `fillDeadEnds()` to land mask post-processing.
+
+3. **False convergence in tests** — `NaN > threshold` evaluates to `false`, so overflowed
+   simulations appeared to converge. Fix: added `isFinite(maxDelta)` divergence check.
+
+Changes integrated into:
+- "Land mask" section: added dead-end filling description
+- "Physics at land/water boundaries": added CFL constraint and collocated grid constraint
+- "Findings": replaced incorrect convergence data with verified numbers

@@ -11,8 +11,8 @@ export const ROWS = 180 / RESOLUTION_DEG;   // 36
 
 // ── Simulation ──
 
-/** Simulation timestep in seconds (1 hour). */
-export const DT = 3600;
+/** Simulation timestep in seconds (15 minutes). */
+export const DT = 900;
 
 /** Fraction of wind speed transferred to water acceleration (s⁻¹). */
 export const WIND_DRAG_COEFFICIENT = 5e-6;

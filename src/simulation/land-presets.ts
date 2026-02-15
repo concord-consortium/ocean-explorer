@@ -28,7 +28,45 @@ export function createLandMask(preset: LandPreset): Uint8Array {
       break;
   }
 
+  fillDeadEnds(mask);
   return mask;
+}
+
+/**
+ * Fill dead-end water cells (3+ orthogonal land neighbors) by converting
+ * them to land. Repeats until stable.
+ *
+ * On a collocated grid, water cells with only 1 open neighbor can develop
+ * numerical instabilities because the divergence feedback bypasses local
+ * drag damping. Filling these cells prevents the instability without
+ * affecting meaningful ocean passages (which are always 2+ cells wide).
+ */
+function fillDeadEnds(mask: Uint8Array): void {
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const i = r * COLS + c;
+        if (mask[i]) continue; // already land
+
+        let landNeighbors = 0;
+        // East (wrapping)
+        if (mask[r * COLS + ((c + 1) % COLS)]) landNeighbors++;
+        // West (wrapping)
+        if (mask[r * COLS + ((c - 1 + COLS) % COLS)]) landNeighbors++;
+        // North (treat out-of-bounds as open water for polar rows)
+        if (r < ROWS - 1 && mask[(r + 1) * COLS + c]) landNeighbors++;
+        // South
+        if (r > 0 && mask[(r - 1) * COLS + c]) landNeighbors++;
+
+        if (landNeighbors >= 3) {
+          mask[i] = 1;
+          changed = true;
+        }
+      }
+    }
+  }
 }
 
 /**

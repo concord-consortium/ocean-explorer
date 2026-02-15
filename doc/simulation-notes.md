@@ -35,7 +35,19 @@ Phase 1 terminal velocities were ~2000 m/s (three orders of magnitude too high).
 for Phase 2 to produce realistic ocean surface current speeds before adding Coriolis.
 With `drag = 1e-4`:
 - Deflection at 45° latitude: ~46°
-- Time constant: 10,000 seconds (~2.8 hours simulated, ~3 seconds real time at default speed)
+- Time constant: 10,000 seconds (~2.8 hours simulated, ~11 seconds real time at default speed)
+
+### Phase 3 → Phase 4
+
+| Constant | Phase 3 | Phase 4 | Rationale |
+|----------|---------|---------|-----------|
+| `DT` | 3600 s | 900 s | CFL stability with land boundaries at high latitudes |
+
+With land boundaries breaking zonal symmetry, pressure gradients develop in the zonal
+direction. Near the poles (lat ±87.5°), zonal grid cells are only ~24 km wide, giving a CFL
+number of c·dt/dx = 22.4·3600/24234 ≈ 3.3 — well above the stability limit of 1.0.
+Reducing dt to 900 s brings the worst-case CFL to 0.83. The simulation runs 4x more steps
+per unit of simulated time but each step is cheaper to observe convergence.
 
 ## Modeling simplifications
 
@@ -91,6 +103,22 @@ into the interior, and grid resolution of ~0.1–0.2° to resolve the resulting 
 **Why:** Without lateral viscosity, there is no mechanism for a no-slip condition to affect
 the interior flow. Free-slip with velocity masking is the simplest correct approach at our
 resolution and physics level.
+
+### Dead-end filling in land masks (Phase 4)
+
+Water cells with 3+ orthogonal land neighbors are automatically converted to land during
+mask creation. On a collocated grid (velocities and SSH at cell centers), such cells develop
+numerical instabilities: the divergence at each cell depends on neighbor velocities, while
+drag acts on the cell's own velocity. In narrow 1-2 cell pockets, this creates a positive
+feedback loop where pressure-driven flow pumps SSH without drag being able to counteract it.
+
+A staggered Arakawa C-grid (velocities at cell faces, SSH at centers) would not have this
+issue because the velocity directly coupling pressure to divergence lives at the same
+location. Dead-end filling is the simplest fix for the collocated grid.
+
+**Why:** Avoids a fundamental instability mode on collocated grids without requiring a grid
+architecture change. The filled cells (45 in the earth-like mask) are sub-resolution
+geographic features that aren't physically meaningful at 5° resolution.
 
 ### Prescribed analytical wind field
 

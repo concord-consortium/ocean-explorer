@@ -29,6 +29,10 @@ function runToSteadyState(
       if (deltaEta > maxDelta) maxDelta = deltaEta;
     }
 
+    if (!isFinite(maxDelta)) {
+      throw new Error(`Simulation diverged at iteration ${iter} (maxDelta=${maxDelta})`);
+    }
+
     if (maxDelta < threshold) return iter;
   }
   throw new Error(`Did not converge within ${maxIter} iterations`);
