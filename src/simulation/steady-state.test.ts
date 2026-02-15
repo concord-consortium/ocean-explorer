@@ -174,11 +174,10 @@ describe("Steady-state with continents", () => {
     runToSteadyState(sim, params);
 
     for (let i = 0; i < ROWS * COLS; i++) {
-      if (mask[i]) {
-        expect(sim.grid.waterU[i]).toBe(0);
-        expect(sim.grid.waterV[i]).toBe(0);
-        expect(sim.grid.eta[i]).toBe(0);
-      }
+      if (!mask[i]) continue;
+      expect(sim.grid.waterU[i]).toBe(0);
+      expect(sim.grid.waterV[i]).toBe(0);
+      expect(sim.grid.eta[i]).toBe(0);
     }
   });
 });
