@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 510" font-family="system-ui, sans-serif">
+  <defs>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#dc2626"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/>
+    </marker>
+    <marker id="arrow-gray" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+      <path d="M0,0 L7,2.5 L0,5 Z" fill="#999"/>
+    </marker>
+  </defs>
+
+  <style>
+    text { font-size: 13px; fill: #333; }
+    .title { font-size: 15px; font-weight: bold; fill: #333; }
+    .label { font-size: 12px; fill: #666; }
+    .point-label { font-size: 13px; font-weight: bold; fill: #333; }
+    .omega-label { font-size: 13px; fill: #2563eb; font-style: italic; }
+    .red-label { font-size: 12px; fill: #dc2626; }
+    .green-label { font-size: 12px; fill: #16a34a; }
+    .legend { font-size: 11.5px; fill: #555; }
+  </style>
+
+  <!-- Title -->
+  <text class="title" text-anchor="middle" x="360" y="24">
+    Decomposition of Earth's Angular Velocity at Three Latitudes
+  </text>
+
+  <!-- ==================== EARTH CROSS-SECTION ==================== -->
+
+  <!-- Earth circle -->
+  <circle cx="230" cy="245" r="140" fill="#f0f7ff" stroke="#b0c4de" stroke-width="1.5"/>
+
+  <!-- Rotation axis (dashed, behind everything) -->
+  <line x1="230" y1="38" x2="230" y2="415" stroke="#2563eb" stroke-width="1"
+        stroke-dasharray="6,4" opacity="0.4"/>
+
+  <!-- Ω arrow at top of axis -->
+  <line x1="230" y1="68" x2="230" y2="40" stroke="#2563eb" stroke-width="2.5"
+        marker-end="url(#arrow-blue)"/>
+  <text class="omega-label" x="240" y="46">Ω</text>
+  <text class="label" x="240" y="61">rotation axis</text>
+
+  <!-- Equator dashed line (horizontal through center) -->
+  <line x1="85" y1="245" x2="375" y2="245" stroke="#ccc" stroke-width="1" stroke-dasharray="4,4"/>
+  <text class="label" text-anchor="end" x="83" y="249">equator</text>
+
+  <!-- Radius line to 45° (dashed gray) -->
+  <line x1="230" y1="245" x2="329" y2="146" stroke="#aaa" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Angle arc for φ at center -->
+  <path d="M 268,245 A 38,38 0 0,0 257,218" fill="none" stroke="#888" stroke-width="1"/>
+  <text class="label" x="268" y="230" fill="#888">φ</text>
+
+  <!-- ==================== EQUATOR (φ = 0°) ==================== -->
+
+  <!-- Point dot -->
+  <circle cx="370" cy="245" r="4" fill="#333"/>
+
+  <!-- Label -->
+  <text class="point-label" x="415" y="280">Equator (φ = 0°)</text>
+
+  <!-- Surface tangent (vertical at equator in cross-section) -->
+  <line x1="370" y1="198" x2="370" y2="292" stroke="#999" stroke-width="1.5"/>
+
+  <!-- Ω arrow (straight up from surface point) -->
+  <line x1="370" y1="245" x2="370" y2="187" stroke="#2563eb" stroke-width="2.5"
+        marker-end="url(#arrow-blue)"/>
+
+  <!-- Horizontal component = Ω (along tangent = upward in cross-section, offset right) -->
+  <line x1="378" y1="245" x2="378" y2="187" stroke="#16a34a" stroke-width="2"
+        stroke-dasharray="5,3" marker-end="url(#arrow-green)"/>
+  <text class="green-label" x="392" y="220">horizontal = Ω</text>
+
+  <!-- Vertical = 0 -->
+  <text class="red-label" x="415" y="250">vertical = 0</text>
+
+  <!-- "local up" indicator (rightward = away from center at equator) -->
+  <line x1="370" y1="245" x2="405" y2="245" stroke="#999" stroke-width="1.5"
+        stroke-dasharray="3,2" marker-end="url(#arrow-gray)"/>
+  <text class="label" x="410" y="260">local up</text>
+
+  <!-- ==================== 45° LATITUDE ==================== -->
+
+  <!-- Point dot -->
+  <circle cx="329" cy="146" r="4" fill="#333"/>
+
+  <!-- Label -->
+  <text class="point-label" x="350" y="165">45° latitude</text>
+
+  <!-- Surface tangent at 45° (perpendicular to radius, in upper-left / lower-right direction) -->
+  <line x1="364" y1="181" x2="294" y2="111" stroke="#999" stroke-width="1.5"/>
+
+  <!-- Ω arrow (straight up) -->
+  <line x1="329" y1="146" x2="329" y2="88" stroke="#2563eb" stroke-width="2.5"
+        marker-end="url(#arrow-blue)"/>
+
+  <!-- Vertical component (along radius = upper-right direction) -->
+  <!-- sin(45°) × 58 ≈ 41; direction (cos45, -sin45) = (0.707, -0.707) -->
+  <line x1="329" y1="146" x2="358" y2="117" stroke="#dc2626" stroke-width="2"
+        stroke-dasharray="5,3" marker-end="url(#arrow-red)"/>
+  <text class="red-label" x="365" y="112">Ω sin φ</text>
+
+  <!-- Horizontal component (along tangent = upper-left direction) -->
+  <!-- cos(45°) × 58 ≈ 41; direction (-sin45, -cos45) = (-0.707, -0.707) -->
+  <line x1="329" y1="146" x2="300" y2="117" stroke="#16a34a" stroke-width="2"
+        stroke-dasharray="5,3" marker-end="url(#arrow-green)"/>
+  <text class="green-label" text-anchor="end" x="296" y="112">Ω cos φ</text>
+
+  <!-- Projection lines (parallelogram) -->
+  <line x1="358" y1="117" x2="329" y2="88" stroke="#ddd" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="300" y1="117" x2="329" y2="88" stroke="#ddd" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Right-angle marker between the two components -->
+  <path d="M 334.7,140.3 L 329,134.7 L 323.3,140.3" fill="none" stroke="#ccc" stroke-width="0.8"/>
+
+  <!-- ==================== POLE (φ = 90°) ==================== -->
+
+  <!-- Point dot -->
+  <circle cx="230" cy="105" r="4" fill="#333"/>
+
+  <!-- Label -->
+  <text class="point-label" text-anchor="end" x="215" y="82">Pole (φ = 90°)</text>
+
+  <!-- Surface tangent (horizontal at pole in cross-section) -->
+  <line x1="188" y1="105" x2="272" y2="105" stroke="#999" stroke-width="1.5"/>
+
+  <!-- Ω arrow (straight up = same direction as local up) -->
+  <line x1="230" y1="105" x2="230" y2="47" stroke="#2563eb" stroke-width="2.5"
+        marker-end="url(#arrow-blue)"/>
+
+  <!-- Vertical component = Ω (along radius = upward, offset left) -->
+  <line x1="222" y1="105" x2="222" y2="47" stroke="#dc2626" stroke-width="2"
+        stroke-dasharray="5,3" marker-end="url(#arrow-red)"/>
+  <text class="red-label" text-anchor="end" x="218" y="72">vertical = Ω</text>
+
+  <!-- Horizontal = 0 -->
+  <text class="green-label" text-anchor="end" x="185" y="100">horizontal = 0</text>
+
+  <!-- ==================== LEGEND ==================== -->
+
+  <g transform="translate(80, 430)">
+    <!-- Blue -->
+    <line x1="0" y1="0" x2="28" y2="0" stroke="#2563eb" stroke-width="2.5"/>
+    <text class="legend" x="36" y="4">
+      Ω — Earth's angular velocity, always points along the rotation axis
+    </text>
+
+    <!-- Red -->
+    <line x1="0" y1="20" x2="28" y2="20" stroke="#dc2626" stroke-width="2" stroke-dasharray="5,3"/>
+    <text class="legend" x="36" y="24">
+      Vertical component (Ω sin φ) — along "local up" — controls Coriolis strength
+    </text>
+
+    <!-- Green -->
+    <line x1="0" y1="40" x2="28" y2="40" stroke="#16a34a" stroke-width="2" stroke-dasharray="5,3"/>
+    <text class="legend" x="36" y="44">
+      Horizontal component (Ω cos φ) — along the surface — overwhelmed by gravity, no effect on currents
+    </text>
+
+    <!-- Note -->
+    <text class="legend" x="0" y="66" fill="#888">
+      "Local up" = direction away from Earth's center (along the radius). It changes orientation with latitude.
+    </text>
+  </g>
+</svg>

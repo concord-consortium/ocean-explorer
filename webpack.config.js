@@ -5,6 +5,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const ESLintPlugin = require('eslint-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 const fs = require('fs');
 const os = require('os');
 
@@ -163,6 +164,14 @@ module.exports = (env, argv) => {
         publicPath: DEPLOY_PATH
       })] : []),
       new CleanWebpackPlugin(),
+      // Only for standalone files not referenced from code (e.g. documentation
+      // visualizations). Resources used by the app should be webpack-imported so
+      // they get correct public paths across all deployment environments.
+      new CopyPlugin({
+        patterns: [
+          { from: 'doc/images/*.html', to: 'doc/images/[name][ext]' },
+        ],
+      }),
     ]
   };
 };

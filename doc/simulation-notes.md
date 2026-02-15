@@ -129,3 +129,43 @@ varies by longitude, time, and is coupled to the ocean state.
 **Why:** Prototype scope. The analytical wind field demonstrates the correct physics
 (latitude-band structure, Coriolis-dependent patterns) without the complexity of atmospheric
 data loading or coupling.
+
+## Related Simulations
+
+### Model My Watershed
+
+[Model My Watershed](https://modelmywatershed.org/) simulates watersheds. And it allows you to change the qualities of the surface in an area and see how it effects the watershed.
+
+It is related because it likely has a "cell" model like the ocean simulation.
+
+They have this additional "micro model", which is the most useful part for us:
+https://runoff.modelmywatershed.org/
+It shows a single cell and how the different surface qualities affect the output
+
+I think ocean explorer would benefit from something similar: a view of a single cell and the impact its neighbors, and earth's rotation has on it. The neighbors are the air, water cells, and land cells. The user could control the velocity of the water in one or more neighbors. This velocity would be both its speed and direction. perhaps just with presets. Then the user can see the affect on the velocity of the main cell: height/pressure increases and velocity changes for influx. If we support lateral viscosity then glancing velocity has an effect too. The land cell can be turned on and off, so they can see the effect of a land cell. I could see it having an arrow in the middle showing the average velocity of the cell, and then an arrow on each surface showing the influx and lateral velocities on that surface. For the flux/pressure we would need to show more than one neighbor so the incoming water has somewhere to go.
+
+The one part I don't know how to show with this model is Coriolis.
+
+### Coriolis effect visualizations
+
+Interactive simulations that help build intuition for how the Coriolis effect works:
+
+- [Coriolis Effect 3D (Open Source Physics @ Singapore)](https://sg.iwant2study.org/ospsg/index.php/622)
+  — Shoots particles on a rotating sphere and shows trajectories from both an inertial
+  (stationary) and rotating reference frame. Magenta velocity vectors show speed and direction;
+  blue arrows show displacement. Built with Easy JavaScript Simulations (HTML5).
+
+- [Coriolis Effect 2D (Open Source Physics @ Singapore)](https://sg.iwant2study.org/ospsg/index.php/interactive-resources/physics/02-newtonian-mechanics/05-circle/623-coriolis2d)
+  — A 2D version showing deflection within a rotating reference frame.
+
+- [Coriolis Effect (JavaLab)](https://javalab.org/en/coriolis_effect_en/)
+  — Users set direction and position on a globe, then watch the trajectory. Shows a red arrow
+  (initial velocity), blue arrow (rotational velocity component), and a dotted path trace.
+  Toggles between hemispheres so users can see the deflection reverse.
+
+- [Weather in a Tank (SERC/Carleton)](https://serc.carleton.edu/teachearth/activities/181248.html)
+  — Physical rotating-table demonstrations that simulate Coriolis deflection with marbles and
+  water.
+
+- [Coriolis effects on wind-driven ocean currents (MIT)](http://oceans.mit.edu/JohnMarshall/wp-content/uploads/2017/07/Coriolis.pdf)
+  — Describes how Coriolis effects drive wind-driven ocean currents, with diagrams.

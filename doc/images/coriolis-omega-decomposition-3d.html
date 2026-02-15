@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coriolis Ω Decomposition — 3D Interactive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
+
+    #info {
+      position: absolute; top: 16px; left: 16px; z-index: 10;
+      color: #e2e8f0; max-width: 360px;
+    }
+    #info h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    #info p { font-size: 12px; color: #94a3b8; line-height: 1.4; }
+
+    #legend {
+      position: absolute; bottom: 20px; left: 20px; z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px; padding: 12px 16px;
+      color: #cbd5e1; font-size: 12px; line-height: 2;
+    }
+    .legend-row { display: flex; align-items: center; gap: 10px; }
+    .swatch { width: 24px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+    .swatch-dash { width: 24px; height: 0; flex-shrink: 0; border-top: 2.5px dashed; }
+
+    .point-label {
+      color: #f1f5f9; font-size: 13px; font-weight: 600;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+      pointer-events: none; white-space: nowrap;
+    }
+    .comp-label {
+      font-size: 11px; font-weight: 500;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.95);
+      pointer-events: none; white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <h2>Decomposition of Earth's Angular Velocity (Ω)</h2>
+    <p>Drag to rotate · Scroll to zoom · Right-drag to pan</p>
+    <p style="margin-top:6px">
+      At each latitude, the same Ω vector decomposes differently relative to the
+      local surface. Only the vertical component (red) drives the Coriolis effect
+      on horizontal ocean currents.
+    </p>
+  </div>
+
+  <div id="legend">
+    <div class="legend-row">
+      <span class="swatch" style="background:#3b82f6"></span>
+      Ω — angular velocity (along rotation axis)
+    </div>
+    <div class="legend-row">
+      <span class="swatch-dash" style="border-color:#ef4444"></span>
+      Vertical (Ω sin φ) — drives Coriolis for horizontal flow
+    </div>
+    <div class="legend-row">
+      <span class="swatch-dash" style="border-color:#22c55e"></span>
+      Horizontal (Ω cos φ) — no effect on ocean currents
+    </div>
+    <div class="legend-row">
+      <span class="swatch" style="background:#64748b"></span>
+      Radius — "local up" direction
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+    // ── Scene ──
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100);
+    camera.position.set(2.2, 1.4, 2.0);
+
+    const gl = new THREE.WebGLRenderer({ antialias: true });
+    gl.setSize(innerWidth, innerHeight);
+    gl.setPixelRatio(devicePixelRatio);
+    gl.setClearColor(0x0f172a);
+    document.body.appendChild(gl.domElement);
+
+    const cssRenderer = new CSS2DRenderer();
+    cssRenderer.setSize(innerWidth, innerHeight);
+    cssRenderer.domElement.style.position = 'absolute';
+    cssRenderer.domElement.style.top = '0';
+    cssRenderer.domElement.style.pointerEvents = 'none';
+    document.body.appendChild(cssRenderer.domElement);
+
+    const orbit = new OrbitControls(camera, gl.domElement);
+    orbit.target.set(0, 0.3, 0);
+    orbit.enableDamping = true;
+    orbit.dampingFactor = 0.08;
+    orbit.update();
+
+    // ── Helpers ──
+    function makeLabel(text, cls, color) {
+      const el = document.createElement('div');
+      el.className = cls;
+      if (color) el.style.color = color;
+      el.textContent = text;
+      return new CSS2DObject(el);
+    }
+
+    function dashedArrow(from, dir, len, hex) {
+      const g = new THREE.Group();
+      const hl = 0.065;
+
+      // Dashed shaft
+      const shaftEnd = from.clone().add(dir.clone().multiplyScalar(len - hl));
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([from.clone(), shaftEnd]),
+        new THREE.LineDashedMaterial({ color: hex, dashSize: 0.04, gapSize: 0.025 })
+      );
+      line.computeLineDistances();
+      g.add(line);
+
+      // Cone head
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(0.022, hl, 8),
+        new THREE.MeshBasicMaterial({ color: hex })
+      );
+      cone.position.copy(from).add(dir.clone().multiplyScalar(len - hl / 2));
+      cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      g.add(cone);
+
+      return g;
+    }
+
+    // ── Earth ──
+    scene.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1, 64, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0x3b82f6, transparent: true, opacity: 0.07, side: THREE.DoubleSide
+      })
+    ));
+    scene.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1.002, 24, 12),
+      new THREE.MeshBasicMaterial({
+        color: 0x60a5fa, wireframe: true, transparent: true, opacity: 0.08
+      })
+    ));
+
+    // ── Reference circles ──
+    function addCircle(pointFn, color, opacity) {
+      const pts = [];
+      for (let i = 0; i <= 128; i++) {
+        pts.push(pointFn((i / 128) * Math.PI * 2));
+      }
+      scene.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color, transparent: true, opacity })
+      ));
+    }
+    addCircle(a => new THREE.Vector3(Math.cos(a), 0, Math.sin(a)), 0x94a3b8, 0.25);
+    addCircle(a => new THREE.Vector3(Math.cos(a), Math.sin(a), 0), 0x94a3b8, 0.25);
+
+    // ── Rotation axis ──
+    const axLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, -1.5, 0), new THREE.Vector3(0, 1.5, 0)
+      ]),
+      new THREE.LineDashedMaterial({
+        color: 0x3b82f6, dashSize: 0.06, gapSize: 0.04, transparent: true, opacity: 0.35
+      })
+    );
+    axLine.computeLineDistances();
+    scene.add(axLine);
+
+    scene.add(new THREE.ArrowHelper(
+      new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1.3, 0),
+      0.2, 0x3b82f6, 0.08, 0.035
+    ));
+    const axLbl = makeLabel('Ω (rotation axis)', 'comp-label', '#60a5fa');
+    axLbl.position.set(0, 1.58, 0);
+    scene.add(axLbl);
+
+    // ── Angle arc φ (0° to 45° at center) ──
+    const arcPts = [];
+    for (let i = 0; i <= 24; i++) {
+      const a = (i / 24) * (Math.PI / 4);
+      arcPts.push(new THREE.Vector3(Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0));
+    }
+    scene.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(arcPts),
+      new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.5 })
+    ));
+    const phiLbl = makeLabel('φ', 'comp-label', '#94a3b8');
+    phiLbl.position.set(0.28, 0.12, 0);
+    scene.add(phiLbl);
+
+    // ── Three decomposition sites ──
+    const AL = 0.55; // arrow length = full |Ω|
+    const UP = new THREE.Vector3(0, 1, 0);
+
+    const sites = [
+      { lat: 0,           name: 'Equator (φ = 0°)',  off: [0.18, -0.1, 0] },
+      { lat: Math.PI / 4, name: '45° latitude',       off: [0.18, 0.02, 0] },
+      { lat: Math.PI / 2, name: 'Pole (φ = 90°)',     off: [0.18, 0.02, 0] },
+    ];
+
+    for (const { lat, name, off } of sites) {
+      const cL = Math.cos(lat), sL = Math.sin(lat);
+      const pos = new THREE.Vector3(cL, sL, 0);
+      const rad = pos.clone().normalize();
+      const tan = new THREE.Vector3(-sL, cL, 0);
+      const vL = AL * sL, hL = AL * cL;
+      const isEq = sL < 0.01, isPo = cL < 0.01, isMid = !isEq && !isPo;
+
+      // White dot on surface
+      const dot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.025, 12, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      dot.position.copy(pos);
+      scene.add(dot);
+
+      // Radius line (center → surface)
+      scene.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), pos.clone()]),
+        new THREE.LineBasicMaterial({ color: 0x64748b, transparent: true, opacity: 0.35 })
+      ));
+
+      // Small tangent ring at surface
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.13, 0.16, 32),
+        new THREE.MeshBasicMaterial({
+          color: 0x94a3b8, transparent: true, opacity: 0.2, side: THREE.DoubleSide
+        })
+      );
+      ring.position.copy(pos);
+      ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), rad);
+      scene.add(ring);
+
+      // Ω arrow (blue, solid) — always points straight up
+      scene.add(new THREE.ArrowHelper(UP, pos, AL, 0x3b82f6, 0.07, 0.03));
+
+      // Vertical component (red, dashed) — along radius
+      if (vL > 0.02) {
+        // Offset slightly at pole so both arrows are visible
+        const origin = isPo ? pos.clone().add(new THREE.Vector3(0.025, 0, 0)) : pos;
+        scene.add(dashedArrow(origin, rad, vL, 0xef4444));
+      }
+
+      // Horizontal component (green, dashed) — along surface toward pole
+      if (hL > 0.02) {
+        // Offset slightly at equator so both arrows are visible
+        const origin = isEq ? pos.clone().add(new THREE.Vector3(0, 0, 0.025)) : pos;
+        scene.add(dashedArrow(origin, tan, hL, 0x22c55e));
+      }
+
+      // Projection lines (45° only — shows parallelogram)
+      if (isMid) {
+        const omTip = pos.clone().add(UP.clone().multiplyScalar(AL));
+        const vTip = pos.clone().add(rad.clone().multiplyScalar(vL));
+        const hTip = pos.clone().add(tan.clone().multiplyScalar(hL));
+        const pm = new THREE.LineDashedMaterial({
+          color: 0x94a3b8, dashSize: 0.025, gapSize: 0.02, transparent: true, opacity: 0.35
+        });
+        for (const [a, b] of [[vTip, omTip], [hTip, omTip]]) {
+          const l = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([a, b]), pm.clone()
+          );
+          l.computeLineDistances();
+          scene.add(l);
+        }
+      }
+
+      // ── Labels ──
+      const pLbl = makeLabel(name, 'point-label');
+      pLbl.position.copy(pos).add(new THREE.Vector3(...off));
+      scene.add(pLbl);
+
+      if (isMid) {
+        const vLbl = makeLabel('Ω sin φ', 'comp-label', '#ef4444');
+        vLbl.position.copy(pos).add(rad.clone().multiplyScalar(vL + 0.06))
+          .add(new THREE.Vector3(0.06, 0, 0.04));
+        scene.add(vLbl);
+
+        const hLbl = makeLabel('Ω cos φ', 'comp-label', '#22c55e');
+        hLbl.position.copy(pos).add(tan.clone().multiplyScalar(hL + 0.06))
+          .add(new THREE.Vector3(-0.06, 0, 0.04));
+        scene.add(hLbl);
+      }
+
+      if (isEq) {
+        const vz = makeLabel('vertical = 0', 'comp-label', '#ef4444');
+        vz.position.copy(pos).add(new THREE.Vector3(0.25, 0.2, 0));
+        scene.add(vz);
+
+        const hf = makeLabel('horizontal = Ω', 'comp-label', '#22c55e');
+        hf.position.copy(pos).add(UP.clone().multiplyScalar(AL * 0.5))
+          .add(new THREE.Vector3(0.14, 0, 0));
+        scene.add(hf);
+
+        const lu = makeLabel('← local up', 'comp-label', '#94a3b8');
+        lu.position.copy(pos).add(rad.clone().multiplyScalar(0.22));
+        scene.add(lu);
+      }
+
+      if (isPo) {
+        const hz = makeLabel('horizontal = 0', 'comp-label', '#22c55e');
+        hz.position.copy(pos).add(new THREE.Vector3(-0.25, -0.08, 0));
+        scene.add(hz);
+
+        const vf = makeLabel('vertical = Ω', 'comp-label', '#ef4444');
+        vf.position.copy(pos).add(UP.clone().multiplyScalar(AL * 0.5))
+          .add(new THREE.Vector3(0.14, 0, 0));
+        scene.add(vf);
+      }
+    }
+
+    // ── Resize ──
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      gl.setSize(innerWidth, innerHeight);
+      cssRenderer.setSize(innerWidth, innerHeight);
+    });
+
+    // ── Render loop ──
+    (function loop() {
+      requestAnimationFrame(loop);
+      orbit.update();
+      gl.render(scene, camera);
+      cssRenderer.render(scene, camera);
+    })();
+  </script>
+</body>
+</html>
