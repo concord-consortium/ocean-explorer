@@ -274,6 +274,66 @@ Entries to add:
   presets. Note that western intensification may be weak at 5° resolution without lateral
   viscosity. Note that coastlines are blocky at 5° resolution.
 
+## Findings
+
+### Convergence times
+
+| Preset | Steps to converge | Threshold |
+|--------|--------------------|-----------|
+| Water world | 6,303 | 1e-6 |
+| Equatorial continent | 458 | 1e-6 |
+| North-south continent | 440 | 1e-6 |
+| Earth-like | 739 | 1e-5 |
+
+The continent presets converge much faster than water world because land boundaries constrain
+flow into enclosed basins, reducing the degrees of freedom. Earth-like requires a looser
+threshold (1e-5 instead of 1e-6) — see Drake Passage note below.
+
+### Drake Passage convergence issue
+
+The Earth-like preset does not converge at the standard 1e-6 threshold even after 100,000+
+iterations. Diagnostic investigation identified 6 water cells in the Drake Passage (the narrow
+channel between South America and Antarctica) where eta drifts monotonically at ~4.1e-6 per
+step. Velocities in these cells converge to ~1e-11, but the eta drift persists due to residual
+divergence in the confined 1–2 cell wide channel geometry. The 1e-5 threshold provides an
+order of magnitude of headroom above this drift rate.
+
+### Plan correction: one-sided vs central difference
+
+The implementation plan's Task 3 test for "north land boundary" specified a central-difference
+denominator (`2 * R_EARTH * DELTA_RAD`), but the correct implementation uses a one-sided
+backward difference (`R_EARTH * DELTA_RAD`) when the north neighbor is land. The test was
+corrected during implementation to match the one-sided difference that the code correctly
+produces. The plan's pressure gradient implementation code was correct — only the test
+assertion had the wrong denominator.
+
+### Visual observations
+
+Visual smoke testing confirmed:
+
+- **Gyres form as expected.** The north-south continent preset produces clear clockwise
+  circulation in the northern hemisphere and counter-clockwise in the southern, matching
+  real-world gyre patterns.
+- **Western intensification is visible but broad.** In both the north-south continent and
+  Earth-like presets, flow along the western boundary is faster than the eastern return flow.
+  As predicted by the design doc, the effect is diffuse (~5,000 km boundary layer width from
+  Rayleigh drag) rather than a narrow jet. This is consistent with the Stommel model.
+- **Earth-like continents are recognizable.** At 5° resolution the major landmasses (Americas,
+  Africa, Eurasia, Australia, Antarctica) are identifiable. Coastlines are blocky but
+  sufficient for generating multiple distinct ocean basins.
+- **Land rendering works correctly.** Land cells display as gray-brown, wind arrows are visible
+  over land, water arrows are suppressed on land. SSH mode correctly excludes land from the
+  color range calculation.
+- **Preset switching resets cleanly.** Changing the dropdown resets velocity, SSH, and the land
+  mask, then simulation resumes from rest with the new configuration.
+
+### Recommendation
+
+Western intensification at 5° resolution with Rayleigh drag is visible but diffuse. A Phase
+4.5 adding lateral viscosity would sharpen western boundary currents but is not required —
+the current implementation demonstrates the correct qualitative physics. Recommend deferring
+lateral viscosity unless sharper boundary currents become a priority.
+
 ## Branch and PR
 
 - Branch from `OE-2-phase-3`
