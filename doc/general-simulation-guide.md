@@ -234,6 +234,33 @@ that break the symmetry (e.g., land boundaries) can trigger previously-dormant C
 When adding solid boundaries or other symmetry-breaking features, re-check CFL at the smallest
 cells.
 
+### Arakawa grid classification
+
+Arakawa and Lamb (1977) classified five ways to arrange velocity and scalar variables on a
+structured grid, labeled A through E:
+
+| Grid | Scalars (η, T) | Velocity (u, v) | Notes |
+|------|----------------|-----------------|-------|
+| **A** | Cell centers | Cell centers (collocated) | Simplest. Pressure gradients span 2Δx, admitting a checkerboard mode. |
+| **B** | Cell centers | Cell corners | Both velocity components at the same location — natural for Coriolis coupling. |
+| **C** | Cell centers | u at east/west faces, v at north/south faces | Pressure gradients and divergence use Δx spacing — no checkerboard mode. Most widely used in ocean/atmosphere models. |
+| **D** | Cell centers | u at north/south faces, v at east/west faces | Transpose of C. Rarely used. |
+| **E** | Cell centers | Cell corners, rotated 45° | Equivalent to B on a rotated mesh. |
+
+The key trade-off is between collocated (A-grid) simplicity and staggered (C-grid) numerical
+properties. On a C-grid, the velocity component that drives flux across a cell face lives at
+that face, so pressure gradients and divergence are computed over Δx (one cell width) rather
+than 2Δx. This eliminates the checkerboard decoupling mode where alternating cells can hold
+opposite values without generating a corrective gradient.
+
+The cost is that Coriolis coupling becomes non-local: the cross-velocity needed for the
+Coriolis term must be averaged from neighboring face values (typically a 4-point average),
+which introduces cross-latitude coupling and can degrade geostrophic balance.
+
+For prototyping or coarse-resolution models, the A-grid's simplicity may outweigh the C-grid's
+numerical advantages — but land boundaries and narrow channels tend to activate the
+checkerboard mode that the A-grid admits (see below).
+
 ### Collocated grids and narrow channels
 
 On a collocated grid (all variables at cell centers), water cells in narrow pockets (1–2 cells

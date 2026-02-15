@@ -120,6 +120,35 @@ location. Dead-end filling is the simplest fix for the collocated grid.
 architecture change. The filled cells (45 in the earth-like mask) are sub-resolution
 geographic features that aren't physically meaningful at 5° resolution.
 
+### Collocated grid instead of Arakawa C-grid
+
+Velocities (u, v) and sea surface height (η) are all stored at cell centers (a collocated
+grid). In Phase 3, both a collocated grid (Approach A) and an Arakawa C-grid (Approach B,
+velocities at cell faces) were implemented and compared. The collocated grid was chosen for
+simpler code, better geostrophic balance, and no observed checkerboard artifacts — at that
+time the simulation had no land boundaries. See `doc/phase-3-design.md` §"Approach comparison
+and decision" for full details.
+
+Two issues have since emerged with continental land masks (Phase 4):
+
+1. **Checkerboard artifacts with continents.** The collocated grid computes pressure gradients
+   over 2Δx spacing, which admits a checkerboard mode where alternating cells can have
+   opposite SSH anomalies without generating a corrective pressure gradient. In Phase 3
+   (water world, no land), zonal symmetry and uniform forcing suppressed this mode. With
+   continental boundaries breaking symmetry, the checkerboard pattern becomes visible.
+
+2. **Narrow channels require dead-end filling.** Water cells with 3+ orthogonal land neighbors
+   develop a positive feedback instability: divergence depends on neighbor velocities while
+   drag acts on the cell's own velocity, so pressure-driven flow pumps SSH without
+   counteraction. The workaround is to fill these cells as land during mask creation,
+   eliminating sub-resolution pockets — but this also closes narrow straits that should be
+   open (e.g., passages between continents). A C-grid would not have this instability because
+   velocity at the cell interface directly couples pressure to divergence at the same location.
+
+A future switch to the C-grid would resolve both issues. The preserved branch
+`OE-2-phase-3-cgrid` and plan `docs/plans/2026-02-14-phase-3-cgrid.md` document the earlier
+C-grid implementation for reference.
+
 ### Prescribed analytical wind field
 
 Wind is a latitude-dependent analytical function (trade winds, westerlies, polar easterlies),
