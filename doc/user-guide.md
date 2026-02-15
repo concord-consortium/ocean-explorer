@@ -11,7 +11,8 @@ The simulation starts from rest. Wind pushes water, Coriolis deflection rotates 
 As water converges and diverges, it builds up sea surface height (SSH) mounds and
 depressions. Pressure gradients from these height differences drive additional flow, which
 Coriolis deflects until the water flows along height contours rather than directly downhill
-— this is geostrophic balance. There are no continents.
+— this is geostrophic balance. Land boundaries can be added to see how continents shape
+the flow into gyres.
 
 ## Controls
 
@@ -25,6 +26,7 @@ Coriolis deflects until the water flows along height contours rather than direct
 | **Arrow size** (0.5x–3x) | Scales the visual length of all arrows. Useful for seeing small arrows. |
 | **Show wind / Show water** | Toggle arrow layers on and off. |
 | **Background** (Temperature / Sea Surface Height) | Switches the background color layer between temperature by latitude and SSH. SSH mode uses a diverging color scale that auto-scales to the current min/max range. |
+| **Continents** (dropdown) | Selects the continental layout. **Water World** = no land (default). **Equatorial Continent** = rectangular landmass across the tropics. **North-South Continent** = pole-to-pole strip creating one enclosed basin. **Earth-Like** = simplified real-world continents. Changing the preset resets the simulation to rest. |
 | **Benchmark** | Measures how many milliseconds of frame-time headroom remain. Runs an automated test that gradually loads each frame until FPS drops, then reports the result (e.g., "Headroom: 30.2ms"). The button shows "Benchmarking..." while running. |
 
 ## What to try
@@ -73,6 +75,25 @@ hemisphere instead of rightward.
 the temperature colors stretch further toward the poles. At 0.5x everything weakens. The
 deflection angle stays the same (it depends on latitude and drag, not wind speed).
 
+**Watch gyres form.** Switch Continents to "North-South Continent" and press Play. As the
+simulation spins up, watch water arrows organize into circular patterns — clockwise in the
+northern hemisphere, counter-clockwise in the southern. These are wind-driven gyres,
+formed because land boundaries redirect the flow that Ekman transport pushes toward the
+western side of the basin.
+
+**Compare hemispheres.** With the North-South Continent preset, notice that the northern and
+southern gyres rotate in opposite directions. This matches real ocean gyres — the North
+Atlantic gyre is clockwise, the South Atlantic is counter-clockwise.
+
+**Look for western intensification.** In Earth-Like mode, compare the western and eastern
+sides of ocean basins. Western boundary currents (like where the Gulf Stream would be) may
+appear faster or more concentrated than the broad, slow return flow on the eastern side.
+This effect may be subtle at 5° resolution — see known limitations.
+
+**Try the equatorial continent.** Switch to "Equatorial Continent" and watch how currents
+deflect around the north and south ends of the landmass. Compare this to the full
+North-South Continent where flow is completely enclosed.
+
 ## What's on screen
 
 - **Gray/white arrows** — wind (prescribed, not simulated)
@@ -109,13 +130,20 @@ The real ocean has an Ekman spiral where deflection increases with depth, produc
 net transport. This model captures ~45° surface-like deflection at mid-latitudes but not the
 full depth-integrated Ekman transport.
 
-**No land.** The planet is entirely ocean. Currents wrap around in longitude with nothing to
-block or deflect them. There are no western boundary currents or gyres.
+**Blocky coastlines.** At 5° resolution (~550 km cells), continental outlines are very
+coarse. The major shapes are recognizable but fine coastal features are lost.
+
+**Western intensification may be weak.** The simulation uses uniform Rayleigh drag, which
+produces a broad (~5,000 km) western boundary layer. Real western boundary currents (Gulf
+Stream, Kuroshio) are narrow (~100 km) jets concentrated by lateral viscosity, which this
+simulation does not include. Western intensification may appear as a broad, gentle
+asymmetry rather than a sharp jet.
 
 **No thermal coupling.** Temperature is decorative — the background color is computed from
 latitude for display only. It does not feed back into the simulation. There are no
 thermal-driven density gradients or thermohaline circulation.
 
-**All cells at a given latitude are identical.** Because wind depends only on latitude and
-there are no land boundaries or longitudinal variations, every cell in a row has the same
-velocity and SSH. The per-cell grid structure exists for future phases.
+**All cells at a given latitude are identical on Water World.** With the Water World preset
+(no land), wind depends only on latitude with no longitudinal variations, so every cell in
+a row has the same velocity and SSH. Adding continents breaks this symmetry — land
+boundaries create longitude-dependent flow patterns.
