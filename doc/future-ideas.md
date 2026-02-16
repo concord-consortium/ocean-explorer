@@ -74,3 +74,50 @@ launched object (as in the visualizations above) but a continuous perpendicular 
 combined with drag, produces a steady-state deflection angle. The micro model would need
 to show this evolving over multiple timesteps, perhaps with a trail or animation of the
 velocity arrow spiraling toward steady state.
+
+## Coriolis local rotation viewer — particle mode
+
+The existing `doc/images/coriolis-local-rotation.html` visualization shows a spinning sphere
+inside a fixed local-horizontal disk with a water-direction arrow. The next step is to make
+the Coriolis effect visible by launching particles.
+
+### Particle launch with trace
+
+Fire a particle from the center in the water-arrow direction. The particle leaves a trail as
+it moves, showing the trajectory curving right (NH) or left (SH) on the local horizontal
+plane.
+
+### Gravity modes
+
+Two modes controlling whether particles stay on the disk or can leave it:
+
+- **Gravity = centrifugal force** — particles can move up and down off the local horizontal
+  plane, producing 3D trajectories visible around the disk. This shows the full physics
+  without the simplification that horizontal motion stays horizontal.
+- **Normal gravity** — particles stay stuck to the local horizontal plane, producing 2D
+  trajectories on the disk surface. This is the simplified view relevant to ocean currents.
+
+### Sphere interpretation (reference frame) modes
+
+What the spinning sphere represents, switchable by the user. The disk always stays fixed in
+all modes — it's always "our" reference frame, the local surface we're standing on. Only the
+sphere's rotation and the particle physics change between modes.
+
+- **Rotating Earth** (current default) — sphere spins counter-clockwise from the north pole.
+  Particle moves with Coriolis deflection in the rotating frame.
+- **Inertial frame** — sphere spins clockwise from the north pole, representing the inertial
+  "sky" rotating overhead as seen from Earth's surface. The particle goes straight in the
+  inertial frame, which looks curved relative to the fixed disk.
+- **Frozen** — sphere stops spinning but Coriolis still applies. The particle "magically"
+  curves, showing the apparent-force perspective that the simulation code uses (f = -2Ω × v).
+
+Rotating Earth and Inertial frame should produce the same apparent trajectory on the disk —
+that's the payoff. One explains it as "a force deflects the particle" and the other as "the
+surface rotates under a straight-moving particle." Same result, different mental model.
+
+### Implementation approach
+
+Start with enough controls to support all modes (gravity toggle, reference-frame selector,
+launch button). Play with the full control set to understand how each mode helps build
+intuition. Then simplify down to fewer combined controls that guide the user through the
+progression.

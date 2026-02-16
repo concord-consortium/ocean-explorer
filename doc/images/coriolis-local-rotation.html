@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Rotation at a Point on Earth</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
+
+    #info {
+      position: absolute; top: 16px; left: 16px; z-index: 10;
+      color: #e2e8f0; max-width: 360px;
+    }
+    #info h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    #info p { font-size: 12px; color: #94a3b8; line-height: 1.4; }
+    #info a { color: #60a5fa; text-decoration: none; cursor: pointer; }
+    #info a:hover { text-decoration: underline; }
+
+    #notes-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: rgba(0, 0, 0, 0.5);
+    }
+    #notes-overlay.open { display: flex; align-items: center; justify-content: center; }
+    #notes-dialog {
+      background: #1e293b; color: #e2e8f0;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 10px; padding: 24px 28px;
+      max-width: 520px; width: 90%; max-height: 80vh; overflow-y: auto;
+      font-size: 13px; line-height: 1.6;
+    }
+    #notes-dialog h3 { font-size: 15px; font-weight: 600; margin: 0 0 12px; }
+    #notes-dialog h4 { font-size: 13px; font-weight: 600; color: #94a3b8; margin: 14px 0 4px; }
+    #notes-dialog p { color: #94a3b8; margin: 6px 0; }
+    #notes-dialog ul { color: #94a3b8; margin: 4px 0 4px 18px; }
+    #notes-dialog li { margin: 4px 0; }
+    #notes-dialog .close-btn {
+      float: right; background: none; border: none; color: #94a3b8;
+      font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1;
+    }
+    #notes-dialog .close-btn:hover { color: #e2e8f0; }
+
+    #legend {
+      position: absolute; bottom: 20px; left: 20px; z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px; padding: 12px 16px;
+      color: #cbd5e1; font-size: 12px; line-height: 2;
+    }
+    .legend-row { display: flex; align-items: center; gap: 10px; }
+    .swatch { width: 24px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+    .swatch-dash { width: 24px; height: 0; flex-shrink: 0; border-top: 2.5px dashed; }
+    .swatch-ring {
+      width: 18px; height: 10px; flex-shrink: 0;
+      border: 2px solid #94a3b8; border-radius: 50%;
+      margin: 0 3px;
+    }
+
+    #controls {
+      position: absolute; bottom: 20px; right: 20px; z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px; padding: 14px 18px;
+      color: #cbd5e1; font-size: 12px;
+    }
+    .control-row {
+      display: flex; flex-direction: column; gap: 4px;
+      margin-bottom: 10px;
+    }
+    .control-row:last-child { margin-bottom: 0; }
+    .control-row label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-weight: 500;
+    }
+    .control-row label span { color: #e2e8f0; font-variant-numeric: tabular-nums; }
+    input[type="range"] {
+      width: 200px; height: 4px;
+      accent-color: #3b82f6;
+      cursor: pointer;
+    }
+
+    .point-label {
+      color: #f1f5f9; font-size: 13px; font-weight: 600;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+      pointer-events: none; white-space: nowrap;
+    }
+    .comp-label {
+      font-size: 11px; font-weight: 500;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.95);
+      pointer-events: none; white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="notes-overlay">
+    <div id="notes-dialog">
+      <button class="close-btn" id="close-notes">&times;</button>
+      <h3>Future Enhancements</h3>
+
+      <h4>1. Particle launch with trace</h4>
+      <p>Fire a particle in the water-arrow direction with a trail. The particle
+        illustrates Coriolis by curving right (NH) or left (SH) on the local
+        horizontal plane.</p>
+
+      <h4>2. Gravity modes</h4>
+      <ul>
+        <li><strong>Gravity = centrifugal force</strong> &mdash; particles can move
+          up and down off the local horizontal plane (3D trajectories visible
+          on/around the disk).</li>
+        <li><strong>Normal gravity</strong> &mdash; particles stay stuck to the local
+          horizontal plane (2D trajectories on the disk surface).</li>
+      </ul>
+
+      <h4>3. Sphere interpretation modes</h4>
+      <p>The disk always stays fixed in all modes &mdash; it&rsquo;s always &ldquo;our&rdquo;
+        reference frame, the local surface we&rsquo;re standing on. Only the sphere&rsquo;s
+        rotation and the particle physics change.</p>
+      <ul>
+        <li><strong>Rotating Earth</strong> (current) &mdash; sphere spins CCW from
+          north pole. Particle curves via Coriolis.</li>
+        <li><strong>Inertial frame</strong> &mdash; sphere spins CW (the inertial
+          &ldquo;sky&rdquo; rotating overhead as seen from Earth). Particle goes
+          straight in the inertial frame, which looks curved relative to the
+          fixed disk.</li>
+        <li><strong>Frozen</strong> &mdash; sphere stops but Coriolis still applies.
+          Particle &ldquo;magically&rdquo; curves (apparent-force perspective).</li>
+      </ul>
+      <p>Rotating Earth and Inertial frame produce the same trajectory on the
+        disk &mdash; one explains it as a force, the other as the surface rotating
+        under a straight-moving particle.</p>
+
+      <h4>4. Implementation plan</h4>
+      <p>Start with enough controls to support all modes, play with the full control
+        set, then simplify down to fewer combined controls.</p>
+    </div>
+  </div>
+  <div id="info">
+    <h2>Local Rotation at a Point on Earth</h2>
+    <p>Drag to orbit &middot; Scroll to zoom &middot; Right-drag to pan</p>
+    <p style="margin-top:6px">
+      The sphere spins at Earth's full rotation rate. The disk is the local
+      horizontal plane at a given latitude. Change latitude to tilt the disk
+      and see how much of the spin is "in-plane" vs perpendicular.
+    </p>
+    <p style="margin-top:4px">
+      At the pole, looking down at the disk, the sphere spins fully within the
+      plane. At the equator, the spin axis lies in the plane &mdash; no
+      perpendicular rotation, no Coriolis.
+    </p>
+    <p style="margin-top:6px"><a id="open-notes">Future enhancements &rarr;</a></p>
+  </div>
+
+  <div id="legend">
+    <div class="legend-row">
+      <span class="swatch" style="background:#3b82f6"></span>
+      &Omega; &mdash; rotation axis
+    </div>
+    <div class="legend-row">
+      <span class="swatch" style="background:#60a5fa"></span>
+      Meridian lines (show spin)
+    </div>
+    <div class="legend-row">
+      <span class="swatch-ring"></span>
+      Local horizontal plane
+    </div>
+    <div class="legend-row">
+      <span class="swatch" style="background:#f59e0b"></span>
+      Water velocity direction
+    </div>
+    <div class="legend-row">
+      <span class="swatch-dash" style="border-color:#94a3b8"></span>
+      Local up
+    </div>
+  </div>
+
+  <div id="controls">
+    <div class="control-row">
+      <label>Latitude <span id="lat-value">45&deg;</span></label>
+      <input type="range" id="lat-slider" min="0" max="90" value="45" step="1">
+    </div>
+    <div class="control-row">
+      <label>Water direction <span id="water-value">0&deg;</span></label>
+      <input type="range" id="water-slider" min="0" max="360" value="0" step="1">
+    </div>
+    <div class="control-row">
+      <label>Spin speed <span id="speed-value">50%</span></label>
+      <input type="range" id="speed-slider" min="0" max="100" value="50" step="1">
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+    // ── State ──
+    let latitudeDeg = 45;
+    let waterDeg = 0;
+    const DEG = Math.PI / 180;
+    const MAX_ROTATION_SPEED = Math.PI / 2; // rad/s → 1 rev per 4 s
+    let speedFraction = 0.5;
+
+    // ── Scene ──
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100);
+    camera.position.set(2.4, 1.6, 2.2);
+
+    const gl = new THREE.WebGLRenderer({ antialias: true });
+    gl.setSize(innerWidth, innerHeight);
+    gl.setPixelRatio(devicePixelRatio);
+    gl.setClearColor(0x0f172a);
+    document.body.appendChild(gl.domElement);
+
+    const cssRenderer = new CSS2DRenderer();
+    cssRenderer.setSize(innerWidth, innerHeight);
+    cssRenderer.domElement.style.position = 'absolute';
+    cssRenderer.domElement.style.top = '0';
+    cssRenderer.domElement.style.pointerEvents = 'none';
+    document.body.appendChild(cssRenderer.domElement);
+
+    const orbit = new OrbitControls(camera, gl.domElement);
+    orbit.enableDamping = true;
+    orbit.dampingFactor = 0.08;
+    orbit.update();
+
+    // ── Helpers ──
+    function makeLabel(text, cls, color) {
+      const el = document.createElement('div');
+      el.className = cls;
+      if (color) el.style.color = color;
+      el.textContent = text;
+      return new CSS2DObject(el);
+    }
+
+    function makeCircle(radius, segments) {
+      const pts = [];
+      for (let i = 0; i <= segments; i++) {
+        const a = (i / segments) * Math.PI * 2;
+        pts.push(new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, 0));
+      }
+      return pts;
+    }
+
+    // ── Earth sphere (translucent) ──
+    scene.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1, 64, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0x3b82f6, transparent: true, opacity: 0.07, side: THREE.DoubleSide
+      })
+    ));
+    scene.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1.002, 24, 12),
+      new THREE.MeshBasicMaterial({
+        color: 0x60a5fa, wireframe: true, transparent: true, opacity: 0.06
+      })
+    ));
+
+    // ── Static reference circles (equator + prime meridian) ──
+    function addRefCircle(pointFn, color, opacity) {
+      const pts = [];
+      for (let i = 0; i <= 128; i++) pts.push(pointFn((i / 128) * Math.PI * 2));
+      scene.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color, transparent: true, opacity })
+      ));
+    }
+    addRefCircle(a => new THREE.Vector3(Math.cos(a), 0, Math.sin(a)), 0x94a3b8, 0.15);
+    addRefCircle(a => new THREE.Vector3(Math.cos(a), Math.sin(a), 0), 0x94a3b8, 0.15);
+
+    // ── Rotating group (meridian lines) ──
+    const rotatingGroup = new THREE.Group();
+    scene.add(rotatingGroup);
+
+    for (let m = 0; m < 3; m++) {
+      const lon = (m / 3) * Math.PI; // 0°, 60°, 120° → 6 visible meridians
+      const pts = [];
+      for (let i = 0; i <= 64; i++) {
+        const a = (i / 64) * Math.PI * 2;
+        pts.push(new THREE.Vector3(
+          Math.cos(a) * Math.cos(lon),
+          Math.sin(a),
+          Math.cos(a) * Math.sin(lon)
+        ));
+      }
+      rotatingGroup.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.3 })
+      ));
+    }
+
+    // ── Rotation axis ──
+    const axLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, -1.5, 0), new THREE.Vector3(0, 1.5, 0)
+      ]),
+      new THREE.LineDashedMaterial({
+        color: 0x3b82f6, dashSize: 0.06, gapSize: 0.04, transparent: true, opacity: 0.35
+      })
+    );
+    axLine.computeLineDistances();
+    scene.add(axLine);
+
+    scene.add(new THREE.ArrowHelper(
+      new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1.3, 0),
+      0.2, 0x3b82f6, 0.08, 0.035
+    ));
+    const omegaLbl = makeLabel('Ω', 'comp-label', '#60a5fa');
+    omegaLbl.position.set(0, 1.58, 0);
+    scene.add(omegaLbl);
+
+    // ── Disk group (tilts with latitude) ──
+    // In local coords: disk lies in XY plane, normal along +Z
+    const diskGroup = new THREE.Group();
+    scene.add(diskGroup);
+
+    // Ring mesh
+    const ringMesh = new THREE.Mesh(
+      new THREE.RingGeometry(1.05, 1.5, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0x94a3b8, transparent: true, opacity: 0.12, side: THREE.DoubleSide
+      })
+    );
+    diskGroup.add(ringMesh);
+
+    // Intersection circle at sphere surface (r=1)
+    diskGroup.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(makeCircle(1.0, 64)),
+      new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.2 })
+    ));
+
+    // Outer edge circle
+    diskGroup.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(makeCircle(1.5, 64)),
+      new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.3 })
+    ));
+
+    // Inner edge circle
+    diskGroup.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(makeCircle(1.05, 64)),
+      new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.15 })
+    ));
+
+    // Local up line (along +Z in disk local coords)
+    const localUpLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, 1.7)
+      ]),
+      new THREE.LineDashedMaterial({
+        color: 0x94a3b8, dashSize: 0.05, gapSize: 0.03, transparent: true, opacity: 0.4
+      })
+    );
+    localUpLine.computeLineDistances();
+    diskGroup.add(localUpLine);
+
+    const localUpLbl = makeLabel('local up', 'comp-label', '#94a3b8');
+    localUpLbl.position.set(0, 0, 1.8);
+    diskGroup.add(localUpLbl);
+
+    // Water arrow
+    const ARROW_LEN = 1.35;
+    let waterArrow = new THREE.ArrowHelper(
+      new THREE.Vector3(1, 0, 0),
+      new THREE.Vector3(0, 0, 0),
+      ARROW_LEN, 0xf59e0b, 0.1, 0.04
+    );
+    diskGroup.add(waterArrow);
+
+    const waterLbl = makeLabel('water', 'comp-label', '#f59e0b');
+    diskGroup.add(waterLbl);
+
+    // ── Update functions ──
+    function updateDisk() {
+      const phi = latitudeDeg * DEG;
+      const localUp = new THREE.Vector3(Math.cos(phi), Math.sin(phi), 0);
+      diskGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), localUp);
+    }
+
+    function updateWaterArrow() {
+      const theta = waterDeg * DEG;
+      const dir = new THREE.Vector3(Math.cos(theta), Math.sin(theta), 0);
+      waterArrow.setDirection(dir);
+      // Position label near arrow tip
+      waterLbl.position.copy(dir.clone().multiplyScalar(ARROW_LEN + 0.08));
+    }
+
+    // Initial state
+    updateDisk();
+    updateWaterArrow();
+
+    // ── Controls ──
+    const latSlider = document.getElementById('lat-slider');
+    const latValue = document.getElementById('lat-value');
+    const waterSlider = document.getElementById('water-slider');
+    const waterValue = document.getElementById('water-value');
+    const speedSlider = document.getElementById('speed-slider');
+    const speedValue = document.getElementById('speed-value');
+
+    latSlider.addEventListener('input', () => {
+      latitudeDeg = +latSlider.value;
+      latValue.textContent = latitudeDeg + '\u00B0';
+      updateDisk();
+    });
+
+    waterSlider.addEventListener('input', () => {
+      waterDeg = +waterSlider.value;
+      waterValue.textContent = waterDeg + '\u00B0';
+      updateWaterArrow();
+    });
+
+    speedSlider.addEventListener('input', () => {
+      speedFraction = +speedSlider.value / 100;
+      speedValue.textContent = Math.round(speedFraction * 100) + '%';
+    });
+
+    // ── Notes dialog ──
+    const notesOverlay = document.getElementById('notes-overlay');
+    document.getElementById('open-notes').addEventListener('click', () => {
+      notesOverlay.classList.add('open');
+    });
+    document.getElementById('close-notes').addEventListener('click', () => {
+      notesOverlay.classList.remove('open');
+    });
+    notesOverlay.addEventListener('click', (e) => {
+      if (e.target === notesOverlay) notesOverlay.classList.remove('open');
+    });
+
+    // ── Resize ──
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      gl.setSize(innerWidth, innerHeight);
+      cssRenderer.setSize(innerWidth, innerHeight);
+    });
+
+    // ── Render loop ──
+    let lastTime = performance.now();
+    (function loop() {
+      requestAnimationFrame(loop);
+      const now = performance.now();
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+
+      rotatingGroup.rotation.y += MAX_ROTATION_SPEED * speedFraction * dt;
+
+      orbit.update();
+      gl.render(scene, camera);
+      cssRenderer.render(scene, camera);
+    })();
+  </script>
+</body>
+</html>
