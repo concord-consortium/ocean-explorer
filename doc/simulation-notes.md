@@ -159,6 +159,71 @@ varies by longitude, time, and is coupled to the ocean state.
 (latitude-band structure, Coriolis-dependent patterns) without the complexity of atmospheric
 data loading or coupling.
 
+## Timestep pseudocode
+
+What `simulation.step()` actually computes, simplified to show the structure.
+
+```js
+// --- Pressure gradient from eta (SSH) ---
+// Land neighbors treated as having same eta as this cell (zero gradient into land)
+forEachCell((r, c) => {
+  if (land[r][c]) return;
+  const etaE = land[r][c+1] ? eta[r][c] : eta[r][c+1];
+  const etaW = land[r][c-1] ? eta[r][c] : eta[r][c-1];
+  dEtaDx[r][c] = (etaE - etaW) / (2 * R * cos(lat) * Δλ);
+
+  const etaN = land[r+1][c] ? eta[r][c] : eta[r+1][c];
+  const etaS = land[r-1][c] ? eta[r][c] : eta[r-1][c];
+  dEtaDy[r][c] = (etaN - etaS) / (2 * R * Δφ);
+});
+
+// --- Velocity update: wind + pressure forcing, then implicit Coriolis+drag ---
+forEachCell((r, c) => {
+  const accelU = windDrag * windU(lat) - g * dEtaDx[r][c];
+  const accelV =                       - g * dEtaDy[r][c];
+
+  // Tentative velocity: old velocity + forcing * dt
+  const uStar = u[r][c] + accelU * dt;
+  const vStar = v[r][c] + accelV * dt;
+
+  // Implicit solve: Coriolis rotates, drag damps, solved together as 2x2 system
+  const D = 1 + drag * dt;
+  const f = coriolisParam(lat);
+  const det = D * D + (f * dt) * (f * dt);
+  u[r][c] = (D * uStar + f * dt * vStar) / det;
+  v[r][c] = (D * vStar - f * dt * uStar) / det;
+});
+
+// --- Zero out land velocities ---
+forEachCell((r, c) => {
+  if (land[r][c]) { u[r][c] = 0; v[r][c] = 0; }
+});
+
+// --- Divergence: how much velocity is spreading out from each cell ---
+// Uses only NEIGHBOR velocities, not the cell's own
+// Land neighbors treated as velocity = 0 (no flux through land)
+forEachCell((r, c) => {
+  if (land[r][c]) return;
+  const uE = land[r][c+1] ? 0 : u[r][c+1];
+  const uW = land[r][c-1] ? 0 : u[r][c-1];
+  const vN = land[r+1][c] ? 0 : v[r+1][c];
+  const vS = land[r-1][c] ? 0 : v[r-1][c];
+
+  div[r][c] = (uE - uW) / (2 * R * cos(lat) * Δλ)
+            + (vN * cos(latN) - vS * cos(latS)) / (2 * R * cos(lat) * Δφ);
+});
+
+// --- Update eta from divergence ---
+forEachCell((r, c) => {
+  eta[r][c] -= div[r][c] * dt;
+  if (land[r][c]) eta[r][c] = 0;
+});
+```
+
+Note: the actual code uses flat arrays (`r * COLS + c`) and handles polar boundaries
+with one-sided differences. The pressure gradient also has more nuanced land handling
+for the north-south direction. This pseudocode shows the interior-cell logic.
+
 ## Related Simulations
 
 ### Model My Watershed

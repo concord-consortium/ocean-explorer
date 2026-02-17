@@ -121,3 +121,15 @@ Start with enough controls to support all modes (gravity toggle, reference-frame
 launch button). Play with the full control set to understand how each mode helps build
 intuition. Then simplify down to fewer combined controls that guide the user through the
 progression.
+
+## Illustrating simulation edge-case behaviors
+
+Create visualizations that show *why* certain numerical issues arise, so developers can
+build intuition without reading derivations. Example: the dead-end filling instability —
+a water cell with 3 land neighbors has its divergence driven entirely by the one open
+neighbor's velocity, while drag only acts on each cell's own velocity. An interactive
+diagram could show the feedback loop: neighbor velocity → divergence → SSH rise →
+pressure gradient accelerates neighbor → repeat, with no drag path to counteract it.
+
+This could be a standalone HTML tool or an extension of the single-cell micro model above.
+The goal is to make failure modes as visible as the normal physics.
