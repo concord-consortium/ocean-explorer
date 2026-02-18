@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Earth Rotation — Inertial vs Rotating Frame</title>
+  <title>Earth Rotation — Reference Frames</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0f172a; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
@@ -124,15 +124,19 @@
 </head>
 <body>
   <div id="info">
-    <h2>Earth Rotation &mdash; Inertial vs Rotating Frame</h2>
+    <h2>Earth Rotation &mdash; Reference Frames</h2>
     <p>Drag to orbit &middot; Scroll to zoom</p>
     <p style="margin-top:6px">
-      Switch between two viewpoints: the <strong>inertial frame</strong> (camera
-      fixed relative to the stars &mdash; Earth spins) and the <strong>rotating
-      frame</strong> (camera fixed relative to Earth &mdash; stars spin).
+      <strong>Focus: Earth</strong> &mdash;
+      <strong>Inertial</strong>: camera fixed to the stars, Earth spins.
+      <strong>Rotating</strong>: camera fixed to Earth, stars spin.
     </p>
     <p style="margin-top:4px">
-      The physics are identical in both frames; only the viewpoint changes.
+      <strong>Focus: Lat point</strong> &mdash;
+      <strong>Earthling</strong>: camera co-rotates with the surface; Earth is
+      fixed underfoot, stars spin overhead.
+      <strong>Co-moving</strong>: camera follows the point but keeps its
+      orientation fixed to the stars, revealing the point&rsquo;s angular velocity.
     </p>
   </div>
 
