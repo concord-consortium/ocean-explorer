@@ -156,12 +156,12 @@
 
   <div id="controls">
     <div class="mode-toggle">
-      <button id="btn-inertial" class="active">Inertial frame</button>
-      <button id="btn-rotating">Rotating frame</button>
-    </div>
-    <div class="mode-toggle">
       <button id="btn-focus-earth" class="active">Focus: Earth</button>
       <button id="btn-focus-point">Focus: Lat point</button>
+    </div>
+    <div class="mode-toggle">
+      <button id="btn-inertial" class="active">Inertial frame</button>
+      <button id="btn-rotating">Rotating frame</button>
     </div>
     <div class="spin-row">
       <div class="control-row">
@@ -416,19 +416,44 @@
 
     // ── Latitude point (moves along longitude 0) ──
     const LAT_POINT_R = 1.01;
+    const LAT_POINT_SPHERE_R = 0.04;
+    const latPointGroup = new THREE.Group();
+    earthGroup.add(latPointGroup);
+
     const latPointMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(0.04, 12, 12),
+      new THREE.SphereGeometry(LAT_POINT_SPHERE_R, 12, 12),
       new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
     );
-    earthGroup.add(latPointMesh);
+    latPointGroup.add(latPointMesh);
+
+    // Lat/lon circles on the lat-point sphere (shows rotation in co-moving frame)
+    const LP_ARC_R = LAT_POINT_SPHERE_R * 1.02; // just above the sphere surface
+    const LP_ARC_SEGS = 32;
+    const arcMat = new THREE.LineBasicMaterial({ color: 0x000000 });
+
+    function makeCircle(plane) {
+      const pts = [];
+      for (let i = 0; i <= LP_ARC_SEGS; i++) {
+        const a = (i / LP_ARC_SEGS) * Math.PI * 2;
+        if (plane === 'xz') pts.push(new THREE.Vector3(LP_ARC_R * Math.cos(a), 0, LP_ARC_R * Math.sin(a)));
+        else                 pts.push(new THREE.Vector3(LP_ARC_R * Math.cos(a), LP_ARC_R * Math.sin(a), 0));
+      }
+      return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), arcMat);
+    }
+    // "Equator" in XZ plane → east-west on the surface
+    latPointGroup.add(makeCircle('xz'));
+    // "Meridian" in XY plane → north-south on the surface
+    latPointGroup.add(makeCircle('xy'));
 
     function updateLatPoint() {
       const phi = latitudeDeg * DEG;
-      latPointMesh.position.set(
+      latPointGroup.position.set(
         LAT_POINT_R * Math.cos(phi),
         LAT_POINT_R * Math.sin(phi),
         0
       );
+      // Orient so local Y points along surface normal (radially outward)
+      latPointGroup.rotation.z = phi - Math.PI / 2;
     }
     updateLatPoint();
 
@@ -493,22 +518,55 @@
 
     function switchFocus(newFocus) {
       if (newFocus === focus) return;
-      // Compute the new target position
-      const oldTarget = orbit.target.clone();
+      // Check if effective render mode will change (XOR: focus=point flips the mode)
+      const wasRotating = (mode === 'rotating') !== (focus === 'point');
+      const willBeRotating = (mode === 'rotating') !== (newFocus === 'point');
+
+      let oldTarget = orbit.target.clone();
+
+      // If effective render mode changes, rotate camera to compensate
+      if (wasRotating !== willBeRotating) {
+        const delta = willBeRotating ? -earthAngle : earthAngle;
+        const cos = Math.cos(delta), sin = Math.sin(delta);
+        // Rotate camera position around Y
+        const px = camera.position.x, pz = camera.position.z;
+        camera.position.x = px * cos + pz * sin;
+        camera.position.z = -px * sin + pz * cos;
+        // Rotate old target to new frame coordinates
+        const tx = oldTarget.x, tz = oldTarget.z;
+        oldTarget.x = tx * cos + tz * sin;
+        oldTarget.z = -tx * sin + tz * cos;
+      }
+
+      focus = newFocus;
+
+      // Set earth rotation to match new render mode for getWorldPosition
+      earthGroup.rotation.y = willBeRotating ? 0 : earthAngle;
+
+      // Compute new orbit target
       let newTarget;
-      if (newFocus === 'point') {
+      if (focus === 'point') {
         newTarget = new THREE.Vector3();
         latPointMesh.getWorldPosition(newTarget);
       } else {
         newTarget = new THREE.Vector3(0, 0, 0);
       }
-      // Shift camera position by the same offset so relative view is preserved
+
+      // Shift camera to orbit around new target
       const shift = newTarget.clone().sub(oldTarget);
       camera.position.add(shift);
       orbit.target.copy(newTarget);
-      focus = newFocus;
+
       btnFocusEarth.classList.toggle('active', focus === 'earth');
       btnFocusPoint.classList.toggle('active', focus === 'point');
+      // Update frame toggle labels based on focus
+      if (focus === 'point') {
+        btnInertial.textContent = 'Earthling frame';
+        btnRotating.textContent = 'Co-moving frame';
+      } else {
+        btnInertial.textContent = 'Inertial frame';
+        btnRotating.textContent = 'Rotating frame';
+      }
       orbit.update();
     }
 
@@ -517,15 +575,25 @@
 
     function switchMode(newMode) {
       if (newMode === mode) return;
-      // When switching, the scene objects jump by earthAngle around Y.
-      // Rotate the camera by the same amount so the view stays identical.
-      const delta = (newMode === 'rotating') ? -earthAngle : earthAngle;
-      const cos = Math.cos(delta), sin = Math.sin(delta);
-      const p = camera.position;
-      const x = p.x, z = p.z;
-      p.x = x * cos + z * sin;
-      p.z = -x * sin + z * cos;
+      const wasRotating = (mode === 'rotating') !== (focus === 'point');
       mode = newMode;
+      const isRotating = (mode === 'rotating') !== (focus === 'point');
+
+      if (wasRotating !== isRotating) {
+        const delta = isRotating ? -earthAngle : earthAngle;
+        const cos = Math.cos(delta), sin = Math.sin(delta);
+        // Rotate camera around origin
+        const p = camera.position;
+        const px = p.x, pz = p.z;
+        p.x = px * cos + pz * sin;
+        p.z = -px * sin + pz * cos;
+        // Rotate orbit target too (matters when focus=point)
+        const t = orbit.target;
+        const tx = t.x, tz = t.z;
+        t.x = tx * cos + tz * sin;
+        t.z = -tx * sin + tz * cos;
+      }
+
       btnInertial.classList.toggle('active', mode === 'inertial');
       btnRotating.classList.toggle('active', mode === 'rotating');
       orbit.update();
@@ -560,12 +628,12 @@
         rotValue.textContent = Math.round(deg) + '\u00B0';
       }
 
-      if (mode === 'inertial') {
-        // Camera is fixed in star frame → Earth rotates, stars stay still
+      // When focus=point the frame meanings flip: earthling (mode=inertial)
+      // renders as rotating, co-moving (mode=rotating) renders as inertial.
+      if ((mode === 'inertial') !== (focus === 'point')) {
         earthGroup.rotation.y = earthAngle;
         starGroup.rotation.y = 0;
       } else {
-        // Camera is fixed in Earth frame → stars rotate backwards, Earth stays still
         earthGroup.rotation.y = 0;
         starGroup.rotation.y = -earthAngle;
       }
@@ -574,6 +642,11 @@
       if (focus === 'point') {
         const worldPos = new THREE.Vector3();
         latPointMesh.getWorldPosition(worldPos);
+        // Co-moving frame: translate camera with the point (but don't rotate)
+        if (mode === 'rotating') {
+          const delta = worldPos.clone().sub(orbit.target);
+          camera.position.add(delta);
+        }
         orbit.target.copy(worldPos);
       } else {
         orbit.target.set(0, 0, 0);
@@ -611,7 +684,7 @@
         const markerPos = camera.position.clone();
         const markerQuat = camera.quaternion.clone();
         const targetPos = orbit.target.clone();
-        if (mode === 'rotating') {
+        if ((mode === 'rotating') !== (focus === 'point')) {
           const earthQuat = new THREE.Quaternion().setFromAxisAngle(
             new THREE.Vector3(0, 1, 0), earthAngle
           );
