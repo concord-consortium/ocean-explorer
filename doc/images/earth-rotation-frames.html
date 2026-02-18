@@ -71,6 +71,21 @@
       border-right: 1px solid rgba(148, 163, 184, 0.3);
     }
 
+    .spin-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px;
+    }
+    .spin-row .control-row { flex: 1; margin-bottom: 0; }
+    #btn-pause {
+      background: none; border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 4px; color: #94a3b8; font-size: 14px;
+      width: 26px; height: 26px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; padding: 0;
+    }
+    #btn-pause:hover { color: #e2e8f0; }
+    #btn-pause.paused { color: #22c55e; }
+
     .point-label {
       color: #f1f5f9; font-size: 13px; font-weight: 600;
       text-shadow: 0 1px 6px rgba(0,0,0,0.9);
@@ -80,6 +95,30 @@
       font-size: 11px; font-weight: 500;
       text-shadow: 0 1px 4px rgba(0,0,0,0.95);
       pointer-events: none; white-space: nowrap;
+    }
+
+    #overview-container {
+      display: none;
+      position: absolute; top: 16px; right: 20px; z-index: 20;
+      width: 300px; height: 300px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 8px; overflow: hidden;
+    }
+    #overview-container.open { display: block; }
+
+    #btn-overview {
+      position: absolute; top: 16px; right: 20px; z-index: 15;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 6px; padding: 5px 10px;
+      color: #94a3b8; font-size: 11px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+    }
+    #btn-overview:hover { color: #e2e8f0; }
+    #btn-overview.active {
+      top: 322px;
+      background: rgba(59, 130, 246, 0.25);
+      color: #e2e8f0;
     }
   </style>
 </head>
@@ -112,14 +151,32 @@
     </div>
   </div>
 
+  <div id="overview-container"></div>
+  <button id="btn-overview">Overview</button>
+
   <div id="controls">
     <div class="mode-toggle">
       <button id="btn-inertial" class="active">Inertial frame</button>
       <button id="btn-rotating">Rotating frame</button>
     </div>
+    <div class="mode-toggle">
+      <button id="btn-focus-earth" class="active">Focus: Earth</button>
+      <button id="btn-focus-point">Focus: Lat point</button>
+    </div>
+    <div class="spin-row">
+      <div class="control-row">
+        <label>Spin speed <span id="speed-value">50%</span></label>
+        <input type="range" id="speed-slider" min="0" max="100" value="50" step="1">
+      </div>
+      <button id="btn-pause" title="Pause / Resume">&#9208;</button>
+    </div>
     <div class="control-row">
-      <label>Spin speed <span id="speed-value">50%</span></label>
-      <input type="range" id="speed-slider" min="0" max="100" value="50" step="1">
+      <label>Rotation <span id="rot-value">0&deg;</span></label>
+      <input type="range" id="rot-slider" min="0" max="360" value="0" step="1">
+    </div>
+    <div class="control-row">
+      <label>Latitude <span id="lat-value">45&deg;</span></label>
+      <input type="range" id="lat-slider" min="-90" max="90" value="45" step="1">
     </div>
   </div>
 
@@ -138,15 +195,17 @@
     import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
     // ── State ──
+    let latitudeDeg = 45;
     const DEG = Math.PI / 180;
     const MAX_ROTATION_SPEED = Math.PI * 0.13; // rad/s → 1 rev per ~15 s
     let speedFraction = 0.5;
     let mode = 'inertial'; // 'inertial' or 'rotating'
     let earthAngle = 0;    // accumulated rotation angle (rad)
+    let spinning = true;   // auto-spin enabled
 
     // ── Scene ──
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 200);
+    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 500000);
     camera.position.set(3.5, 2.0, 3.5);
 
     const gl = new THREE.WebGLRenderer({ antialias: true });
@@ -169,6 +228,55 @@
     orbit.target.set(0, 0, 0);
     orbit.update();
 
+    // ── Overview (picture-in-picture debug view) ──
+    const overviewContainer = document.getElementById('overview-container');
+    const OVERVIEW_SIZE = 300;
+
+    const overviewGl = new THREE.WebGLRenderer({ antialias: true });
+    overviewGl.setSize(OVERVIEW_SIZE, OVERVIEW_SIZE);
+    overviewGl.setPixelRatio(devicePixelRatio);
+    overviewGl.setClearColor(0x0f172a);
+    overviewContainer.appendChild(overviewGl.domElement);
+
+    const overviewCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 500000);
+    overviewCamera.position.set(6, 4, 6);
+
+    const overviewOrbit = new OrbitControls(overviewCamera, overviewGl.domElement);
+    overviewOrbit.enableDamping = true;
+    overviewOrbit.dampingFactor = 0.08;
+    overviewOrbit.enablePan = false;
+    overviewOrbit.target.set(0, 0, 0);
+    overviewOrbit.update();
+
+    let overviewVisible = false;
+    const btnOverview = document.getElementById('btn-overview');
+    btnOverview.addEventListener('click', () => {
+      overviewVisible = !overviewVisible;
+      overviewContainer.classList.toggle('open', overviewVisible);
+      btnOverview.classList.toggle('active', overviewVisible);
+    });
+
+    // Camera marker: cone (body) + line (look direction)
+    const camMarkerGroup = new THREE.Group();
+    scene.add(camMarkerGroup);
+
+    const coneMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+    const coneMesh = new THREE.Mesh(
+      new THREE.ConeGeometry(0.12, 0.3, 8),
+      coneMat
+    );
+    camMarkerGroup.add(coneMesh);
+
+    // Line from camera to its look target
+    const lookLineGeom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)
+    ]);
+    const lookLine = new THREE.Line(
+      lookLineGeom,
+      new THREE.LineBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.5 })
+    );
+    camMarkerGroup.add(lookLine);
+
     // ── Helpers ──
     function makeLabel(text, cls, color) {
       const el = document.createElement('div');
@@ -183,7 +291,7 @@
     scene.add(starGroup);
 
     const STAR_COUNT = 2000;
-    const STAR_RADIUS = 80;
+    const STAR_RADIUS = 200000;
     const starPositions = new Float32Array(STAR_COUNT * 3);
     const starColors = new Float32Array(STAR_COUNT * 3);
 
@@ -222,7 +330,7 @@
     starGeom.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
 
     const starMaterial = new THREE.PointsMaterial({
-      size: 0.6,
+      size: 1200,
       vertexColors: true,
       sizeAttenuation: true,
       transparent: true,
@@ -280,14 +388,8 @@
 
     // Land-like markers: small colored dots at recognizable positions
     const markers = [
-      { lat: 90, lon: 0, color: 0xff4444, label: 'N' },   // North pole
-      { lat: -90, lon: 0, color: 0xff4444, label: 'S' },   // South pole
-      { lat: 0, lon: 0, color: 0x22c55e },                  // On equator/prime meridian
-      { lat: 0, lon: 90, color: 0x22c55e },                 // Equator 90E
-      { lat: 45, lon: 30, color: 0xfbbf24 },                // Mid-latitude marker
-      { lat: 45, lon: 150, color: 0xfbbf24 },
-      { lat: -30, lon: -60, color: 0xfbbf24 },
-      { lat: -30, lon: 120, color: 0xfbbf24 },
+      { lat: 90, lon: 0, color: 0xff4444, label: 'N' },
+      { lat: -90, lon: 0, color: 0xff4444, label: 'S' },
     ];
 
     for (const m of markers) {
@@ -311,6 +413,24 @@
         occludedLabels.push(lbl);
       }
     }
+
+    // ── Latitude point (moves along longitude 0) ──
+    const LAT_POINT_R = 1.01;
+    const latPointMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.04, 12, 12),
+      new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
+    );
+    earthGroup.add(latPointMesh);
+
+    function updateLatPoint() {
+      const phi = latitudeDeg * DEG;
+      latPointMesh.position.set(
+        LAT_POINT_R * Math.cos(phi),
+        LAT_POINT_R * Math.sin(phi),
+        0
+      );
+    }
+    updateLatPoint();
 
     // ── Rotation axis (always visible, aligned with scene Y) ──
     const axLine = new THREE.Line(
@@ -339,10 +459,61 @@
     const btnInertial = document.getElementById('btn-inertial');
     const btnRotating = document.getElementById('btn-rotating');
 
+    const latSlider = document.getElementById('lat-slider');
+    const latValue = document.getElementById('lat-value');
+    const btnFocusEarth = document.getElementById('btn-focus-earth');
+    const btnFocusPoint = document.getElementById('btn-focus-point');
+    let focus = 'earth'; // 'earth' or 'point'
+
+    const rotSlider = document.getElementById('rot-slider');
+    const rotValue = document.getElementById('rot-value');
+    const btnPause = document.getElementById('btn-pause');
+
     speedSlider.addEventListener('input', () => {
       speedFraction = +speedSlider.value / 100;
       speedValue.textContent = Math.round(speedFraction * 100) + '%';
     });
+
+    btnPause.addEventListener('click', () => {
+      spinning = !spinning;
+      btnPause.textContent = spinning ? '\u23F8' : '\u25B6';
+      btnPause.classList.toggle('paused', !spinning);
+    });
+
+    rotSlider.addEventListener('input', () => {
+      earthAngle = +rotSlider.value * DEG;
+      rotValue.textContent = rotSlider.value + '\u00B0';
+    });
+
+    latSlider.addEventListener('input', () => {
+      latitudeDeg = +latSlider.value;
+      latValue.textContent = latitudeDeg + '\u00B0';
+      updateLatPoint();
+    });
+
+    function switchFocus(newFocus) {
+      if (newFocus === focus) return;
+      // Compute the new target position
+      const oldTarget = orbit.target.clone();
+      let newTarget;
+      if (newFocus === 'point') {
+        newTarget = new THREE.Vector3();
+        latPointMesh.getWorldPosition(newTarget);
+      } else {
+        newTarget = new THREE.Vector3(0, 0, 0);
+      }
+      // Shift camera position by the same offset so relative view is preserved
+      const shift = newTarget.clone().sub(oldTarget);
+      camera.position.add(shift);
+      orbit.target.copy(newTarget);
+      focus = newFocus;
+      btnFocusEarth.classList.toggle('active', focus === 'earth');
+      btnFocusPoint.classList.toggle('active', focus === 'point');
+      orbit.update();
+    }
+
+    btnFocusEarth.addEventListener('click', () => switchFocus('earth'));
+    btnFocusPoint.addEventListener('click', () => switchFocus('point'));
 
     function switchMode(newMode) {
       if (newMode === mode) return;
@@ -380,8 +551,14 @@
       const dt = (now - lastTime) / 1000;
       lastTime = now;
 
-      // Accumulate rotation
-      earthAngle += MAX_ROTATION_SPEED * speedFraction * dt;
+      // Accumulate rotation (only when auto-spinning)
+      if (spinning) {
+        earthAngle += MAX_ROTATION_SPEED * speedFraction * dt;
+        // Keep rotation slider in sync
+        const deg = ((earthAngle / DEG) % 360 + 360) % 360;
+        rotSlider.value = Math.round(deg);
+        rotValue.textContent = Math.round(deg) + '\u00B0';
+      }
 
       if (mode === 'inertial') {
         // Camera is fixed in star frame → Earth rotates, stars stay still
@@ -391,6 +568,15 @@
         // Camera is fixed in Earth frame → stars rotate backwards, Earth stays still
         earthGroup.rotation.y = 0;
         starGroup.rotation.y = -earthAngle;
+      }
+
+      // Update orbit target based on focus
+      if (focus === 'point') {
+        const worldPos = new THREE.Vector3();
+        latPointMesh.getWorldPosition(worldPos);
+        orbit.target.copy(worldPos);
+      } else {
+        orbit.target.set(0, 0, 0);
       }
 
       // Occlude labels behind the Earth sphere
@@ -410,8 +596,57 @@
       }
 
       orbit.update();
+
+      // Hide camera marker for main render
+      camMarkerGroup.visible = false;
       gl.render(scene, camera);
       cssRenderer.render(scene, camera);
+
+      // Overview render
+      if (overviewVisible) {
+        // Update camera marker to match main camera in the inertial frame.
+        // In rotating mode, the main camera is fixed relative to Earth in scene
+        // space, but in the inertial frame it co-rotates with Earth.
+        camMarkerGroup.visible = true;
+        const markerPos = camera.position.clone();
+        const markerQuat = camera.quaternion.clone();
+        const targetPos = orbit.target.clone();
+        if (mode === 'rotating') {
+          const earthQuat = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0), earthAngle
+          );
+          markerPos.applyQuaternion(earthQuat);
+          markerQuat.premultiply(earthQuat);
+          targetPos.applyQuaternion(earthQuat);
+        }
+        camMarkerGroup.position.copy(markerPos);
+        camMarkerGroup.quaternion.copy(markerQuat);
+        // Cone points along -Z (camera look dir) — rotate so cone tip faces forward
+        coneMesh.rotation.set(Math.PI / 2, 0, 0);
+
+        // Update look line from camera to its target
+        const positions = lookLineGeom.attributes.position;
+        positions.setXYZ(0, 0, 0, 0);
+        // Transform target into camMarkerGroup local space
+        const localTarget = targetPos.sub(markerPos);
+        const invQ = markerQuat.clone().invert();
+        localTarget.applyQuaternion(invQ);
+        positions.setXYZ(1, localTarget.x, localTarget.y, localTarget.z);
+        positions.needsUpdate = true;
+
+        // Overview always shows inertial frame — temporarily override rotations
+        const savedEarthY = earthGroup.rotation.y;
+        const savedStarY = starGroup.rotation.y;
+        earthGroup.rotation.y = earthAngle;
+        starGroup.rotation.y = 0;
+
+        overviewOrbit.update();
+        overviewGl.render(scene, overviewCamera);
+
+        // Restore main view rotations
+        earthGroup.rotation.y = savedEarthY;
+        starGroup.rotation.y = savedStarY;
+      }
     })();
   </script>
 </body>
