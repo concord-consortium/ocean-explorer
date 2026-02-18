@@ -67,3 +67,8 @@ export const DELTA_RAD = RESOLUTION_DEG * Math.PI / 180;
 
 /** Color for land cells (gray-brown). */
 export const LAND_COLOR = 0x8B7355;
+
+// ── Phase 5: Temperature advection ──
+
+/** Newtonian relaxation timescale in seconds (30 days). */
+export const RELAXATION_TIMESCALE = 2_592_000;
