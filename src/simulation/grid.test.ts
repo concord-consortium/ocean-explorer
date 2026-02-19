@@ -91,3 +91,13 @@ describe("Grid", () => {
     expect(grid.isLand(5, 71)).toBe(true);
   });
 });
+
+describe("temperatureField", () => {
+  it("is initialized to all zeros", () => {
+    const grid = new Grid();
+    expect(grid.temperatureField.length).toBe(ROWS * COLS);
+    for (let i = 0; i < ROWS * COLS; i++) {
+      expect(grid.temperatureField[i]).toBe(0);
+    }
+  });
+});
