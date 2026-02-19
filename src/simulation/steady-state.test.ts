@@ -4,6 +4,7 @@ import { SimParams } from "./wind";
 import { coriolisParameter } from "./coriolis";
 import { divergence, pressureGradient } from "./spatial";
 import { createLandMask } from "./land-presets";
+import { temperature } from "./temperature";
 
 /**
  * Run simulation from rest until U, V, and eta all converge.
@@ -114,10 +115,19 @@ describe("Steady-state with continents", () => {
     }
   });
 
-  it("earth-like converges to steady state", () => {
+  it("earth-like converges to steady state with bounded temperature", () => {
     const params = { ...defaultParams };
     const sim = new Simulation();
     sim.grid.landMask.set(createLandMask("earth-like"));
+    // Initialize temperature to solar equilibrium
+    for (let r = 0; r < ROWS; r++) {
+      const lat = latitudeAtRow(r);
+      const tSolar = temperature(lat, params.tempGradientRatio);
+      for (let c = 0; c < COLS; c++) {
+        const i = r * COLS + c;
+        sim.grid.temperatureField[i] = sim.grid.landMask[i] ? 0 : tSolar;
+      }
+    }
     // Earth-like has narrow channels (Drake Passage) where eta drifts
     // at ~4.1e-6/step due to residual divergence in confined geometry.
     // Velocities converge to ~1e-11 but eta never reaches 1e-6 threshold.
@@ -125,5 +135,14 @@ describe("Steady-state with continents", () => {
     const steps = runToSteadyState(sim, params, 50000, 1e-5);
     expect(steps).toBeGreaterThan(10);
     expect(steps).toBeLessThan(50000);
+
+    // Check all water cell temperatures are finite and within physical range
+    for (let i = 0; i < ROWS * COLS; i++) {
+      if (sim.grid.landMask[i]) continue;
+      const t = sim.grid.temperatureField[i];
+      expect(isFinite(t)).toBe(true);
+      expect(t).toBeGreaterThan(-30);
+      expect(t).toBeLessThan(50);
+    }
   });
 });
