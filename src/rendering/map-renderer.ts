@@ -2,7 +2,7 @@ import { Application, Graphics, GraphicsContext, Container, Text, TextStyle } fr
 import { Grid, ROWS, COLS, latitudeAtRow } from "../simulation/grid";
 import { TARGET_FPS, COLOR_MIN, COLOR_MAX, WIND_SCALE, WATER_SCALE, LAND_COLOR } from "../constants";
 import { windU, SimParams } from "../simulation/wind";
-import { temperature } from "../simulation/temperature";
+
 
 /** Maps a temperature to a 0xRRGGBB color on a blue-to-red scale. */
 export function tempToColor(t: number): number {
@@ -197,7 +197,6 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
     // Draw background cells
     for (let r = 0; r < ROWS; r++) {
-      const lat = latitudeAtRow(r);
       const displayRow = ROWS - 1 - r;
 
       for (let c = 0; c < COLS; c++) {
@@ -211,8 +210,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
         } else if (opts.backgroundMode === "ssh") {
           bg.tint = sshToColor(grid.eta[cellIdx], minEta, maxEta);
         } else {
-          const t = temperature(lat, params.tempGradientRatio);
-          bg.tint = tempToColor(t);
+          bg.tint = tempToColor(grid.temperatureField[cellIdx]);
         }
       }
     }
