@@ -12,7 +12,45 @@
 
 ---
 
-### Task 1: Add RELAXATION_TIMESCALE constant
+### Task 1: Simplify steady-state tests
+
+**Files:**
+- Modify: `src/simulation/steady-state.test.ts`
+
+**Goal:** `steady-state.test.ts` is inefficient — it calls `runToSteadyState` multiple times for tests that could share a single run. Simplify before adding Phase 5 temperature tests.
+
+**Step 1: Combine all `it` blocks under "Steady-state with pressure gradients"**
+
+Run `runToSteadyState` once at the start of the describe block (in a `beforeAll` or at the top of a single `it`), then make all of the checks that are currently split between different `it` blocks.
+
+**Step 2: Remove the "Phase 4 regression: water world unchanged" test**
+
+This test runs `runToSteadyState` again just to check that adding land presets didn't change water world. It's redundant now that the water world tests exist.
+
+**Step 3: Combine "north-south continent converges to steady state" and "land cells remain zero at steady state"**
+
+These both need `runToSteadyState` with the north-south continent preset. Combine them so `runToSteadyState` is only called once.
+
+**Step 4: Run tests to verify they still pass**
+
+Run: `npx jest src/simulation/steady-state.test.ts --no-watchman --verbose --forceExit`
+Expected: PASS (fewer tests, same coverage, faster runtime)
+
+**Step 5: Run full lint + tests**
+
+Run: `npm run lint:build && npm test`
+Expected: PASS
+
+**Step 6: Commit**
+
+```bash
+git add src/simulation/steady-state.test.ts
+git commit -m "OE-2 Simplify steady-state tests before Phase 5"
+```
+
+---
+
+### Task 2: Add RELAXATION_TIMESCALE constant
 
 **Files:**
 - Modify: `src/constants.ts`
@@ -42,7 +80,7 @@ git commit -m "OE-2 Add RELAXATION_TIMESCALE constant for Phase 5"
 
 ---
 
-### Task 2: Add temperatureField to Grid
+### Task 3: Add temperatureField to Grid
 
 **Files:**
 - Modify: `src/simulation/grid.ts`
@@ -102,7 +140,7 @@ git commit -m "OE-2 Add temperatureField to Grid"
 
 ---
 
-### Task 3: Create advection operator
+### Task 4: Create advection operator
 
 **Files:**
 - Create: `src/simulation/advection.ts`
@@ -337,7 +375,7 @@ git commit -m "OE-2 Add first-order upwind advection operator"
 
 ---
 
-### Task 4: Integrate temperature step into Simulation
+### Task 5: Integrate temperature step into Simulation
 
 **Files:**
 - Modify: `src/simulation/simulation.ts`
@@ -483,7 +521,7 @@ git commit -m "OE-2 Add temperature advection + relaxation to simulation step"
 
 ---
 
-### Task 5: Initialize temperature on reset
+### Task 6: Initialize temperature on reset
 
 **Files:**
 - Modify: `src/components/simulation-canvas.tsx`
@@ -535,7 +573,7 @@ git commit -m "OE-2 Initialize temperature field on simulation reset"
 
 ---
 
-### Task 6: Render per-cell temperature
+### Task 7: Render per-cell temperature
 
 **Files:**
 - Modify: `src/rendering/map-renderer.ts`
@@ -580,7 +618,7 @@ git commit -m "OE-2 Render per-cell advected temperature instead of latitude-onl
 
 ---
 
-### Task 7: Regression and steady-state tests for temperature
+### Task 8: Regression and steady-state tests for temperature
 
 **Files:**
 - Modify: `src/simulation/steady-state.test.ts`
@@ -701,7 +739,7 @@ git commit -m "OE-2 Add temperature regression and steady-state tests"
 
 ---
 
-### Task 8: Update user guide
+### Task 9: Update user guide
 
 **Files:**
 - Modify: `doc/user-guide.md`
@@ -768,7 +806,7 @@ git commit -m "OE-2 Update user guide for Phase 5 temperature advection"
 
 ---
 
-### Task 9: Final verification
+### Task 10: Final verification
 
 **Step 1: Run full lint + unit tests + Playwright**
 
