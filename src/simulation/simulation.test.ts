@@ -1,6 +1,7 @@
 import { Simulation } from "./simulation";
-import { ROWS, COLS } from "./grid";
+import { ROWS, COLS, latitudeAtRow } from "./grid";
 import { windU, SimParams } from "./wind";
+import { temperature } from "./temperature";
 
 const defaultParams: SimParams = {
   rotationRatio: 1.0,
@@ -217,6 +218,62 @@ describe("Pressure gradient integration", () => {
     // Eta should not change from non-divergent flow
     for (let i = 0; i < ROWS * COLS; i++) {
       expect(Math.abs(sim.grid.eta[i] - etaBefore[i])).toBeLessThan(1e-10);
+    }
+  });
+});
+
+describe("Temperature in simulation step", () => {
+  it("land cells have zero temperature after step", () => {
+    const sim = new Simulation();
+    const r = 18, c = 36;
+    sim.grid.landMask[r * COLS + c] = 1;
+    // Initialize with nonzero temperature
+    sim.grid.temperatureField[r * COLS + c] = 25;
+    sim.step(defaultParams);
+    expect(sim.grid.temperatureField[r * COLS + c]).toBe(0);
+  });
+
+  it("relaxation warms a cell colder than T_solar", () => {
+    const sim = new Simulation();
+    const r = 18; // near equator, T_solar ≈ 35
+    const c = 36;
+    const tSolar = temperature(latitudeAtRow(r), defaultParams.tempGradientRatio);
+    // Set temperature well below solar target
+    sim.grid.temperatureField[r * COLS + c] = tSolar - 10;
+    const tBefore = sim.grid.temperatureField[r * COLS + c];
+    sim.step(defaultParams);
+    // Temperature should have increased (moved toward T_solar)
+    expect(sim.grid.temperatureField[r * COLS + c]).toBeGreaterThan(tBefore);
+  });
+
+  it("relaxation cools a cell warmer than T_solar", () => {
+    const sim = new Simulation();
+    const r = 18;
+    const c = 36;
+    const tSolar = temperature(latitudeAtRow(r), defaultParams.tempGradientRatio);
+    // Set temperature above solar target
+    sim.grid.temperatureField[r * COLS + c] = tSolar + 10;
+    const tBefore = sim.grid.temperatureField[r * COLS + c];
+    sim.step(defaultParams);
+    // Temperature should have decreased
+    expect(sim.grid.temperatureField[r * COLS + c]).toBeLessThan(tBefore);
+  });
+
+  it("temperature at T_solar with no currents stays at T_solar", () => {
+    const sim = new Simulation();
+    // Use zero wind/rotation to keep velocities near zero
+    const params = { ...defaultParams, tempGradientRatio: 0, rotationRatio: 0 };
+    // Initialize all water cells to T_solar (with gradient 0, T_solar = T_AVG everywhere)
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const lat = latitudeAtRow(r);
+        sim.grid.temperatureField[r * COLS + c] = temperature(lat, params.tempGradientRatio);
+      }
+    }
+    const before = new Float64Array(sim.grid.temperatureField);
+    sim.step(params);
+    for (let i = 0; i < ROWS * COLS; i++) {
+      expect(sim.grid.temperatureField[i]).toBeCloseTo(before[i], 6);
     }
   });
 });
