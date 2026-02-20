@@ -4,12 +4,33 @@ import { TARGET_FPS, COLOR_MIN, COLOR_MAX, WIND_SCALE, WATER_SCALE, LAND_COLOR }
 import { windU, SimParams } from "../simulation/wind";
 
 
-/** Maps a temperature to a 0xRRGGBB color on a blue-to-red scale. */
+/** Color stops for the temperature scale: blue → cyan → green → yellow → red. */
+const TEMP_STOPS: [number, number, number, number][] = [
+  [0.00,   0,   0, 180],  // deep blue
+  [0.25,   0, 220, 255],  // cyan
+  [0.50,   0, 200,   0],  // green
+  [0.75, 255, 255,   0],  // yellow
+  [1.00, 255,   0,   0],  // red
+];
+
+/** Maps a temperature to a 0xRRGGBB color on a blue-green-yellow-red scale. */
 export function tempToColor(t: number): number {
   const frac = Math.max(0, Math.min(1, (t - COLOR_MIN) / (COLOR_MAX - COLOR_MIN)));
-  const r = Math.round(255 * frac);
-  const b = Math.round(255 * (1 - frac));
-  const g = Math.round(100 * (1 - Math.abs(frac - 0.5) * 2));
+  // Find the two surrounding stops
+  let lo = TEMP_STOPS[0];
+  let hi = TEMP_STOPS[TEMP_STOPS.length - 1];
+  for (let i = 1; i < TEMP_STOPS.length; i++) {
+    if (frac <= TEMP_STOPS[i][0]) {
+      lo = TEMP_STOPS[i - 1];
+      hi = TEMP_STOPS[i];
+      break;
+    }
+  }
+  const span = hi[0] - lo[0];
+  const s = span > 0 ? (frac - lo[0]) / span : 0;
+  const r = Math.round(lo[1] + s * (hi[1] - lo[1]));
+  const g = Math.round(lo[2] + s * (hi[2] - lo[2]));
+  const b = Math.round(lo[3] + s * (hi[3] - lo[3]));
   return r * 65536 + g * 256 + b;
 }
 
