@@ -3,7 +3,7 @@
 ## What you're looking at
 
 A 2D equirectangular map of a simplified water world. The background color shows either
-temperature (blue = cold, red = hot) or sea surface height (blue = low, white = neutral,
+temperature advected by ocean currents (blue = cold, red = hot) or sea surface height (blue = low, white = neutral,
 red = high), selectable via a dropdown. Two layers of arrows show wind and water velocity.
 
 The simulation starts from rest. Wind pushes water, Coriolis deflection rotates the flow
@@ -25,7 +25,7 @@ the flow into gyres.
 | **Speed** (6–600 steps/s) | How many simulation steps run per second. Higher values advance simulated time faster. The default (60 steps/s) runs 2 steps per rendered frame at 30fps. |
 | **Arrow size** (0.5x–3x) | Scales the visual length of all arrows. Useful for seeing small arrows. |
 | **Show wind / Show water** | Toggle arrow layers on and off. |
-| **Background** (Temperature / Sea Surface Height) | Switches the background color layer between temperature by latitude and SSH. SSH mode uses a diverging color scale that auto-scales to the current min/max range. |
+| **Background** (Temperature / Sea Surface Height) | Switches the background color layer between per-cell temperature (advected by currents, relaxed toward a latitude-dependent solar equilibrium) and SSH. SSH mode uses a diverging color scale that auto-scales to the current min/max range. |
 | **Continents** (dropdown) | Selects the continental layout. **Water World** = no land (default). **Equatorial Continent** = rectangular landmass across the tropics. **North-South Continent** = pole-to-pole strip creating one enclosed basin. **Earth-Like** = simplified real-world continents. Changing the preset resets the simulation to rest. |
 | **Benchmark** | Measures how many milliseconds of frame-time headroom remain. Runs an automated test that gradually loads each frame until FPS drops, then reports the result (e.g., "Headroom: 30.2ms"). The button shows "Benchmarking..." while running. |
 
@@ -94,6 +94,23 @@ This effect may be subtle at 5° resolution — see known limitations.
 deflect around the north and south ends of the landmass. Compare this to the full
 North-South Continent where flow is completely enclosed.
 
+**Watch heat transport.** With Earth-Like continents, press Play and switch Background to
+Temperature. Watch as the initially smooth latitude gradient gets distorted by currents.
+Warm tongues extend poleward along western boundary currents (where the Gulf Stream would
+be), while cold water is pulled equatorward on the eastern sides of basins.
+
+**Compare Water World to Earth-Like.** On Water World, the temperature gradient stays nearly
+symmetric (currents are zonally uniform, so there's little distortion). Switch to Earth-Like
+and the gradient becomes visibly asymmetric — land and gyres redistribute heat.
+
+**Strengthen the temperature gradient.** Slide the temperature gradient to 2x. This
+strengthens winds, which strengthens currents, which transport more heat. The warm poleward
+tongues become more pronounced. At 0.5x, heat transport weakens and the pattern stays closer
+to the smooth solar baseline.
+
+**Reverse rotation and watch heat transport flip.** Uncheck Prograde rotation. Gyre
+directions reverse, and the warm poleward tongues shift to the opposite side of each basin.
+
 ## What's on screen
 
 - **Gray/white arrows** — wind (prescribed, not simulated)
@@ -139,9 +156,10 @@ Stream, Kuroshio) are narrow (~100 km) jets concentrated by lateral viscosity, w
 simulation does not include. Western intensification may appear as a broad, gentle
 asymmetry rather than a sharp jet.
 
-**No thermal coupling.** Temperature is decorative — the background color is computed from
-latitude for display only. It does not feed back into the simulation. There are no
-thermal-driven density gradients or thermohaline circulation.
+**Passive temperature.** Temperature is advected by currents and relaxed toward a solar
+equilibrium but does not feed back into the dynamics — it doesn't affect wind, pressure
+gradients, or currents. There are no thermal-driven density gradients or thermohaline
+circulation.
 
 **All cells at a given latitude are identical on Water World.** With the Water World preset
 (no land), wind depends only on latitude with no longitudinal variations, so every cell in
