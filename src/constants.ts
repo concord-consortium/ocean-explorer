@@ -70,5 +70,5 @@ export const LAND_COLOR = 0x8B7355;
 
 // ── Phase 5: Temperature advection ──
 
-/** Newtonian relaxation timescale in seconds (~half a year). */
-export const RELAXATION_TIMESCALE = 15_768_000;
+/** Newtonian relaxation timescale in seconds (60 days). */
+export const RELAXATION_TIMESCALE = 5_184_000;

@@ -4,16 +4,15 @@ import { TARGET_FPS, COLOR_MIN, COLOR_MAX, WIND_SCALE, WATER_SCALE, LAND_COLOR }
 import { windU, SimParams } from "../simulation/wind";
 
 
-/** Color stops for the temperature scale: blue → cyan → green → yellow → red. */
+/** Color stops for the temperature scale: blue → cyan → yellow → red. */
 const TEMP_STOPS: [number, number, number, number][] = [
-  [0.00,   0,   0, 180],  // deep blue
-  [0.25,   0, 220, 255],  // cyan
-  [0.50,   0, 200,   0],  // green
-  [0.75, 255, 255,   0],  // yellow
-  [1.00, 255,   0,   0],  // red
+  [0.000,   0,   0, 180],  // deep blue
+  [0.333,   0, 220, 255],  // cyan
+  [0.667, 255, 255,   0],  // yellow
+  [1.000, 255,   0,   0],  // red
 ];
 
-/** Maps a temperature to a 0xRRGGBB color on a blue-green-yellow-red scale. */
+/** Maps a temperature to a 0xRRGGBB color on a blue-cyan-yellow-red scale. */
 export function tempToColor(t: number): number {
   const frac = Math.max(0, Math.min(1, (t - COLOR_MIN) / (COLOR_MAX - COLOR_MIN)));
   // Find the two surrounding stops

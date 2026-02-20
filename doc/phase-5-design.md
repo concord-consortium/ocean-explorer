@@ -94,7 +94,7 @@ T_new = T_old + dt * (T_solar(lat) - T_old) / tau
 ```
 
 - `T_solar(lat)` = existing `temperature(lat, tempGradientRatio)` function
-- `tau` = relaxation timescale, ~half a year = `15,768,000 seconds`
+- `tau` = relaxation timescale, 60 days = `5,184,000 seconds`
 
 This represents the net effect of solar heating and atmospheric/radiative cooling. At equilibrium
 with no currents, `T_cell = T_solar(lat)`. Currents push temperature away from equilibrium;
@@ -184,7 +184,7 @@ New constant in `constants.ts`:
 
 | Constant | Value | Units | Purpose |
 |----------|-------|-------|---------|
-| `RELAXATION_TIMESCALE` | `15_768_000` | seconds (~half a year) | Newtonian relaxation timescale |
+| `RELAXATION_TIMESCALE` | `5_184_000` | seconds (60 days) | Newtonian relaxation timescale |
 
 Existing constants `T_AVG` (15°C), `DELTA_T_EARTH` (40°C), `COLOR_MIN` (-15°C), `COLOR_MAX`
 (35°C) are unchanged.
@@ -197,9 +197,9 @@ the advection CFL is `0.3 * 900 / 24000 ~ 0.01`. No timestep reduction needed.
 
 ### Tuning notes
 
-The half-year relaxation timescale allows advection-driven temperature drift to accumulate to
-visible levels before being pulled back toward solar equilibrium. If heat transport patterns
-are too subtle, increase `tau`. If temperature drifts unrealistically, decrease `tau`.
+The 60-day relaxation timescale balances visible advection-driven drift with responsive
+relaxation toward solar equilibrium. If heat transport patterns are too subtle, increase
+`tau`. If temperature drifts unrealistically, decrease `tau`.
 
 ## Testing
 
@@ -275,6 +275,9 @@ are too subtle, increase `tau`. If temperature drifts unrealistically, decrease 
 ### Revision 1: Increase relaxation timescale from 30 days to half a year
 
 The original 30-day timescale was too aggressive — relaxation pulled temperature back toward
-solar equilibrium faster than advection could accumulate visible drift. Increasing to ~6 months
-(15,768,000 seconds) allows currents to visibly distort the temperature field before relaxation
-counteracts the effect.
+solar equilibrium faster than advection could accumulate visible drift.
+
+### Revision 2: Reduce relaxation timescale from half a year to 60 days
+
+Half a year was too slow for the relaxation response. 60 days (5,184,000 seconds) balances
+visible advection drift with responsive relaxation.

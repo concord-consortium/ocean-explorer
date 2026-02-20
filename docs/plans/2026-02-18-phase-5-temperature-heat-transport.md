@@ -741,26 +741,26 @@ git commit -m "OE-2 Update user guide for Phase 5 temperature advection"
 
 ---
 
-### Task 10: Change temperature color ramp to blue→green→yellow→red
+### Task 10: Change temperature color ramp to blue→cyan→yellow→red
 
 **Files:**
 - Modify: `src/rendering/map-renderer.ts`
 
 **Goal:** Replace the current blue-to-red color scale with a multi-stop gradient matching
-the NASA-style ocean temperature visualization: deep blue → cyan → green → yellow → red.
+the NASA-style ocean temperature visualization: deep blue → cyan → yellow → red.
 See `assets/heat_colors.png` for reference.
 
 **Step 1: Replace `tempToColor` with piecewise linear interpolation**
 
-Replace the current `tempToColor` function with one that interpolates through 5 color stops:
+Replace the current `tempToColor` function with one that interpolates through 4 evenly spaced
+color stops:
 
 | Fraction | Color | RGB |
 |----------|-------|-----|
-| 0.00 | Deep blue | (0, 0, 180) |
-| 0.25 | Cyan | (0, 220, 255) |
-| 0.50 | Green | (0, 200, 0) |
-| 0.75 | Yellow | (255, 255, 0) |
-| 1.00 | Red | (255, 0, 0) |
+| 0.000 | Deep blue | (0, 0, 180) |
+| 0.333 | Cyan | (0, 220, 255) |
+| 0.667 | Yellow | (255, 255, 0) |
+| 1.000 | Red | (255, 0, 0) |
 
 The fraction mapping (`COLOR_MIN` to `COLOR_MAX`) is unchanged. The color scale bar and all
 cell tinting will automatically pick up the new gradient since they already call `tempToColor`.
