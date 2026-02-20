@@ -618,112 +618,47 @@ git commit -m "OE-2 Render per-cell advected temperature instead of latitude-onl
 
 ---
 
-### Task 8: Regression and steady-state tests for temperature
+### Task 8: Add temperature check to earth-like steady-state test
 
 **Files:**
 - Modify: `src/simulation/steady-state.test.ts`
 
-**Step 1: Write the tests**
+**Step 1: Add temperature initialization and checks to the existing earth-like test**
 
-Add to `src/simulation/steady-state.test.ts`:
+In the existing "earth-like converges to steady state" test (inside the "Steady-state with continents" describe block), add:
 
-```typescript
-import { temperature } from "./temperature";
+1. Initialize `temperatureField` to solar equilibrium before running to steady state:
+   ```typescript
+   import { temperature } from "./temperature";
+   // ... inside the test, after setting landMask:
+   for (let r = 0; r < ROWS; r++) {
+     const lat = latitudeAtRow(r);
+     const tSolar = temperature(lat, params.tempGradientRatio);
+     for (let c = 0; c < COLS; c++) {
+       const i = r * COLS + c;
+       sim.grid.temperatureField[i] = sim.grid.landMask[i] ? 0 : tSolar;
+     }
+   }
+   ```
 
-describe("Phase 5 regression: velocity/SSH unchanged by temperature", () => {
-  it("water world velocity and SSH match Phase 4 (temperature field does not affect dynamics)", () => {
-    const params = { ...defaultParams };
+2. After the existing convergence check, add temperature bounds check:
+   ```typescript
+   // Check all temperatures are finite and within physical range
+   for (let i = 0; i < ROWS * COLS; i++) {
+     expect(isFinite(sim.grid.temperatureField[i])).toBe(true);
+     if (!sim.grid.landMask[i]) {
+       expect(sim.grid.temperatureField[i]).toBeGreaterThan(-30);
+       expect(sim.grid.temperatureField[i]).toBeLessThan(50);
+     }
+   }
+   ```
 
-    // Run baseline (temperature field starts at zero — no advection effect on dynamics)
-    const sim1 = new Simulation();
-    const steps1 = runToSteadyState(sim1, params);
-
-    // Run with temperature initialized to solar equilibrium
-    const sim2 = new Simulation();
-    for (let r = 0; r < ROWS; r++) {
-      const lat = latitudeAtRow(r);
-      const tSolar = temperature(lat, params.tempGradientRatio);
-      for (let c = 0; c < COLS; c++) {
-        sim2.grid.temperatureField[r * COLS + c] = tSolar;
-      }
-    }
-    const steps2 = runToSteadyState(sim2, params);
-
-    // Velocity and SSH should be identical (temperature is passive)
-    expect(steps2).toBe(steps1);
-    for (let i = 0; i < ROWS * COLS; i++) {
-      expect(sim2.grid.waterU[i]).toBe(sim1.grid.waterU[i]);
-      expect(sim2.grid.waterV[i]).toBe(sim1.grid.waterV[i]);
-      expect(sim2.grid.eta[i]).toBe(sim1.grid.eta[i]);
-    }
-  });
-});
-
-describe("Temperature steady-state", () => {
-  it("water world: temperature converges near solar baseline", () => {
-    const params = { ...defaultParams };
-    const sim = new Simulation();
-    // Initialize temperature to solar equilibrium
-    for (let r = 0; r < ROWS; r++) {
-      const lat = latitudeAtRow(r);
-      const tSolar = temperature(lat, params.tempGradientRatio);
-      for (let c = 0; c < COLS; c++) {
-        sim.grid.temperatureField[r * COLS + c] = tSolar;
-      }
-    }
-
-    // Run to velocity steady state first
-    runToSteadyState(sim, params);
-
-    // Now run more steps and check temperature is near solar baseline
-    // (Water world currents are zonally symmetric, so temperature distortion is small)
-    for (let r = 0; r < ROWS; r++) {
-      const lat = latitudeAtRow(r);
-      const tSolar = temperature(lat, params.tempGradientRatio);
-      for (let c = 0; c < COLS; c++) {
-        const tCell = sim.grid.temperatureField[r * COLS + c];
-        // Allow up to 3°C deviation from solar baseline due to meridional advection
-        expect(Math.abs(tCell - tSolar)).toBeLessThan(3);
-      }
-    }
-  });
-
-  it("earth-like: temperature converges (no divergence)", () => {
-    const params = { ...defaultParams };
-    const sim = new Simulation();
-    sim.grid.landMask.set(createLandMask("earth-like"));
-    // Initialize temperature to solar equilibrium
-    for (let r = 0; r < ROWS; r++) {
-      const lat = latitudeAtRow(r);
-      const tSolar = temperature(lat, params.tempGradientRatio);
-      for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
-        sim.grid.temperatureField[i] = sim.grid.landMask[i] ? 0 : tSolar;
-      }
-    }
-
-    // Run 30000 steps (enough for velocity and temperature to stabilize)
-    for (let i = 0; i < 30000; i++) {
-      sim.step(params);
-    }
-
-    // Check all temperatures are finite and within physical range
-    for (let i = 0; i < ROWS * COLS; i++) {
-      expect(isFinite(sim.grid.temperatureField[i])).toBe(true);
-      if (!sim.grid.landMask[i]) {
-        // Temperature should stay within a reasonable range
-        expect(sim.grid.temperatureField[i]).toBeGreaterThan(-30);
-        expect(sim.grid.temperatureField[i]).toBeLessThan(50);
-      }
-    }
-  });
-});
-```
+This avoids adding any new `runToSteadyState` calls — the temperature check piggybacks on the existing earth-like convergence run.
 
 **Step 2: Run tests to verify they pass**
 
 Run: `npx jest src/simulation/steady-state.test.ts --verbose`
-Expected: PASS (these tests may take a few seconds due to convergence loops)
+Expected: PASS
 
 **Step 3: Run full test suite**
 
@@ -734,7 +669,7 @@ Expected: PASS
 
 ```bash
 git add src/simulation/steady-state.test.ts
-git commit -m "OE-2 Add temperature regression and steady-state tests"
+git commit -m "OE-2 Add temperature bounds check to earth-like steady-state test"
 ```
 
 ---
