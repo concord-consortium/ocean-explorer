@@ -97,4 +97,4 @@ export const GLOBE_MIN_DISTANCE = 1.3;
 export const GLOBE_MAX_DISTANCE = 4.0;
 
 /** Initial camera distance from globe center (sphere radii). */
-export const GLOBE_INITIAL_DISTANCE = 2.5;
+export const GLOBE_INITIAL_DISTANCE = 3.25;

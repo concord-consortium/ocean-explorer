@@ -33,7 +33,7 @@ export const App = () => {
   const [paused, setPaused] = useState(true);
   const [arrowScale, setArrowScale] = useState(1.0);
   const [backgroundMode, setBackgroundMode] = useState<"temperature" | "ssh">("temperature");
-  const [landPreset, setLandPreset] = useState<LandPreset>("water-world");
+  const [landPreset, setLandPreset] = useState<LandPreset>("earth-like");
   const [viewMode, setViewMode] = useState<"map" | "globe">("globe");
   const [metrics, setMetrics] = useState<RendererMetrics | null>(null);
 
