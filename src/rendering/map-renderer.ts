@@ -3,7 +3,7 @@ import { ROWS, COLS } from "../simulation/grid";
 import { WIND_SCALE, WATER_SCALE, LAND_COLOR, LEFT_MARGIN, RIGHT_MARGIN } from "../constants";
 import { windU, SimParams } from "../simulation/wind";
 import type { IGrid } from "../types/grid-types";
-import type { Renderer, RendererOptions, RendererMetrics } from "./renderer-interface";
+import type { Renderer, RendererOptions, RendererMetrics } from "../types/renderer-types";
 import { tempToColor, sshToColor } from "../utils/color-utils";
 import { latitudeAtRow, computeSshRange } from "../utils/grid-utils";
 
@@ -190,5 +190,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       arrowContext.destroy();
       app.destroy();
     },
+    savesCameraState: () => false,
+    getCameraState: () => null,
   };
 }

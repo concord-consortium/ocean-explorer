@@ -8,7 +8,7 @@ import {
   WIND_SCALE, ROWS, LEFT_MARGIN, RIGHT_MARGIN,
 } from "../constants";
 import { tempToColor, sshToColor } from "../utils/color-utils";
-import type { RendererMetrics } from "../rendering/renderer-interface";
+import type { RendererMetrics } from "../types/renderer-types";
 
 import "./app.scss";
 
@@ -34,6 +34,7 @@ export const App = () => {
   const [arrowScale, setArrowScale] = useState(1.0);
   const [backgroundMode, setBackgroundMode] = useState<"temperature" | "ssh">("temperature");
   const [landPreset, setLandPreset] = useState<LandPreset>("water-world");
+  const [viewMode, setViewMode] = useState<"map" | "globe">("globe");
   const [metrics, setMetrics] = useState<RendererMetrics | null>(null);
 
   const controlsRef = useRef<HTMLDivElement>(null);
@@ -173,6 +174,13 @@ export const App = () => {
           </select>
         </label>
         <label>
+          View:{" "}
+          <select value={viewMode} onChange={e => setViewMode(e.target.value as "map" | "globe")}>
+            <option value="globe">Globe</option>
+            <option value="map">Map</option>
+          </select>
+        </label>
+        <label>
           Continents:
           <select value={landPreset} onChange={e => setLandPreset(e.target.value as LandPreset)}>
             <option value="water-world">Water World</option>
@@ -212,6 +220,7 @@ export const App = () => {
           arrowScale={arrowScale}
           backgroundMode={backgroundMode}
           landPreset={landPreset}
+          viewMode={viewMode}
           benchmarkRef={benchmarkRef}
           onMetrics={setMetrics}
         />
@@ -221,16 +230,24 @@ export const App = () => {
           {showWater && metrics && <div>Water max: {metrics.waterMax.toFixed(1)} m/s</div>}
           {perfParts.length > 0 && <div>{perfParts.join(" | ")}</div>}
         </div>
-        {/* Latitude labels */}
-        <div className="latitude-labels">
-          {latLabelPositions.map(({ lat, y }) => (
-            <div key={lat} className="lat-label" style={{ top: y }}>
-              {lat}&deg;
-            </div>
-          ))}
-        </div>
+        {/* Latitude labels (map view only) */}
+        {viewMode === "map" && (
+          <div className="latitude-labels">
+            {latLabelPositions.map(({ lat, y }) => (
+              <div key={lat} className="lat-label" style={{ top: y }}>
+                {lat}&deg;
+              </div>
+            ))}
+          </div>
+        )}
         {/* Color scale bar */}
-        <div className="color-scale" style={{ top: barTop, height: barHeight, left: LEFT_MARGIN + mapWidth + 8 }}>
+        <div
+          className={`color-scale ${viewMode === "globe" ? "color-scale-globe" : ""}`}
+          style={viewMode === "map"
+            ? { top: barTop, height: barHeight, left: LEFT_MARGIN + mapWidth + 8 }
+            : { top: barTop, height: barHeight }
+          }
+        >
           <div className="color-scale-max-label">{colorScaleMaxLabel}</div>
           <div className="color-scale-bar" style={{ background: gradient }} />
           <div className="color-scale-min-label">{colorScaleMinLabel}</div>

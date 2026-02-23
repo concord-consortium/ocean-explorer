@@ -80,6 +80,10 @@
   align-items: flex-start;
   pointer-events: none;
 
+  &.color-scale-globe {
+    right: 16px;
+  }
+
   .color-scale-max-label,
   .color-scale-min-label {
     font-family: monospace;

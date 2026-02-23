@@ -11,13 +11,7 @@ import { tempToColor, sshToColor } from "../utils/color-utils";
 import { latitudeAtRow, longitudeAtCol, computeSshRange } from "../utils/grid-utils";
 import { buildArrowGeometry, buildArrowMatrix } from "./globe-arrows";
 import type { IGrid } from "../types/grid-types";
-import type { Renderer, RendererOptions, RendererMetrics } from "./renderer-interface";
-
-export interface GlobeCameraState {
-  azimuth: number;   // radians
-  polar: number;     // radians
-  distance: number;
-}
+import type { Renderer, RendererOptions, RendererMetrics, GlobeCameraState } from "../types/renderer-types";
 
 /** Reference arrow length in model units, used to scale arrow geometry. */
 const REF_ARROW_LEN = 0.06;
@@ -25,7 +19,7 @@ const REF_ARROW_LEN = 0.06;
 /** Speed threshold below which arrows are hidden. */
 const SPEED_THRESHOLD = 0.001;
 
-export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer & { getCameraState(): GlobeCameraState } {
+export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
   // --- Three.js scene setup ---
   const webglRenderer = new THREE.WebGLRenderer({ antialias: true });
   webglRenderer.setPixelRatio(window.devicePixelRatio);
@@ -262,6 +256,7 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer & 
     update,
     resize,
     destroy,
+    savesCameraState: () => true,
     getCameraState,
   };
 }

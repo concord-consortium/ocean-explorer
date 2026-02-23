@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import { createMapRenderer } from "../rendering/map-renderer";
-import type { Renderer, RendererMetrics } from "../rendering/renderer-interface";
+import { createGlobeRenderer } from "../rendering/globe-renderer";
+import type { Renderer, RendererMetrics, GlobeCameraState } from "../types/renderer-types";
 import { Simulation } from "../simulation/simulation";
 import { SimulationStepper } from "../simulation/simulation-stepper";
 import { SimParams } from "../simulation/wind";
@@ -21,16 +22,18 @@ interface Props {
   arrowScale: number;
   backgroundMode: "temperature" | "ssh";
   landPreset: LandPreset;
+  viewMode: "map" | "globe";
   benchmarkRef?: React.RefObject<FrameHeadroomBenchmark | null>;
   onMetrics?: (metrics: RendererMetrics) => void;
 }
 
 export const SimulationCanvas: React.FC<Props> = ({
   width, height, params, showWind, showWater, targetStepsPerSecond,
-  paused, arrowScale, backgroundMode, landPreset, benchmarkRef, onMetrics,
+  paused, arrowScale, backgroundMode, landPreset, viewMode, benchmarkRef, onMetrics,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<Renderer | null>(null);
+  const cameraStateRef = useRef<GlobeCameraState | null>(null);
   const simRef = useRef(new Simulation());
   const paramsRef = useRef(params);
   paramsRef.current = params;
@@ -59,7 +62,8 @@ export const SimulationCanvas: React.FC<Props> = ({
   const renderVersionRef = useRef(0);
   renderVersionRef.current += 1;
 
-  // Create renderer once on mount, destroy on unmount
+  // Create/recreate renderer when viewMode changes; destroy on unmount.
+  // Simulation state (simRef) persists across view toggles.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -73,20 +77,7 @@ export const SimulationCanvas: React.FC<Props> = ({
       benchmarkRefProp.current.current = benchmark;
     }
 
-    // Create a canvas element for the renderer
-    const canvas = document.createElement("canvas");
-    container.appendChild(canvas);
-
-    createMapRenderer(canvas, sizeRef.current.width, sizeRef.current.height).then((renderer) => {
-      if (destroyed) {
-        renderer.destroy();
-        return;
-      }
-      rendererRef.current = renderer;
-
-      // Apply any size changes that occurred while the async init was in flight.
-      renderer.resize(sizeRef.current.width, sizeRef.current.height);
-
+    function startRafLoop(renderer: Renderer): void {
       const minFrameInterval = 1000 / TARGET_FPS;
       let lastFrameTime = -1;
       let lastRenderedVersion = -1;
@@ -140,24 +131,55 @@ export const SimulationCanvas: React.FC<Props> = ({
       }
 
       rafId = requestAnimationFrame(tick);
-    }).catch((err) => {
-      console.error("Failed to initialize PixiJS renderer:", err);
+    }
+
+    (async () => {
+      let renderer: Renderer;
+
+      if (viewMode === "globe") {
+        renderer = createGlobeRenderer(cameraStateRef.current ?? undefined);
+        container.appendChild(renderer.canvas);
+      } else {
+        const canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+        renderer = await createMapRenderer(canvas, sizeRef.current.width, sizeRef.current.height);
+      }
+
+      if (destroyed) {
+        renderer.destroy();
+        return;
+      }
+
+      rendererRef.current = renderer;
+      renderer.resize(sizeRef.current.width, sizeRef.current.height);
+      startRafLoop(renderer);
+    })().catch((err) => {
+      console.error("Failed to initialize renderer:", err);
     });
 
     return () => {
       destroyed = true;
       cancelAnimationFrame(rafId);
+
+      // Save camera state before destroying a globe renderer
+      if (rendererRef.current?.savesCameraState()) {
+        cameraStateRef.current = rendererRef.current.getCameraState();
+      }
+
       rendererRef.current?.destroy();
       rendererRef.current = null;
-      if (container.contains(canvas)) {
-        container.removeChild(canvas);
+
+      // Remove any child canvases from the container
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
       }
+
       if (benchmarkRefProp.current) {
         benchmarkRefProp.current.current = null;
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [viewMode]);
 
   // Reset simulation when land preset changes
   useEffect(() => {
