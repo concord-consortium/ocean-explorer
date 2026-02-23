@@ -3,7 +3,10 @@ import { SimulationCanvas } from "./simulation-canvas";
 import { SimParams } from "../simulation/wind";
 import { LandPreset } from "../simulation/land-presets";
 import { FrameHeadroomBenchmark, BenchmarkResult } from "../benchmark/frame-headroom-benchmark";
-import { TARGET_FPS, DEFAULT_STEPS_PER_SECOND, COLOR_MIN, COLOR_MAX, WIND_SCALE, ROWS } from "../constants";
+import {
+  TARGET_FPS, DEFAULT_STEPS_PER_SECOND, COLOR_MIN, COLOR_MAX,
+  WIND_SCALE, ROWS, LEFT_MARGIN, RIGHT_MARGIN,
+} from "../constants";
 import { tempToColor, sshToColor } from "../rendering/map-renderer";
 import type { RendererMetrics } from "../rendering/renderer-interface";
 
@@ -16,10 +19,6 @@ function hexColor(c: number): string {
 
 /** Latitude labels to display along the left edge (every 30 degrees). */
 const LAT_LABELS = [-90, -60, -30, 0, 30, 60, 90];
-
-/** Margins matching the map renderer's layout. */
-const LEFT_MARGIN = 32;
-const RIGHT_MARGIN = 40;
 
 /** Number of gradient stops for the color scale bar. */
 const COLOR_SCALE_STOPS = 50;

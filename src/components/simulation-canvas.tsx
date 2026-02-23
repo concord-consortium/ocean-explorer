@@ -131,6 +131,8 @@ export const SimulationCanvas: React.FC<Props> = ({
         });
         lastRenderedVersion = renderVersionRef.current;
 
+        // Compute FPS from rAF elapsed time
+        metrics.fps = elapsed > 0 ? 1000 / elapsed : 0;
         onMetricsRef.current?.(metrics);
         benchmark.onFrame(metrics.fps);
 

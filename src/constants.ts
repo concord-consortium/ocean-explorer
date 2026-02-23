@@ -37,7 +37,7 @@ export const DEFAULT_STEPS_PER_SECOND = 60;
 
 // ── Rendering ──
 
-/** Target rendering frame rate, used for both PixiJS ticker.maxFPS and benchmark target. */
+/** Target rendering frame rate, used for rAF frame-rate capping and benchmark target. */
 export const TARGET_FPS = 30;
 
 /** Minimum temperature on the color scale in °C (blue end). */
@@ -51,6 +51,12 @@ export const WIND_SCALE = 20;
 
 /** Reference water speed in m/s used to normalize arrow lengths. */
 export const WATER_SCALE = 1.0;
+
+/** Left margin in pixels, reserving space for latitude labels. */
+export const LEFT_MARGIN = 32;
+
+/** Right margin in pixels, reserving space for the color scale. */
+export const RIGHT_MARGIN = 40;
 
 // ── Phase 3: Pressure gradients ──
 

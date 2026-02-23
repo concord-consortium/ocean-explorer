@@ -1,6 +1,6 @@
 import { Application, Graphics, GraphicsContext, Container } from "pixi.js";
 import { Grid, ROWS, COLS, latitudeAtRow } from "../simulation/grid";
-import { TARGET_FPS, COLOR_MIN, COLOR_MAX, WIND_SCALE, WATER_SCALE, LAND_COLOR } from "../constants";
+import { COLOR_MIN, COLOR_MAX, WIND_SCALE, WATER_SCALE, LAND_COLOR, LEFT_MARGIN, RIGHT_MARGIN } from "../constants";
 import { windU, SimParams } from "../simulation/wind";
 import type { Renderer, RendererOptions, RendererMetrics } from "./renderer-interface";
 
@@ -55,7 +55,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     Promise<Renderer> {
   const app = new Application();
   await app.init({ canvas, width, height, background: 0x111111 });
-  app.ticker.maxFPS = TARGET_FPS;
+  app.ticker.stop();
 
   const bgContainer = new Container();
   const windContainer = new Container();
@@ -111,8 +111,6 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
   function update(grid: Grid, params: SimParams, opts: RendererOptions): RendererMetrics {
     const sceneT0 = performance.now();
-    const LEFT_MARGIN = 32;  // space for latitude labels
-    const RIGHT_MARGIN = 40; // space for color scale
     const mapWidth = opts.width - LEFT_MARGIN - RIGHT_MARGIN;
     const mapHeight = opts.height;
     const cellW = mapWidth / COLS;
@@ -212,13 +210,12 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     }
 
     // Compute performance metrics
-    const fps = app.ticker.FPS;
     const rawSceneMs = performance.now() - sceneT0;
     sceneUpdateTimeMs = emaAlpha * rawSceneMs + (1 - emaAlpha) * sceneUpdateTimeMs;
 
     return {
       waterMax: maxWaterSpeed,
-      fps,
+      fps: 0,
       sceneUpdateTimeMs,
       stepTimeMs: opts.stepTimeMs,
       actualStepsPerSecond: opts.actualStepsPerSecond,
