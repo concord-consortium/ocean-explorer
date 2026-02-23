@@ -163,6 +163,9 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       }
     }
 
+    // Manually render since the ticker is stopped
+    app.render();
+
     // Compute performance metrics
     const rawSceneMs = performance.now() - sceneT0;
     sceneUpdateTimeMs = emaAlpha * rawSceneMs + (1 - emaAlpha) * sceneUpdateTimeMs;
