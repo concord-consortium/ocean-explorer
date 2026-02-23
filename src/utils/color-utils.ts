@@ -48,8 +48,6 @@ export function sshToColor(eta: number, minEta: number, maxEta: number): number 
 
 /** Convert a 0xRRGGBB integer to [r, g, b] in 0..255. */
 export function intToRGB(c: number): [number, number, number] {
-  const r = Math.floor(c / 65536) % 256;
-  const g = Math.floor(c / 256) % 256;
-  const b = c % 256;
-  return [r, g, b];
+  // eslint-disable-next-line no-bitwise
+  return [(c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff];
 }

@@ -44,6 +44,7 @@ const _yAxis = new THREE.Vector3();
 const _zAxis = new THREE.Vector3();
 const _rotMat = new THREE.Matrix4();
 const _quat = new THREE.Quaternion();
+const _scale = new THREE.Vector3();
 
 /**
  * Build a Matrix4 that places and orients an arrow on the sphere surface.
@@ -92,5 +93,6 @@ export function buildArrowMatrix(
   _quat.setFromRotationMatrix(_rotMat);
 
   // Compose: position + rotation + uniform scale
-  out.compose(_pos, _quat, new THREE.Vector3(length, length, length));
+  _scale.set(length, length, length);
+  out.compose(_pos, _quat, _scale);
 }

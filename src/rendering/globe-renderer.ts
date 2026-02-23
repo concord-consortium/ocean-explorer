@@ -7,7 +7,7 @@ import {
   GLOBE_MIN_DISTANCE, GLOBE_MAX_DISTANCE, GLOBE_INITIAL_DISTANCE,
   WIND_SCALE, WATER_SCALE, LAND_COLOR,
 } from "../constants";
-import { tempToColor, sshToColor, intToRGB } from "../utils/color-utils";
+import { tempToColor, sshToColor } from "../utils/color-utils";
 import { latitudeAtRow, longitudeAtCol, computeSshRange } from "../utils/grid-utils";
 import { buildArrowGeometry, buildArrowMatrix } from "./globe-arrows";
 import type { IGrid } from "../types/grid-types";
@@ -65,6 +65,7 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer & 
     throw new Error("Failed to get 2D context for globe texture canvas");
   }
   const ctx: CanvasRenderingContext2D = maybeCtx;
+  const imageData = ctx.createImageData(COLS, ROWS);
 
   const texture = new THREE.CanvasTexture(offscreenCanvas);
   texture.magFilter = THREE.NearestFilter;
@@ -112,7 +113,6 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer & 
     }
 
     // Update offscreen texture
-    const imageData = ctx.createImageData(COLS, ROWS);
     const data = imageData.data;
 
     for (let r = 0; r < ROWS; r++) {
@@ -134,10 +134,11 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer & 
           color = tempToColor(grid.temperatureField[cellIdx]);
         }
 
-        const [cr, cg, cb] = intToRGB(color);
-        data[pixelIdx] = cr;
-        data[pixelIdx + 1] = cg;
-        data[pixelIdx + 2] = cb;
+        /* eslint-disable no-bitwise */
+        data[pixelIdx]     = (color >> 16) & 0xff;
+        data[pixelIdx + 1] = (color >> 8) & 0xff;
+        data[pixelIdx + 2] = color & 0xff;
+        /* eslint-enable no-bitwise */
         data[pixelIdx + 3] = 255;
       }
     }
