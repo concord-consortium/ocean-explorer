@@ -1,12 +1,13 @@
 import React, { useRef, useEffect } from "react";
-import { createMapRenderer, MapRenderer } from "../rendering/map-renderer";
+import { createMapRenderer } from "../rendering/map-renderer";
+import type { Renderer, RendererMetrics } from "../rendering/renderer-interface";
 import { Simulation } from "../simulation/simulation";
 import { SimulationStepper } from "../simulation/simulation-stepper";
 import { SimParams } from "../simulation/wind";
 import { LandPreset, createLandMask } from "../simulation/land-presets";
 import { temperature } from "../simulation/temperature";
 import { latitudeAtRow } from "../simulation/grid";
-import { ROWS, COLS } from "../constants";
+import { ROWS, COLS, TARGET_FPS } from "../constants";
 import { FrameHeadroomBenchmark } from "../benchmark/frame-headroom-benchmark";
 
 interface Props {
@@ -21,14 +22,15 @@ interface Props {
   backgroundMode: "temperature" | "ssh";
   landPreset: LandPreset;
   benchmarkRef?: React.RefObject<FrameHeadroomBenchmark | null>;
+  onMetrics?: (metrics: RendererMetrics) => void;
 }
 
 export const SimulationCanvas: React.FC<Props> = ({
   width, height, params, showWind, showWater, targetStepsPerSecond,
-  paused, arrowScale, backgroundMode, landPreset, benchmarkRef,
+  paused, arrowScale, backgroundMode, landPreset, benchmarkRef, onMetrics,
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rendererRef = useRef<MapRenderer | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const rendererRef = useRef<Renderer | null>(null);
   const simRef = useRef(new Simulation());
   const paramsRef = useRef(params);
   paramsRef.current = params;
@@ -48,25 +50,32 @@ export const SimulationCanvas: React.FC<Props> = ({
   benchmarkRefProp.current = benchmarkRef;
   const sizeRef = useRef({ width, height });
   sizeRef.current = { width, height };
+  const onMetricsRef = useRef(onMetrics);
+  onMetricsRef.current = onMetrics;
 
   // Increments on every React render (i.e., whenever any prop changes).
-  // The ticker compares this against lastRenderedVersion to skip redundant
+  // The rAF loop compares this against lastRenderedVersion to skip redundant
   // renders when paused.
   const renderVersionRef = useRef(0);
   renderVersionRef.current += 1;
 
   // Create renderer once on mount, destroy on unmount
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!container) return;
 
     let destroyed = false;
+    let rafId = 0;
     const sim = simRef.current;
     const stepper = new SimulationStepper(() => sim.step(paramsRef.current));
     const benchmark = new FrameHeadroomBenchmark();
     if (benchmarkRefProp.current) {
       benchmarkRefProp.current.current = benchmark;
     }
+
+    // Create a canvas element for the renderer
+    const canvas = document.createElement("canvas");
+    container.appendChild(canvas);
 
     createMapRenderer(canvas, sizeRef.current.width, sizeRef.current.height).then((renderer) => {
       if (destroyed) {
@@ -78,19 +87,38 @@ export const SimulationCanvas: React.FC<Props> = ({
       // Apply any size changes that occurred while the async init was in flight.
       renderer.resize(sizeRef.current.width, sizeRef.current.height);
 
+      const minFrameInterval = 1000 / TARGET_FPS;
+      let lastFrameTime = -1;
       let lastRenderedVersion = -1;
 
-      renderer.app.ticker.add(() => {
+      function tick(timestamp: number): void {
+        if (destroyed) return;
+
+        // Initialize lastFrameTime on the first frame
+        if (lastFrameTime < 0) {
+          lastFrameTime = timestamp;
+        }
+
+        // Frame rate capping: skip if not enough time has passed
+        const elapsed = timestamp - lastFrameTime;
+        if (elapsed < minFrameInterval) {
+          rafId = requestAnimationFrame(tick);
+          return;
+        }
+        lastFrameTime = timestamp;
+
         stepper.paused = pausedRef.current;
         stepper.targetStepsPerSecond = targetStepsPerSecondRef.current;
-        stepper.advance(renderer.app.ticker.deltaMS);
+        stepper.advance(elapsed);
 
         // When paused and no props have changed, skip the render entirely.
         const propsChanged = renderVersionRef.current !== lastRenderedVersion;
-        if (pausedRef.current && !propsChanged) return;
+        if (pausedRef.current && !propsChanged) {
+          rafId = requestAnimationFrame(tick);
+          return;
+        }
 
-        const sceneT0 = performance.now();
-        renderer.update(sim.grid, paramsRef.current, {
+        const metrics = renderer.update(sim.grid, paramsRef.current, {
           width: sizeRef.current.width,
           height: sizeRef.current.height,
           showWind: showWindRef.current,
@@ -101,19 +129,27 @@ export const SimulationCanvas: React.FC<Props> = ({
           benchLoadTimeMs: benchmark.loadTimeMs,
           backgroundMode: backgroundModeRef.current,
         });
-        renderer.setSceneUpdateTimeMs(performance.now() - sceneT0);
         lastRenderedVersion = renderVersionRef.current;
 
-        benchmark.onFrame(renderer.app.ticker.FPS);
-      });
+        onMetricsRef.current?.(metrics);
+        benchmark.onFrame(metrics.fps);
+
+        rafId = requestAnimationFrame(tick);
+      }
+
+      rafId = requestAnimationFrame(tick);
     }).catch((err) => {
       console.error("Failed to initialize PixiJS renderer:", err);
     });
 
     return () => {
       destroyed = true;
+      cancelAnimationFrame(rafId);
       rendererRef.current?.destroy();
       rendererRef.current = null;
+      if (container.contains(canvas)) {
+        container.removeChild(canvas);
+      }
       if (benchmarkRefProp.current) {
         benchmarkRefProp.current.current = null;
       }
@@ -139,10 +175,10 @@ export const SimulationCanvas: React.FC<Props> = ({
     }
   }, [landPreset]);
 
-  // Resize the PixiJS renderer when dimensions change (no destroy/recreate)
+  // Resize the renderer when dimensions change (no destroy/recreate)
   useEffect(() => {
     rendererRef.current?.resize(width, height);
   }, [width, height]);
 
-  return <canvas ref={canvasRef} />;
+  return <div ref={containerRef} />;
 };

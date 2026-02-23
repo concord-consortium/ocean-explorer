@@ -38,4 +38,66 @@
 .canvas-container {
   flex: 1;
   overflow: hidden;
+  position: relative;
+}
+
+.legend-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 6px;
+  pointer-events: none;
+  line-height: 1.5;
+}
+
+.latitude-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 100%;
+  pointer-events: none;
+
+  .lat-label {
+    position: absolute;
+    right: 4px;
+    font-family: monospace;
+    font-size: 10px;
+    color: #cccccc;
+    transform: translateY(-50%);
+    white-space: nowrap;
+  }
+}
+
+.color-scale {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  pointer-events: none;
+
+  .color-scale-max-label,
+  .color-scale-min-label {
+    font-family: monospace;
+    font-size: 11px;
+    color: #ffffff;
+    white-space: nowrap;
+  }
+
+  .color-scale-max-label {
+    margin-bottom: 2px;
+  }
+
+  .color-scale-min-label {
+    margin-top: 2px;
+  }
+
+  .color-scale-bar {
+    width: 15px;
+    flex: 1;
+  }
 }

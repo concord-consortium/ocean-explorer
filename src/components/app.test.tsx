@@ -7,6 +7,12 @@ jest.mock("./simulation-canvas", () => ({
   SimulationCanvas: () => <div data-testid="simulation-canvas" />,
 }));
 
+// Mock the map renderer to avoid importing pixi.js in the test environment
+jest.mock("../rendering/map-renderer", () => ({
+  tempToColor: () => 0x000000,
+  sshToColor: () => 0xffffff,
+}));
+
 describe("App component", () => {
   it("renders controls and canvas", () => {
     render(<App />);

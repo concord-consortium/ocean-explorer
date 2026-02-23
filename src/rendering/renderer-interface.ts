@@ -20,6 +20,10 @@ export interface RendererMetrics {
   stepTimeMs: number;
   actualStepsPerSecond: number;
   benchLoadTimeMs: number;
+  /** Minimum sea surface height (eta) across ocean cells, for SSH color scale. */
+  sshMin: number;
+  /** Maximum sea surface height (eta) across ocean cells, for SSH color scale. */
+  sshMax: number;
 }
 
 export interface Renderer {

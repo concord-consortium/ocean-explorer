@@ -3,9 +3,26 @@ import { SimulationCanvas } from "./simulation-canvas";
 import { SimParams } from "../simulation/wind";
 import { LandPreset } from "../simulation/land-presets";
 import { FrameHeadroomBenchmark, BenchmarkResult } from "../benchmark/frame-headroom-benchmark";
-import { TARGET_FPS, DEFAULT_STEPS_PER_SECOND } from "../constants";
+import { TARGET_FPS, DEFAULT_STEPS_PER_SECOND, COLOR_MIN, COLOR_MAX, WIND_SCALE, ROWS } from "../constants";
+import { tempToColor, sshToColor } from "../rendering/map-renderer";
+import type { RendererMetrics } from "../rendering/renderer-interface";
 
 import "./app.scss";
+
+/** Convert a 0xRRGGBB number to a CSS hex color string. */
+function hexColor(c: number): string {
+  return `#${c.toString(16).padStart(6, "0")}`;
+}
+
+/** Latitude labels to display along the left edge (every 30 degrees). */
+const LAT_LABELS = [-90, -60, -30, 0, 30, 60, 90];
+
+/** Margins matching the map renderer's layout. */
+const LEFT_MARGIN = 32;
+const RIGHT_MARGIN = 40;
+
+/** Number of gradient stops for the color scale bar. */
+const COLOR_SCALE_STOPS = 50;
 
 export const App = () => {
   const [rotationRatio, setRotationRatio] = useState(1.0);
@@ -18,6 +35,7 @@ export const App = () => {
   const [arrowScale, setArrowScale] = useState(1.0);
   const [backgroundMode, setBackgroundMode] = useState<"temperature" | "ssh">("temperature");
   const [landPreset, setLandPreset] = useState<LandPreset>("water-world");
+  const [metrics, setMetrics] = useState<RendererMetrics | null>(null);
 
   const controlsRef = useRef<HTMLDivElement>(null);
   const benchmarkRef = useRef<FrameHeadroomBenchmark | null>(null);
@@ -47,6 +65,66 @@ export const App = () => {
   };
 
   const speedOptions = [6, 15, 30, 60, 120, 300, 600];
+
+  // Build performance metrics string
+  const perfParts: string[] = [];
+  if (metrics) {
+    const fps = metrics.fps;
+    const frameMs = fps > 0 ? 1000 / fps : 0;
+    const stepPct = frameMs > 0 ? (metrics.stepTimeMs / frameMs * 100).toFixed(0) : "0";
+    const drawPct = frameMs > 0 ? (metrics.sceneUpdateTimeMs / frameMs * 100).toFixed(0) : "0";
+    perfParts.push(`${Math.round(fps)} fps`);
+    perfParts.push(`${Math.round(metrics.actualStepsPerSecond)} steps/s`);
+    perfParts.push(`step ${metrics.stepTimeMs.toFixed(1)}ms (${stepPct}%)`);
+    perfParts.push(`draw ${metrics.sceneUpdateTimeMs.toFixed(1)}ms (${drawPct}%)`);
+    if (metrics.benchLoadTimeMs > 0) {
+      const benchPct = frameMs > 0 ? (metrics.benchLoadTimeMs / frameMs * 100).toFixed(0) : "0";
+      perfParts.push(`bench ${metrics.benchLoadTimeMs.toFixed(1)}ms (${benchPct}%)`);
+    }
+  }
+
+  // Compute color scale bar gradient stops
+  const mapHeight = canvasSize.height;
+  const barHeight = mapHeight * 0.6;
+  const barTop = (mapHeight - barHeight) / 2;
+
+  const colorScaleStops: string[] = [];
+  for (let i = 0; i < COLOR_SCALE_STOPS; i++) {
+    const frac = 1 - i / (COLOR_SCALE_STOPS - 1); // top = hot / positive
+    if (backgroundMode === "ssh" && metrics) {
+      const range = Math.max(Math.abs(metrics.sshMin), Math.abs(metrics.sshMax), 1e-10);
+      const eta = (frac * 2 - 1) * range;
+      colorScaleStops.push(hexColor(sshToColor(eta, -range, range)));
+    } else {
+      const t = COLOR_MIN + frac * (COLOR_MAX - COLOR_MIN);
+      colorScaleStops.push(hexColor(tempToColor(t)));
+    }
+  }
+  const gradient = `linear-gradient(to bottom, ${colorScaleStops.join(", ")})`;
+
+  // Color scale labels
+  let colorScaleMaxLabel: string;
+  let colorScaleMinLabel: string;
+  if (backgroundMode === "ssh" && metrics) {
+    const range = Math.max(Math.abs(metrics.sshMin), Math.abs(metrics.sshMax), 1e-10);
+    colorScaleMaxLabel = `+${range.toFixed(2)} m`;
+    colorScaleMinLabel = `-${range.toFixed(2)} m`;
+  } else {
+    colorScaleMaxLabel = `${COLOR_MAX}\u00B0C`;
+    colorScaleMinLabel = `${COLOR_MIN}\u00B0C`;
+  }
+
+  // Compute latitude label positions
+  const cellH = mapHeight / ROWS;
+  const latLabelPositions = LAT_LABELS.map(lat => {
+    const row = (lat + 87.5) / 5;
+    const displayRow = ROWS - 1 - row;
+    const y = displayRow * cellH + cellH / 2;
+    return { lat, y };
+  });
+
+  // Map area width for positioning the color scale
+  const mapWidth = canvasSize.width - LEFT_MARGIN - RIGHT_MARGIN;
 
   return (
     <div className="app">
@@ -136,7 +214,28 @@ export const App = () => {
           backgroundMode={backgroundMode}
           landPreset={landPreset}
           benchmarkRef={benchmarkRef}
+          onMetrics={setMetrics}
         />
+        {/* Legend overlay */}
+        <div className="legend-overlay">
+          {showWind && <div>Wind scale: {WIND_SCALE} m/s</div>}
+          {showWater && metrics && <div>Water max: {metrics.waterMax.toFixed(1)} m/s</div>}
+          {perfParts.length > 0 && <div>{perfParts.join(" | ")}</div>}
+        </div>
+        {/* Latitude labels */}
+        <div className="latitude-labels">
+          {latLabelPositions.map(({ lat, y }) => (
+            <div key={lat} className="lat-label" style={{ top: y }}>
+              {lat}&deg;
+            </div>
+          ))}
+        </div>
+        {/* Color scale bar */}
+        <div className="color-scale" style={{ top: barTop, height: barHeight, left: LEFT_MARGIN + mapWidth + 8 }}>
+          <div className="color-scale-max-label">{colorScaleMaxLabel}</div>
+          <div className="color-scale-bar" style={{ background: gradient }} />
+          <div className="color-scale-min-label">{colorScaleMinLabel}</div>
+        </div>
       </div>
     </div>
   );
