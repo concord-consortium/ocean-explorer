@@ -1,4 +1,4 @@
-import type { Grid } from "../simulation/grid";
+import type { IGrid } from "../types/grid-types";
 import type { SimParams } from "../simulation/wind";
 
 export interface RendererOptions {
@@ -27,7 +27,7 @@ export interface RendererMetrics {
 }
 
 export interface Renderer {
-  update(grid: Grid, params: SimParams, opts: RendererOptions): RendererMetrics;
+  update(grid: IGrid, params: SimParams, opts: RendererOptions): RendererMetrics;
   resize(width: number, height: number): void;
   destroy(): void;
   readonly canvas: HTMLCanvasElement;

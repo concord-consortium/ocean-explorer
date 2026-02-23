@@ -7,7 +7,7 @@ import {
   TARGET_FPS, DEFAULT_STEPS_PER_SECOND, COLOR_MIN, COLOR_MAX,
   WIND_SCALE, ROWS, LEFT_MARGIN, RIGHT_MARGIN,
 } from "../constants";
-import { tempToColor, sshToColor } from "../rendering/map-renderer";
+import { tempToColor, sshToColor } from "../utils/color-utils";
 import type { RendererMetrics } from "../rendering/renderer-interface";
 
 import "./app.scss";
