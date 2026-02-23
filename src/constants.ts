@@ -78,3 +78,23 @@ export const LAND_COLOR = 0x8B7355;
 
 /** Newtonian relaxation timescale in seconds (60 days). */
 export const RELAXATION_TIMESCALE = 5_184_000;
+
+// ── Phase 6: Globe rendering ──
+
+/** Sphere geometry width segments (longitude subdivisions). */
+export const GLOBE_WIDTH_SEGMENTS = 64;
+
+/** Sphere geometry height segments (latitude subdivisions). */
+export const GLOBE_HEIGHT_SEGMENTS = 32;
+
+/** Globe scene background color (very dark blue). */
+export const GLOBE_BG_COLOR = 0x111122;
+
+/** Minimum camera distance from globe center (sphere radii). */
+export const GLOBE_MIN_DISTANCE = 1.3;
+
+/** Maximum camera distance from globe center (sphere radii). */
+export const GLOBE_MAX_DISTANCE = 4.0;
+
+/** Initial camera distance from globe center (sphere radii). */
+export const GLOBE_INITIAL_DISTANCE = 2.5;
