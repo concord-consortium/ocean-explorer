@@ -1,7 +1,8 @@
 import { RESOLUTION_DEG, COLS, ROWS } from "../constants";
 import type { IGrid } from "../types/grid-types";
 
-/** Returns latitude in degrees for the center of the given row. Row 0 = -87.5, Row 35 = 87.5. */
+/** Returns latitude in degrees for the center of the given row.
+ *  Row 0 is the southernmost band, Row ROWS-1 is the northernmost. */
 export function latitudeAtRow(row: number): number {
   return -90 + RESOLUTION_DEG / 2 + row * RESOLUTION_DEG;
 }

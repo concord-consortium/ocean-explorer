@@ -1,10 +1,11 @@
 import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
+import { RESOLUTION_DEG } from "../constants";
 import { rowAtLatitude, colAtLongitude, longitudeAtCol } from "../utils/grid-utils";
 
 describe("Grid", () => {
   it("has 72 columns and 36 rows", () => {
-    expect(COLS).toBe(72);
-    expect(ROWS).toBe(36);
+    expect(COLS).toBe(360 / RESOLUTION_DEG);
+    expect(ROWS).toBe(180 / RESOLUTION_DEG);
   });
 
   it("initializes all velocities to zero", () => {
@@ -27,13 +28,13 @@ describe("Grid", () => {
     expect(grid.getU(0, 0)).toBe(0);
   });
 
-  it("wraps longitude: col -1 maps to col 71, col 72 maps to col 0", () => {
+  it("wraps longitude: col -1 maps to last col, col COLS maps to col 0", () => {
     const grid = new Grid();
-    grid.setU(5, 71, 3.0);
+    grid.setU(5, COLS - 1, 3.0);
     expect(grid.getU(5, -1)).toBe(3.0);
 
     grid.setU(5, 0, 7.0);
-    expect(grid.getU(5, 72)).toBe(7.0);
+    expect(grid.getU(5, COLS)).toBe(7.0);
   });
 
   it("initializes eta to zero", () => {
@@ -54,17 +55,17 @@ describe("Grid", () => {
 
   it("eta wraps longitude", () => {
     const grid = new Grid();
-    grid.setEta(5, 71, 3.0);
+    grid.setEta(5, COLS - 1, 3.0);
     expect(grid.getEta(5, -1)).toBe(3.0);
   });
 
   it("provides latitude in degrees for a given row", () => {
-    // Row 0 is the southernmost band: centered at -87.5
-    expect(latitudeAtRow(0)).toBe(-87.5);
-    // Row 35 is the northernmost band: centered at 87.5
-    expect(latitudeAtRow(35)).toBe(87.5);
-    // Middle row 18 should be 2.5 (just north of equator)
-    expect(latitudeAtRow(18)).toBe(2.5);
+    // Row 0 is the southernmost band
+    expect(latitudeAtRow(0)).toBeCloseTo(-90 + RESOLUTION_DEG / 2);
+    // Row ROWS-1 is the northernmost band
+    expect(latitudeAtRow(ROWS - 1)).toBeCloseTo(90 - RESOLUTION_DEG / 2);
+    // Round-trip: latitude 2.5 maps to a row that maps back to 2.5
+    expect(latitudeAtRow(rowAtLatitude(2.5))).toBeCloseTo(2.5);
   });
 
   it("initializes landMask to all water (zeros)", () => {
@@ -87,9 +88,9 @@ describe("Grid", () => {
 
   it("isLand wraps longitude", () => {
     const grid = new Grid();
-    grid.landMask[5 * COLS + 71] = 1;
+    grid.landMask[5 * COLS + (COLS - 1)] = 1;
     expect(grid.isLand(5, -1)).toBe(true);
-    expect(grid.isLand(5, 71)).toBe(true);
+    expect(grid.isLand(5, COLS - 1)).toBe(true);
   });
 });
 
