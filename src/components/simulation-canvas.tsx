@@ -78,7 +78,9 @@ export const SimulationCanvas: React.FC<Props> = ({
     }
 
     function startRafLoop(renderer: Renderer): void {
-      const minFrameInterval = 1000 / TARGET_FPS;
+      // Subtract 1ms tolerance so rAF timestamp jitter doesn't cause
+      // occasional double-interval frames when elapsed ≈ 1000/TARGET_FPS.
+      const minFrameInterval = 1000 / TARGET_FPS - 1;
       let lastFrameTime = -1;
       let lastRenderedVersion = -1;
 
@@ -98,13 +100,21 @@ export const SimulationCanvas: React.FC<Props> = ({
         }
         lastFrameTime = timestamp;
 
+        // Compute FPS from rAF elapsed time
+        const fps = elapsed > 0 ? 1000 / elapsed : 0;
+
+        // Run benchmark busy-loop on every frame so it can measure FPS drop
+        benchmark.onFrame(fps);
+
         stepper.paused = pausedRef.current;
         stepper.targetStepsPerSecond = targetStepsPerSecondRef.current;
         stepper.advance(elapsed);
 
-        // When paused and no props have changed, skip the render entirely.
+        // When paused and no props have changed, skip the render —
+        // unless the benchmark is running (it needs continuous rendering
+        // to measure frame-time headroom).
         const propsChanged = renderVersionRef.current !== lastRenderedVersion;
-        if (pausedRef.current && !propsChanged) {
+        if (pausedRef.current && !propsChanged && !benchmark.isRunning) {
           rafId = requestAnimationFrame(tick);
           return;
         }
@@ -122,10 +132,8 @@ export const SimulationCanvas: React.FC<Props> = ({
         });
         lastRenderedVersion = renderVersionRef.current;
 
-        // Compute FPS from rAF elapsed time
-        metrics.fps = elapsed > 0 ? 1000 / elapsed : 0;
+        metrics.fps = fps;
         onMetricsRef.current?.(metrics);
-        benchmark.onFrame(metrics.fps);
 
         rafId = requestAnimationFrame(tick);
       }
