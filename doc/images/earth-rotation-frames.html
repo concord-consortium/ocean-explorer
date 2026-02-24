@@ -28,6 +28,12 @@
       width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
       margin: 0 9px;
     }
+    .swatch-multi {
+      display: flex; gap: 1px; flex-shrink: 0;
+    }
+    .swatch-multi span {
+      width: 6px; height: 3px; border-radius: 1px;
+    }
 
     #controls {
       position: absolute; bottom: 20px; right: 20px; z-index: 10;
@@ -85,6 +91,34 @@
     }
     #btn-pause:hover { color: #e2e8f0; }
     #btn-pause.paused { color: #22c55e; }
+
+    #btn-launch {
+      --launch-rgb: 249, 115, 22;
+      --launch-color: #f97316;
+      padding: 6px 0;
+      background: rgba(var(--launch-rgb), 0.2);
+      border: 1px solid rgba(var(--launch-rgb), 0.45);
+      border-radius: 4px; color: var(--launch-color);
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    #btn-launch:hover { background: rgba(var(--launch-rgb), 0.35); }
+
+    #btn-clear {
+      padding: 6px 0;
+      background: rgba(148, 163, 184, 0.15);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 4px; color: #94a3b8;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    #btn-clear:hover { background: rgba(148, 163, 184, 0.25); }
+
+    .button-row {
+      display: flex; gap: 6px; margin-top: 2px;
+    }
+    .button-row button { flex: 1; }
 
     .point-label {
       color: #f1f5f9; font-size: 13px; font-weight: 600;
@@ -153,6 +187,15 @@
       <span class="swatch-dot" style="background:#e2e8f0"></span>
       Star field (inertial reference)
     </div>
+    <div class="legend-row">
+      <span class="swatch-multi">
+        <span style="background:#f97316"></span>
+        <span style="background:#22d3ee"></span>
+        <span style="background:#a78bfa"></span>
+        <span style="background:#4ade80"></span>
+      </span>
+      Launch traces (tangent plane)
+    </div>
   </div>
 
   <div id="overview-container"></div>
@@ -182,6 +225,14 @@
       <label>Latitude <span id="lat-value">45&deg;</span></label>
       <input type="range" id="lat-slider" min="-90" max="90" value="45" step="1">
     </div>
+    <div class="control-row">
+      <label>Launch angle <span id="launch-value">0&deg;</span></label>
+      <input type="range" id="launch-slider" min="0" max="360" value="0" step="1">
+    </div>
+    <div class="button-row">
+      <button id="btn-launch">Launch</button>
+      <button id="btn-clear">Clear</button>
+    </div>
   </div>
 
   <script type="importmap">
@@ -200,6 +251,7 @@
 
     // ── State ──
     let latitudeDeg = 45;
+    let launchAngleDeg = 0;
     const DEG = Math.PI / 180;
     const MAX_ROTATION_SPEED = Math.PI * 0.13; // rad/s → 1 rev per ~15 s
     let speedFraction = 0.5;
@@ -426,7 +478,7 @@
 
     const latPointMesh = new THREE.Mesh(
       new THREE.SphereGeometry(LAT_POINT_SPHERE_R, 12, 12),
-      new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
+      new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.35 })
     );
     latPointGroup.add(latPointMesh);
 
@@ -460,6 +512,61 @@
       latPointGroup.rotation.z = phi - Math.PI / 2;
     }
     updateLatPoint();
+
+    // ── Launch direction arrow (in tangent plane of lat point) ──
+    const LAUNCH_ARROW_LEN = 0.15;
+    const launchArrowGroup = new THREE.Group();
+    latPointGroup.add(launchArrowGroup);
+
+    // Arrow points outward from center showing the launch direction.
+    // At angle 0 it points toward −X (north in local frame).
+    const launchArrow = new THREE.ArrowHelper(
+      new THREE.Vector3(-1, 0, 0),                  // direction (northward at angle 0)
+      new THREE.Vector3(0, 0, 0),                    // origin (lat-point center)
+      LAUNCH_ARROW_LEN,
+      0xf97316,  // orange
+      0.035, 0.018
+    );
+    launchArrowGroup.add(launchArrow);
+
+    function updateLaunchArrow() {
+      launchArrowGroup.rotation.y = launchAngleDeg * DEG;
+    }
+    updateLaunchArrow();
+
+    // ── Launched particle + ghost trail ──
+    const LAUNCH_SPEED = 0.3;
+    const MAX_GHOSTS = 200;
+    const GHOST_INTERVAL = 0.5; // seconds between ghost drops
+    const LAUNCH_COLORS = [0xf97316, 0x22d3ee, 0xa78bfa, 0x4ade80]; // orange, cyan, violet, green
+    let colorIndex = 0;
+    let activeLaunchColorIdx = 0;
+    const ghostArrowObjects = []; // ghost arrows left at launch points
+    let particleActive = false;
+    const particleIPos = new THREE.Vector3(); // inertial-frame position
+    const particleIVel = new THREE.Vector3(); // inertial-frame velocity
+    let ghostTimer = 0;        // time since last ghost drop
+    let ghostCount = 0;        // how many ghosts are active
+
+    const particleMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.02, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xf97316 })
+    );
+    particleMesh.visible = false;
+    scene.add(particleMesh);
+
+    // Ghost pool: shared geometry, individual meshes
+    const ghostGeom = new THREE.SphereGeometry(0.015, 8, 8);
+    const ghostMaterials = LAUNCH_COLORS.map(c =>
+      new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.35 })
+    );
+    const ghosts = [];
+    for (let i = 0; i < MAX_GHOSTS; i++) {
+      const g = new THREE.Mesh(ghostGeom, ghostMaterials[0]);
+      g.visible = false;
+      earthGroup.add(g);
+      ghosts.push(g);
+    }
 
     // ── Rotation axis (always visible, aligned with scene Y) ──
     const axLine = new THREE.Line(
@@ -518,6 +625,97 @@
       latitudeDeg = +latSlider.value;
       latValue.textContent = latitudeDeg + '\u00B0';
       updateLatPoint();
+    });
+
+    const launchSlider = document.getElementById('launch-slider');
+    const launchValue = document.getElementById('launch-value');
+    launchSlider.addEventListener('input', () => {
+      launchAngleDeg = +launchSlider.value;
+      launchValue.textContent = launchAngleDeg + '\u00B0';
+      updateLaunchArrow();
+    });
+
+    const btnLaunch = document.getElementById('btn-launch');
+    function updateLaunchButtonColor() {
+      const c = LAUNCH_COLORS[colorIndex];
+      const r = (c >> 16) & 0xff, g = (c >> 8) & 0xff, b = c & 0xff;
+      btnLaunch.style.setProperty('--launch-rgb', `${r}, ${g}, ${b}`);
+      btnLaunch.style.setProperty('--launch-color', `#${c.toString(16).padStart(6, '0')}`);
+    }
+    btnLaunch.addEventListener('click', () => {
+      // Resume spin if paused
+      if (!spinning) {
+        spinning = true;
+        btnPause.textContent = '\u23F8';
+        btnPause.classList.remove('paused');
+      }
+
+      // Pick color for this launch
+      const currentColor = LAUNCH_COLORS[colorIndex];
+      activeLaunchColorIdx = colorIndex;
+      particleMesh.material.color.setHex(currentColor);
+
+      // Inertial-frame start position (lat point on earth surface, rotated by earthAngle)
+      const phi = latitudeDeg * DEG;
+      const yAxis = new THREE.Vector3(0, 1, 0);
+      const zAxis = new THREE.Vector3(0, 0, 1);
+      particleIPos.set(LAT_POINT_R * Math.cos(phi), LAT_POINT_R * Math.sin(phi), 0);
+      particleIPos.applyAxisAngle(yAxis, earthAngle);
+
+      // Launch direction: (-cos α, 0, sin α) in latPointGroup local frame
+      const α = launchAngleDeg * DEG;
+      particleIVel.set(-Math.cos(α), 0, Math.sin(α));
+      // Transform local → earthGroup space (latPointGroup rotation about Z)
+      particleIVel.applyAxisAngle(zAxis, phi - Math.PI / 2);
+      // Transform earthGroup → inertial space
+      particleIVel.applyAxisAngle(yAxis, earthAngle);
+      particleIVel.normalize().multiplyScalar(LAUNCH_SPEED);
+
+      // Add surface velocity from Earth's rotation (ω × r)
+      const omega = MAX_ROTATION_SPEED * speedFraction;
+      const surfaceSpeed = omega * LAT_POINT_R * Math.cos(phi);
+      particleIVel.x += -surfaceSpeed * Math.sin(earthAngle);
+      particleIVel.z += -surfaceSpeed * Math.cos(earthAngle);
+
+      // Leave a ghost arrow at the launch point (in earthGroup / rotating frame)
+      const ghostGroup = new THREE.Group();
+      ghostGroup.position.copy(latPointGroup.position);
+      ghostGroup.rotation.copy(latPointGroup.rotation);
+      const ghostInner = new THREE.Group();
+      ghostInner.rotation.y = launchAngleDeg * DEG;
+      const ghostArrow = new THREE.ArrowHelper(
+        new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, 0),
+        LAUNCH_ARROW_LEN, currentColor, 0.035, 0.018
+      );
+      ghostArrow.line.material.transparent = true;
+      ghostArrow.line.material.opacity = 0.5;
+      ghostArrow.cone.material.transparent = true;
+      ghostArrow.cone.material.opacity = 0.5;
+      ghostInner.add(ghostArrow);
+      ghostGroup.add(ghostInner);
+      earthGroup.add(ghostGroup);
+      ghostArrowObjects.push(ghostGroup);
+
+      // Advance color for next launch
+      colorIndex = (colorIndex + 1) % LAUNCH_COLORS.length;
+      launchArrow.setColor(new THREE.Color(LAUNCH_COLORS[colorIndex]));
+      updateLaunchButtonColor();
+
+      ghostTimer = 0;
+      particleActive = true;
+      particleMesh.visible = true;
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      // Clear all ghost dots
+      for (let i = 0; i < ghostCount; i++) ghosts[i].visible = false;
+      ghostCount = 0;
+      // Clear all ghost arrows
+      for (const g of ghostArrowObjects) earthGroup.remove(g);
+      ghostArrowObjects.length = 0;
+      // Hide active particle
+      particleActive = false;
+      particleMesh.visible = false;
     });
 
     function switchFocus(newFocus) {
@@ -670,6 +868,43 @@
         // Hide if the sphere is hit closer than the label
         const blocked = hits.length > 0 && hits[0].distance < dist;
         lbl.visible = !blocked;
+      }
+
+      // ── Update particle + ghosts ──
+      if (particleActive) {
+        particleIPos.addScaledVector(particleIVel, dt);
+
+        // Drop a ghost in the rotating (Earth) frame
+        ghostTimer += dt;
+        if (ghostTimer >= GHOST_INTERVAL && ghostCount < MAX_GHOSTS) {
+          // Inertial → rotating: inverse of earthGroup's Y rotation
+          const cE = Math.cos(earthAngle), sE = Math.sin(earthAngle);
+          ghosts[ghostCount].material = ghostMaterials[activeLaunchColorIdx];
+          ghosts[ghostCount].position.set(
+            particleIPos.x * cE - particleIPos.z * sE,
+            particleIPos.y,
+            particleIPos.x * sE + particleIPos.z * cE
+          );
+          ghosts[ghostCount].visible = true;
+          ghostCount++;
+          ghostTimer -= GHOST_INTERVAL;
+        }
+
+        // Deactivate when far from Earth
+        if (particleIPos.lengthSq() > 9) {
+          particleActive = false;
+          particleMesh.visible = false;
+        }
+
+        // Position particle in current render frame (it lives in scene space)
+        const inertialRender = (mode === 'inertial') !== (focus === 'point');
+        if (inertialRender) {
+          particleMesh.position.copy(particleIPos);
+        } else {
+          const cR = Math.cos(-earthAngle), sR = Math.sin(-earthAngle);
+          const px = particleIPos.x, pz = particleIPos.z;
+          particleMesh.position.set(px * cR + pz * sR, particleIPos.y, -px * sR + pz * cR);
+        }
       }
 
       orbit.update();
