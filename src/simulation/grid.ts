@@ -2,7 +2,7 @@ export { RESOLUTION_DEG, COLS, ROWS } from "../constants";
 import { COLS, ROWS } from "../constants";
 import type { IGrid } from "../types/grid-types";
 
-export { latitudeAtRow } from "../utils/grid-utils";
+export { latitudeAtRow, longitudeAtCol, rowAtLatitude, colAtLongitude } from "../utils/grid-utils";
 
 function wrapCol(c: number): number {
   return ((c % COLS) + COLS) % COLS;

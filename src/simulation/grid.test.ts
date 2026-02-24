@@ -1,4 +1,5 @@
 import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
+import { rowAtLatitude, colAtLongitude, longitudeAtCol } from "../utils/grid-utils";
 
 describe("Grid", () => {
   it("has 72 columns and 36 rows", () => {
@@ -98,6 +99,20 @@ describe("temperatureField", () => {
     expect(grid.temperatureField.length).toBe(ROWS * COLS);
     for (let i = 0; i < ROWS * COLS; i++) {
       expect(grid.temperatureField[i]).toBe(0);
+    }
+  });
+});
+
+describe("rowAtLatitude / colAtLongitude", () => {
+  it("rowAtLatitude inverts latitudeAtRow", () => {
+    for (let r = 0; r < ROWS; r++) {
+      expect(rowAtLatitude(latitudeAtRow(r))).toBe(r);
+    }
+  });
+
+  it("colAtLongitude inverts longitudeAtCol", () => {
+    for (let c = 0; c < COLS; c++) {
+      expect(colAtLongitude(longitudeAtCol(c))).toBe(c);
     }
   });
 });
