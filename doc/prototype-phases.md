@@ -22,6 +22,9 @@ evaluate and give feedback on the simulation behavior.
 - Quick Chromebook performance checks should happen after each phase to catch bottlenecks
   early. Dedicated optimization remains the final phase, but knowing where we stand
   throughout avoids late surprises
+- Follow `doc/simulation-guide.md` for simulation stepping, performance metrics, frame rate
+  management, and rendering patterns. These should be implemented during Phase 1 as part of
+  the engine foundation
 - **Documenting lessons learned is critical.** Since code is generated, the real investment is
   knowledge — what worked, what didn't, what parameter values were tuned, what numerical
   approaches succeeded or failed. Each phase's detailed design doc should be updated with
@@ -89,9 +92,11 @@ this doesn't work, we have a fundamental rendering or architecture problem.
 - **Arrow density required subsampling.** At 72 columns, rendering an arrow in every cell
   created visual clutter. Skipping every other column made the field readable — Phase 2 and
   beyond should account for this in their arrow rendering specs.
-- **Rendering infrastructure is ahead of schedule.** Playback speed control (0.1x–10x),
-  play/pause, and dynamic viewport sizing were added during Phase 1 revisions. These are
-  available for all subsequent phases without additional work.
+- **Rendering infrastructure is ahead of schedule.** Playback speed control (steps/s model,
+  decoupled from frame rate), play/pause, dynamic viewport sizing, and a performance metrics
+  overlay (fps, steps/s, step time, draw time) were added during Phase 1. An automated frame
+  headroom benchmark measures how much per-frame budget remains before the frame rate drops.
+  These are available for all subsequent phases without additional work.
 - **Chromebook performance check still pending.** Should be done before starting Phase 2.
 
 ## Phase 2: Coriolis + Ekman Transport

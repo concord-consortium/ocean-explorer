@@ -15,21 +15,23 @@ The design doc in `doc/` is the source of truth for *what* to build. The plan in
 is a disposable implementation guide for *how* to build it — it can be regenerated from the
 design doc if needed.
 
+## Verification
+
+After modifying source files, run `npm run lint:build`, `npm test`, and `npm run test:playwright`
+and fix all errors **and warnings** before considering the change complete. `lint:build` is
+the same lint configuration used by CI.
+
 ## Code style
 
 - **Objects with behavior should be classes.** When functions take an object as their first
   argument and operate on its internal state, that object should be a class with those
   functions as methods — unless there's a measured performance reason not to.
 
-## Rendering
+## Simulation and rendering
 
-### Optimization principle
-
-Don't optimize rendering in ways that prevent future complexity. If a visualization element
-(e.g., temperature background, wind arrows) will become per-cell variable in later phases,
-keep redrawing it every frame rather than caching or skipping it based on change detection.
-The rendering loop code should change as little as possible over time — only the model
-computations get more complex.
+General principles for simulation stepping, performance metrics, frame rate management,
+and rendering are in `doc/simulation-guide.md`. The sections below cover PixiJS-specific
+implementation patterns for this project.
 
 ### PixiJS shared GraphicsContext pattern
 

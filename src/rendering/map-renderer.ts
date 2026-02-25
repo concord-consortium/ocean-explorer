@@ -1,11 +1,8 @@
 import { Application, Graphics, GraphicsContext, Container, Text, TextStyle } from "pixi.js";
 import { Grid, ROWS, COLS, latitudeAtRow } from "../simulation/grid";
+import { TARGET_FPS, COLOR_MIN, COLOR_MAX, WIND_SCALE, WATER_SCALE } from "../constants";
 import { windU, SimParams } from "../simulation/wind";
 import { temperature } from "../simulation/temperature";
-
-/** Color scale constants */
-const COLOR_MIN = -15;      // °C (blue end of scale)
-const COLOR_MAX = 35;     // °C (red end of scale)
 
 /** Maps a temperature to a 0xRRGGBB color on a blue-to-red scale. */
 export function tempToColor(t: number): number {
@@ -22,11 +19,15 @@ export interface RendererOptions {
   showWind: boolean;
   showWater: boolean;
   arrowScale: number;
+  stepTimeMs: number;
+  actualStepsPerSecond: number;
+  benchLoadTimeMs: number;
 }
 
 export interface MapRenderer {
   app: Application;
   update(grid: Grid, params: SimParams, opts: RendererOptions): void;
+  setSceneUpdateTimeMs(ms: number): void;
   resize(width: number, height: number): void;
   destroy(): void;
 }
@@ -35,6 +36,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     Promise<MapRenderer> {
   const app = new Application();
   await app.init({ canvas, width, height, background: 0x111111 });
+  app.ticker.maxFPS = TARGET_FPS;
 
   const bgContainer = new Container();
   const windContainer = new Container();
@@ -110,6 +112,9 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
   fpsText.position.set(8, 40);
   legendContainer.addChild(fpsText);
 
+  // Scene-update timing from the previous frame (set after update() returns)
+  let lastSceneUpdateTimeMs = 0;
+
   // Color scale legend elements
   const colorScaleBar = new Graphics();
   const colorScaleMinLabel = new Text({ text: `${COLOR_MIN}\u00B0C`, style: legendStyle });
@@ -157,9 +162,6 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       }
     }
 
-    // Fixed arrow scale references
-    const WIND_SCALE = 20;    // m/s (base_wind_speed * max temp_gradient_ratio)
-    const WATER_SCALE = 2000; // m/s (approximate terminal velocity at max settings)
     const maxArrowLen = Math.min(cellW * 2, cellH) * 0.9 * opts.arrowScale; // cellW*2 since we skip columns
 
     // Draw arrows (skip every other column to reduce density)
@@ -239,13 +241,31 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     // Color scale
     drawColorScale(LEFT_MARGIN + mapWidth + 8, mapHeight);
 
-    // FPS counter
-    fpsText.text = `${Math.round(app.ticker.FPS)} fps`;
+    // Performance metrics
+    const fps = app.ticker.FPS;
+    const frameMs = fps > 0 ? 1000 / fps : 0;
+    const stepPct = frameMs > 0 ? (opts.stepTimeMs / frameMs * 100).toFixed(0) : "0";
+    const drawPct = frameMs > 0 ? (lastSceneUpdateTimeMs / frameMs * 100).toFixed(0) : "0";
+    const parts = [
+      `${Math.round(fps)} fps`,
+      `${Math.round(opts.actualStepsPerSecond)} steps/s`,
+      `step ${opts.stepTimeMs.toFixed(1)}ms (${stepPct}%)`,
+      `draw ${lastSceneUpdateTimeMs.toFixed(1)}ms (${drawPct}%)`,
+    ];
+    if (opts.benchLoadTimeMs > 0) {
+      const benchPct = frameMs > 0 ? (opts.benchLoadTimeMs / frameMs * 100).toFixed(0) : "0";
+      parts.push(`bench ${opts.benchLoadTimeMs.toFixed(1)}ms (${benchPct}%)`);
+    }
+    fpsText.text = parts.join(" | ");
   }
 
   return {
     app,
     update,
+    setSceneUpdateTimeMs(ms: number) {
+      const alpha = 0.05;
+      lastSceneUpdateTimeMs = alpha * ms + (1 - alpha) * lastSceneUpdateTimeMs;
+    },
     resize(w: number, h: number) {
       app.renderer.resize(w, h);
     },

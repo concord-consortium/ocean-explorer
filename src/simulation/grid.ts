@@ -1,6 +1,5 @@
-export const RESOLUTION_DEG = 5;
-export const COLS = 360 / RESOLUTION_DEG;           // 72
-export const ROWS = 180 / RESOLUTION_DEG;           // 36
+export { RESOLUTION_DEG, COLS, ROWS } from "../constants";
+import { RESOLUTION_DEG, COLS, ROWS } from "../constants";
 
 function wrapCol(c: number): number {
   return ((c % COLS) + COLS) % COLS;
