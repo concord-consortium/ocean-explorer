@@ -13,7 +13,6 @@ import typescriptEslint, { configs as tsConfigs } from "typescript-eslint";
 import js from "@eslint/js";
 import comments from "@eslint-community/eslint-plugin-eslint-comments/configs";
 import { flatConfigs as importPluginConfig } from "eslint-plugin-import";
-import pluginCypress from "eslint-plugin-cypress/flat";
 
 // This helper `config()` function replaces the basic [] used by 
 // eslint normally:
@@ -126,15 +125,16 @@ export default typescriptEslint.config(
       "react/react-in-jsx-scope": "off",
     },
   },
-  // The projectService is required to use the @typescript-eslint/prefer-optional-chain rule
-  // The projectService does not work well with files that aren't configured by a tsconfig.json
-  // file, so we only apply it to the files in src and cypress.
+  // The projectService is required to use the @typescript-eslint/prefer-optional-chain rule.
+  // allowDefaultProject lets it handle files not covered by tsconfig.json (like playwright/).
   {
-    name: "rules only for project and cypress typescript files",
-    files: ["src/**/*.ts", "src/**/*.tsx", "cypress/**/*.ts", "cypress/**/*.tsx"],
+    name: "rules only for project and playwright typescript files",
+    files: ["src/**/*.ts", "src/**/*.tsx", "playwright/**/*.ts"],
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ["playwright/*.ts", "playwright/lib/*.ts"],
+        },
       },
     },
     rules: {
@@ -163,18 +163,27 @@ export default typescriptEslint.config(
       "jest/no-done-callback": "off"
     }
   },
-  { 
-    name: "rules specific to Cypress tests",
-    files: ["cypress/**"],
-    extends: [
-      pluginCypress.configs.recommended
-    ],
+  {
+    name: "playwright tests",
+    files: ["playwright/**/*.ts"],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      },
+    },
     rules: {
-      "@typescript-eslint/no-require-imports": "off",
-      "@typescript-eslint/no-non-null-assertion": "off",
-      "@typescript-eslint/no-var-requires": "off",
-      "cypress/no-unnecessary-waiting": "off"
-    }
+      // Playwright's `use` function triggers this rule incorrectly
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
+  {
+    name: "scripts",
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      },
+    },
   },
   {
     name: "json files",
