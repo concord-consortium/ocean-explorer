@@ -109,7 +109,43 @@ Build an array of `{r, c}` pairs at init time. During update, loop over only thi
 - `GLOBE_WIDTH_SEGMENTS` (64) and `GLOBE_HEIGHT_SEGMENTS` (32) are independent of the
   simulation grid — no change needed
 
-## 5. Utility functions
+## 5. Numerical stability
+
+**Files: `src/constants.ts`, `src/simulation/simulation.ts`**
+
+At 2.5° resolution, the earth-like land mask resolves complex coastline geometry
+(especially in the Canadian Arctic Archipelago) that creates numerical instabilities.
+Two mechanisms address this:
+
+### Velocity and eta clamping
+
+Add hard clamps in the simulation step to prevent runaway growth and NaN propagation:
+
+- `MAX_VELOCITY = 10` m/s — applied to waterU/waterV after the velocity update
+- `MAX_ETA = 10` m — applied to eta after the divergence update
+
+These are safety nets that prevent rendering errors (NaN colors) even if localized
+instabilities occur. Clamps are merged into the existing land-mask loops (step 2b and
+step 3b) to avoid extra passes.
+
+### Latitude-dependent coastal drag
+
+Near the poles, grid cells become physically tiny (`dx = R_EARTH * cos(lat) * DELTA_RAD`),
+so small SSH differences create disproportionately large pressure gradients. The base
+Rayleigh drag (`DRAG = 1e-4 s⁻¹`, damping timescale ~10,000 s) cannot counter the
+resulting acceleration at coastal cells adjacent to complex land geometry.
+
+Apply enhanced drag to water cells with at least one orthogonal land neighbor, but only
+above a latitude threshold:
+
+- `COASTAL_DRAG_MULTIPLIER = 50` — gives coastal `dragFactor = 1 + 5e-3 * 200 = 2.0`
+- `COASTAL_DRAG_MIN_LAT = 60` — only applied above 60° latitude
+
+This is physically motivated (continental shelf friction) and avoids artifacts at
+mid-latitude coasts. Both open-ocean and coastal drag/determinant values are precomputed
+per row for efficiency, with the inner column loop selecting based on a neighbor check.
+
+## 6. Utility functions
 
 **File: `src/utils/grid-utils.ts`**
 
@@ -122,9 +158,9 @@ function colAtLongitude(lon: number): number
 
 These are useful for:
 - Making land presets resolution-independent (section 3)
-- Making tests resolution-independent (section 6)
+- Making tests resolution-independent (section 7)
 
-## 6. Tests
+## 7. Tests
 
 ### Resolution-independent index helpers
 
@@ -143,13 +179,25 @@ and `colAtLongitude` from `grid-utils.ts`. For example, `18 * COLS + 36` (equato
 | `steady-state.test.ts` | Geostrophic check rows `[12, 15, 21, 24, 27]` become latitude-based |
 | `land-presets.test.ts` | N-S continent edge cols, polar row checks, geographic spot checks |
 
-## 7. Files not changed
+## 8. Files not changed
 
 These files use `COLS`, `ROWS`, `DELTA_RAD` generically and require no modifications:
 
 - `src/simulation/grid.ts` — re-exports constants
 - `src/simulation/spatial.ts` — uses DELTA_RAD in formulas
 - `src/simulation/advection.ts` — uses DELTA_RAD in formulas
-- `src/simulation/simulation.ts` — loops over ROWS/COLS
 - `src/rendering/globe-arrows.ts` — independent of grid resolution
 - All UI components — no grid awareness
+
+---
+
+## Revision log
+
+1. **2026-02-25 — Added numerical stability section.** Added section 5 (Numerical
+   stability) with velocity/eta clamping and latitude-dependent coastal drag. These were
+   discovered during implementation: the earth-like land mask at 2.5° resolves complex
+   Arctic coastline geometry that creates pressure gradient instabilities near the poles.
+   Clamping prevents NaN propagation; coastal drag (applied only above 60° latitude)
+   dampens the runaway acceleration at high-latitude coastal cells without introducing
+   artifacts at mid-latitude coasts. `simulation.ts` moved from "Files not changed" to
+   section 5.
