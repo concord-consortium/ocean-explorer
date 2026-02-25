@@ -14,11 +14,12 @@ interface Props {
   targetStepsPerSecond: number;
   paused: boolean;
   arrowScale: number;
+  backgroundMode: "temperature" | "ssh";
   benchmarkRef?: React.RefObject<FrameHeadroomBenchmark | null>;
 }
 
 export const SimulationCanvas: React.FC<Props> = ({
-  width, height, params, showWind, showWater, targetStepsPerSecond, paused, arrowScale, benchmarkRef,
+  width, height, params, showWind, showWater, targetStepsPerSecond, paused, arrowScale, backgroundMode, benchmarkRef,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<MapRenderer | null>(null);
@@ -35,6 +36,8 @@ export const SimulationCanvas: React.FC<Props> = ({
   pausedRef.current = paused;
   const arrowScaleRef = useRef(arrowScale);
   arrowScaleRef.current = arrowScale;
+  const backgroundModeRef = useRef(backgroundMode);
+  backgroundModeRef.current = backgroundMode;
   const benchmarkRefProp = useRef(benchmarkRef);
   benchmarkRefProp.current = benchmarkRef;
   const sizeRef = useRef({ width, height });
@@ -90,6 +93,7 @@ export const SimulationCanvas: React.FC<Props> = ({
           stepTimeMs: stepper.stepTimeMs,
           actualStepsPerSecond: stepper.actualStepsPerSecond,
           benchLoadTimeMs: benchmark.loadTimeMs,
+          backgroundMode: backgroundModeRef.current,
         });
         renderer.setSceneUpdateTimeMs(performance.now() - sceneT0);
         lastRenderedVersion = renderVersionRef.current;

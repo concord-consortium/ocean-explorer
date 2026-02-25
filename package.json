@@ -16,7 +16,8 @@
     "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/playwright/"
+      "/playwright/",
+      "<rootDir>/.worktrees/"
     ],
     "coveragePathIgnorePatterns": [
       "/node_modules/",

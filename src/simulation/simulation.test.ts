@@ -1,7 +1,6 @@
 import { Simulation } from "./simulation";
 import { ROWS, COLS } from "./grid";
 import { windU, SimParams } from "./wind";
-import { coriolisParameter } from "./coriolis";
 
 const defaultParams: SimParams = {
   rotationRatio: 1.0,
@@ -33,31 +32,32 @@ describe("Simulation", () => {
     // With Coriolis, V is no longer zero at non-equatorial latitudes
   });
 
-  it("reaches terminal velocity: waterU converges to Coriolis steady-state", () => {
+  it("reaches approximate terminal velocity after many steps", () => {
     const sim = new Simulation();
     const params = defaultParams;
 
-    // Check a cell in the trade wind zone (row 6 = lat -57.5)
-    const lat = -87.5 + 6 * 5; // -57.5
-    const windAccelU = sim.windDragCoefficient * windU(lat, params);
-    const f = coriolisParameter(lat, params.rotationRatio);
-    const denom = sim.drag * sim.drag + f * f;
-    const expectedU = windAccelU * sim.drag / denom;
-    const expectedV = -windAccelU * f / denom;
-
-    // Run steps until close to terminal velocity or hit a safety cap
-    // With drag = 1e-4, time constant = 10,000 steps (vs 100,000 at old drag)
+    // With pressure gradients active, the steady state is no longer the simple
+    // analytical wind+Coriolis+drag formula. Instead, check that velocities
+    // converge (change per step becomes small). Detailed steady-state checks
+    // are in steady-state.test.ts.
     const maxSteps = 5000;
-    const tolerance = 0.00005; // match toBeCloseTo precision of 4
+    const threshold = 1e-4;
+    let converged = false;
     for (let i = 0; i < maxSteps; i++) {
+      const prevU = sim.grid.getU(6, 0);
+      const prevV = sim.grid.getV(6, 0);
       sim.step(params);
-      const deltaU = Math.abs(sim.grid.getU(6, 0) - expectedU);
-      const deltaV = Math.abs(sim.grid.getV(6, 0) - expectedV);
-      if (deltaU < tolerance && deltaV < tolerance) break;
+      const deltaU = Math.abs(sim.grid.getU(6, 0) - prevU);
+      const deltaV = Math.abs(sim.grid.getV(6, 0) - prevV);
+      if (deltaU < threshold && deltaV < threshold) {
+        converged = true;
+        break;
+      }
     }
 
-    expect(sim.grid.getU(6, 0)).toBeCloseTo(expectedU, 4);
-    expect(sim.grid.getV(6, 0)).toBeCloseTo(expectedV, 4);
+    expect(converged).toBe(true);
+    // Wind-driven flow at row 6 (lat -57.5) should be nonzero
+    expect(sim.grid.getU(6, 0)).not.toBe(0);
   });
 
   it("Coriolis creates cross-wind flow after one step (waterV nonzero)", () => {
@@ -129,5 +129,66 @@ describe("Simulation", () => {
     // Compare to mid-latitude deflection
     const midLatV = Math.abs(sim.grid.getV(24, 0));
     expect(nearEquatorV).toBeLessThan(midLatV * 0.2);
+  });
+});
+
+describe("Pressure gradient integration", () => {
+  it("pressure gradient drives flow from SSH mound after one step", () => {
+    const sim = new Simulation();
+    // Create an SSH mound at mid-latitude
+    const r = 18, c = 36;
+    sim.grid.setEta(r, c, 10.0);
+    // Zero-rotation to remove Coriolis (flow should go directly downhill)
+    const params = { ...defaultParams, rotationRatio: 0.01 };
+    sim.step(params);
+    // Water should flow away from the mound (outward velocity)
+    // East neighbor should have positive u (eastward, away from mound)
+    expect(sim.grid.getU(r, c + 1)).toBeGreaterThan(0);
+    // West neighbor should have negative u (westward, away from mound)
+    expect(sim.grid.getU(r, c - 1)).toBeLessThan(0);
+  });
+
+  it("pressure-driven flow is deflected by Coriolis", () => {
+    const sim = new Simulation();
+    // Create SSH mound at NH mid-latitude
+    sim.grid.setEta(24, 36, 10.0);
+    const params = { ...defaultParams };
+    // Run a few steps to let Coriolis act
+    for (let i = 0; i < 5; i++) sim.step(params);
+    // In NH, flow should be deflected rightward from the pressure gradient
+    // direction, so we expect nonzero V at the mound location
+    const v = sim.grid.getV(24, 36);
+    expect(v).not.toBe(0);
+  });
+
+  it("eta changes from velocity divergence", () => {
+    const sim = new Simulation();
+    // Set up converging velocity field (u decreasing eastward)
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        sim.grid.setU(r, c, -c * 0.001);
+      }
+    }
+    const params = { ...defaultParams, rotationRatio: 0.01 };
+    sim.step(params);
+    // Converging flow → eta should increase at interior points
+    const eta = sim.grid.getEta(18, 36);
+    expect(eta).toBeGreaterThan(0);
+  });
+
+  it("uniform velocity field does not change eta", () => {
+    const sim = new Simulation();
+    for (let i = 0; i < ROWS * COLS; i++) {
+      sim.grid.waterU[i] = 0.1;
+    }
+    // Use zero wind and rotation so step only applies uniform drag
+    const params = { ...defaultParams, rotationRatio: 0, tempGradientRatio: 0 };
+    // Save pre-step eta
+    const etaBefore = new Float64Array(sim.grid.eta);
+    sim.step(params);
+    // Eta should not change from non-divergent flow
+    for (let i = 0; i < ROWS * COLS; i++) {
+      expect(Math.abs(sim.grid.eta[i] - etaBefore[i])).toBeLessThan(1e-10);
+    }
   });
 });

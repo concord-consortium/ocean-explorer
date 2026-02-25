@@ -8,11 +8,13 @@ function wrapCol(c: number): number {
 export class Grid {
   readonly waterU: Float64Array;
   readonly waterV: Float64Array;
+  readonly eta: Float64Array;
 
   constructor() {
     const size = ROWS * COLS;
     this.waterU = new Float64Array(size);
     this.waterV = new Float64Array(size);
+    this.eta = new Float64Array(size);
   }
 
   private idx(r: number, c: number): number {
@@ -33,6 +35,14 @@ export class Grid {
 
   setV(r: number, c: number, val: number): void {
     this.waterV[this.idx(r, c)] = val;
+  }
+
+  getEta(r: number, c: number): number {
+    return this.eta[this.idx(r, c)];
+  }
+
+  setEta(r: number, c: number, val: number): void {
+    this.eta[this.idx(r, c)] = val;
   }
 }
 

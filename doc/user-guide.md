@@ -2,14 +2,16 @@
 
 ## What you're looking at
 
-A 2D equirectangular map of a simplified planet. The background color shows temperature
-(blue = cold, red = hot) based on latitude. Two layers of arrows show wind and water velocity.
+A 2D equirectangular map of a simplified water world. The background color shows either
+temperature (blue = cold, red = hot) or sea surface height (blue = low, white = neutral,
+red = high), selectable via a dropdown. Two layers of arrows show wind and water velocity.
 
 The simulation starts from rest. Wind pushes water, Coriolis deflection rotates the flow
 (rightward in the northern hemisphere, leftward in the southern), and friction slows it.
-Water accelerates until these forces balance. At mid-latitudes, water arrows visibly diverge
-from wind arrows due to the Coriolis effect. There are no continents and no pressure gradients
-yet.
+As water converges and diverges, it builds up sea surface height (SSH) mounds and
+depressions. Pressure gradients from these height differences drive additional flow, which
+Coriolis deflects until the water flows along height contours rather than directly downhill
+— this is geostrophic balance. There are no continents.
 
 ## Controls
 
@@ -22,15 +24,26 @@ yet.
 | **Speed** (6–600 steps/s) | How many simulation steps run per second. Higher values advance simulated time faster. The default (60 steps/s) runs 2 steps per rendered frame at 30fps. |
 | **Arrow size** (0.5x–3x) | Scales the visual length of all arrows. Useful for seeing small arrows. |
 | **Show wind / Show water** | Toggle arrow layers on and off. |
+| **Background** (Temperature / Sea Surface Height) | Switches the background color layer between temperature by latitude and SSH. SSH mode uses a diverging color scale that auto-scales to the current min/max range. |
 | **Benchmark** | Measures how many milliseconds of frame-time headroom remain. Runs an automated test that gradually loads each frame until FPS drops, then reports the result (e.g., "Headroom: 30.2ms"). The button shows "Benchmarking..." while running. |
 
 ## What to try
 
 **Watch convergence from rest.** The simulation loads paused at initial conditions (zero
-water velocity). Press Play and watch the blue water arrows grow from nothing. As they spin
-up, notice how mid-latitude water arrows gradually rotate away from the wind direction —
-this is Coriolis deflection building up. Increase the speed setting to see convergence happen
-faster. Pause partway through to see the transient state.
+water velocity, flat SSH). Press Play and watch the blue water arrows grow from nothing. As
+they spin up, notice how mid-latitude water arrows gradually rotate away from the wind
+direction — this is Coriolis deflection building up. Increase the speed setting to see
+convergence happen faster. Pause partway through to see the transient state.
+
+**Watch SSH develop.** Switch Background to "Sea Surface Height" and press Play from rest.
+The map starts white (flat). As Ekman transport moves water, SSH mounds (red) form at
+subtropical latitudes (~30°N and ~30°S) and depressions (blue) form near the equator and at
+higher latitudes. This pattern takes several thousand simulation steps to fully develop.
+
+**See geostrophic flow.** Once the SSH pattern has developed, compare the water arrows to
+the SSH color contours. Water flows approximately parallel to the height contours — along
+the boundaries between red and blue regions, not directly from red to blue. This is
+geostrophic balance: Coriolis deflection prevents water from flowing directly downhill.
 
 **Compare wind and water arrows.** With both layers visible, look at the angle between wind
 and water arrows at different latitudes. At the equator they should align closely. At
@@ -63,8 +76,8 @@ deflection angle stays the same (it depends on latitude and drag, not wind speed
 ## What's on screen
 
 - **Gray/white arrows** — wind (prescribed, not simulated)
-- **Blue arrows** — water velocity (simulated)
-- **Color background** — temperature by latitude (prescribed, used for coloring only)
+- **Blue arrows** — water velocity (simulated, includes wind-driven + geostrophic components)
+- **Color background** — either temperature by latitude or sea surface height (switchable)
 - **Top-left text** — described below under "Legend overlay"
 - **Left edge** — latitude labels every 30°
 - **Right edge** — temperature color scale (0°C to 35°C)
@@ -81,9 +94,9 @@ The top-left corner shows arrow reference values and performance metrics:
   (arrows are drawn every other column, so they have two cell widths of horizontal space).
 - **Water max: _N_ m/s** — the fastest water speed in the current frame. This is a live
   measurement that changes as the simulation runs — during spin-up from rest it climbs from 0
-  toward the steady-state peak (~0.35 m/s at default settings). Water arrows use the same
+  toward the steady-state peak (~0.5 m/s at default settings). Water arrows use the same
   proportional scaling as wind arrows, but with a 1.0 m/s reference scale (not displayed in
-  the legend). At 0.35 m/s the longest arrows are about a third of the maximum arrow length.
+  the legend). At 0.5 m/s the longest arrows are about half of the maximum arrow length.
 - **Performance line** — `fps | steps/s | step _ms (_%) | draw _ms (_%)`. Shows frames per
   second, simulation steps per second, and the time spent on simulation stepping and rendering
   as both milliseconds and percentage of the frame budget. During a benchmark run, a `bench`
@@ -99,10 +112,10 @@ full depth-integrated Ekman transport.
 **No land.** The planet is entirely ocean. Currents wrap around in longitude with nothing to
 block or deflect them. There are no western boundary currents or gyres.
 
-**No pressure gradients.** Temperature is decorative — the background color is computed from
+**No thermal coupling.** Temperature is decorative — the background color is computed from
 latitude for display only. It does not feed back into the simulation. There are no
-thermal-driven pressure gradients or geostrophic currents yet.
+thermal-driven density gradients or thermohaline circulation.
 
 **All cells at a given latitude are identical.** Because wind depends only on latitude and
 there are no land boundaries or longitudinal variations, every cell in a row has the same
-velocity. The per-cell grid structure exists for future phases.
+velocity and SSH. The per-cell grid structure exists for future phases.

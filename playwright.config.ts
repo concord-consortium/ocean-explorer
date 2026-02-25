@@ -1,11 +1,22 @@
 import type { PlaywrightCoverageOptions } from "@bgotink/playwright-coverage";
 import { defineConfig, devices, type ReporterDescription } from "@playwright/test";
+import fs from "fs";
 import path from "path";
 
 // Playwright transpiles .ts configs to CJS, so __dirname is available.
 const rootDir = __dirname;
 
-process.env.REPOSITORY_NAME = "ocean-explorer";
+// Load .env if present (used to override BONJOUR_SERVICE_NAME in worktrees)
+try {
+  const envFile = fs.readFileSync(path.join(rootDir, ".env"), "utf8");
+  for (const line of envFile.split("\n")) {
+    const match = line.match(/^([A-Z_]+)=(.+)$/);
+    if (match && !(match[1] in process.env)) process.env[match[1]] = match[2].trim();
+  }
+} catch { /* .env is optional */ }
+
+process.env.REPOSITORY_NAME = process.env.REPOSITORY_NAME || "ocean-explorer";
+process.env.BONJOUR_SERVICE_NAME = process.env.BONJOUR_SERVICE_NAME || process.env.REPOSITORY_NAME;
 
 const collectCoverage = !!process.env.CI;
 const coverageReporter: ReporterDescription = [
