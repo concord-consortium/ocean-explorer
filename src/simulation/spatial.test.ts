@@ -3,7 +3,7 @@ import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
 import { R_EARTH, DELTA_RAD } from "../constants";
 import { rowAtLatitude, colAtLongitude } from "../utils/grid-utils";
 
-const rEq = rowAtLatitude(2.5);    // equatorial row
+const rEq = rowAtLatitude(0);      // equatorial row
 const cMid = colAtLongitude(2.5);  // mid-column (away from wrap boundary)
 
 describe("pressureGradient", () => {

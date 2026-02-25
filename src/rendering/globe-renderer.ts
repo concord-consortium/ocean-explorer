@@ -9,6 +9,7 @@ import {
 } from "../constants";
 import { tempToColor, sshToColor } from "../utils/color-utils";
 import { latitudeAtRow, longitudeAtCol, computeSshRange } from "../utils/grid-utils";
+import { getArrowSubset } from "../utils/arrow-utils";
 import { buildArrowGeometry, buildArrowMatrix } from "./globe-arrows";
 import type { IGrid } from "../types/grid-types";
 import type { Renderer, RendererOptions, RendererMetrics, GlobeCameraState } from "../types/renderer-types";
@@ -72,7 +73,8 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
 
   // --- Arrow InstancedMeshes ---
   const arrowGeo = buildArrowGeometry();
-  const instanceCount = ROWS * COLS;
+  const arrowSubset = getArrowSubset();
+  const instanceCount = arrowSubset.length;
 
   const windMat = new THREE.MeshBasicMaterial({ color: 0xcccccc });
   const windMesh = new THREE.InstancedMesh(arrowGeo, windMat, instanceCount);
@@ -111,7 +113,7 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
 
     for (let r = 0; r < ROWS; r++) {
       // Texture row 0 = top of image = north pole.
-      // Grid row 0 = -87.5 (south), row 35 = 87.5 (north).
+      // Grid row 0 = south pole, row ROWS-1 = north pole.
       // So texture row ty maps to grid row (ROWS - 1 - ty).
       const gridRow = ROWS - 1 - r;
 
@@ -140,55 +142,52 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
     ctx.putImageData(imageData, 0, 0);
     texture.needsUpdate = true;
 
-    // Update arrows
+    // Update arrows (subsampled to ~36 per dimension)
     windMesh.visible = opts.showWind;
     waterMesh.visible = opts.showWater;
 
     let waterMax = 0;
 
-    for (let r = 0; r < ROWS; r++) {
+    for (let ai = 0; ai < arrowSubset.length; ai++) {
+      const { r, c } = arrowSubset[ai];
       const lat = latitudeAtRow(r);
       const wU = windU(lat, params);
+      const lon = longitudeAtCol(c);
+      const cellIdx = r * COLS + c;
+      const isLand = grid.landMask[cellIdx] === 1;
 
-      for (let c = 0; c < COLS; c++) {
-        const idx = r * COLS + c;
-        const lon = longitudeAtCol(c);
-        const isLand = grid.landMask[idx] === 1;
-        const showArrow = c % 2 === 0;
+      // --- Wind arrow ---
+      if (opts.showWind && !isLand) {
+        const windSpeed = Math.abs(wU);
+        const scaledLen = Math.min(windSpeed / WIND_SCALE, 1) * REF_ARROW_LEN * opts.arrowScale;
 
-        // --- Wind arrow ---
-        if (opts.showWind && showArrow && !isLand) {
-          const windSpeed = Math.abs(wU);
-          const scaledLen = Math.min(windSpeed / WIND_SCALE, 1) * REF_ARROW_LEN * opts.arrowScale;
-
-          if (windSpeed < SPEED_THRESHOLD) {
-            windMesh.setMatrixAt(idx, _zeroMat);
-          } else {
-            buildArrowMatrix(lat, lon, wU, 0, scaledLen, _mat4);
-            windMesh.setMatrixAt(idx, _mat4);
-          }
+        if (windSpeed < SPEED_THRESHOLD) {
+          windMesh.setMatrixAt(ai, _zeroMat);
         } else {
-          windMesh.setMatrixAt(idx, _zeroMat);
+          buildArrowMatrix(lat, lon, wU, 0, scaledLen, _mat4);
+          windMesh.setMatrixAt(ai, _mat4);
         }
+      } else {
+        windMesh.setMatrixAt(ai, _zeroMat);
+      }
 
-        // --- Water arrow ---
-        const uVal = grid.waterU[idx];
-        const vVal = grid.waterV[idx];
-        const speed = Math.sqrt(uVal * uVal + vVal * vVal);
-        if (speed > waterMax) waterMax = speed;
+      // --- Water arrow ---
+      const uVal = grid.waterU[cellIdx];
+      const vVal = grid.waterV[cellIdx];
+      const speed = Math.sqrt(uVal * uVal + vVal * vVal);
+      if (speed > waterMax) waterMax = speed;
 
-        if (opts.showWater && showArrow && !isLand) {
-          const scaledLen = Math.min(speed / WATER_SCALE, 1) * REF_ARROW_LEN * opts.arrowScale;
+      if (opts.showWater && !isLand) {
+        const scaledLen = Math.min(speed / WATER_SCALE, 1) * REF_ARROW_LEN * opts.arrowScale;
 
-          if (speed < SPEED_THRESHOLD) {
-            waterMesh.setMatrixAt(idx, _zeroMat);
-          } else {
-            buildArrowMatrix(lat, lon, uVal, vVal, scaledLen, _mat4);
-            waterMesh.setMatrixAt(idx, _mat4);
-          }
+        if (speed < SPEED_THRESHOLD) {
+          waterMesh.setMatrixAt(ai, _zeroMat);
         } else {
-          waterMesh.setMatrixAt(idx, _zeroMat);
+          buildArrowMatrix(lat, lon, uVal, vVal, scaledLen, _mat4);
+          waterMesh.setMatrixAt(ai, _mat4);
         }
+      } else {
+        waterMesh.setMatrixAt(ai, _zeroMat);
       }
     }
 

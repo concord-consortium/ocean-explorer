@@ -64,8 +64,9 @@ describe("Grid", () => {
     expect(latitudeAtRow(0)).toBeCloseTo(-90 + RESOLUTION_DEG / 2);
     // Row ROWS-1 is the northernmost band
     expect(latitudeAtRow(ROWS - 1)).toBeCloseTo(90 - RESOLUTION_DEG / 2);
-    // Round-trip: latitude 2.5 maps to a row that maps back to 2.5
-    expect(latitudeAtRow(rowAtLatitude(2.5))).toBeCloseTo(2.5);
+    // Round-trip: a cell-center latitude survives the round-trip
+    const cellCenter = latitudeAtRow(1);
+    expect(latitudeAtRow(rowAtLatitude(cellCenter))).toBeCloseTo(cellCenter);
   });
 
   it("initializes landMask to all water (zeros)", () => {

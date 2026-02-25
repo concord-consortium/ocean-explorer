@@ -1,6 +1,9 @@
 import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
 import { windU, SimParams } from "./wind";
-import { DT, WIND_DRAG_COEFFICIENT, DRAG, G_STIFFNESS, RELAXATION_TIMESCALE } from "../constants";
+import {
+  DT, WIND_DRAG_COEFFICIENT, DRAG, G_STIFFNESS, RELAXATION_TIMESCALE,
+  MAX_VELOCITY, MAX_ETA,
+} from "../constants";
 import { coriolisParameter } from "./coriolis";
 import { pressureGradient, divergence } from "./spatial";
 import { advect } from "./advection";
@@ -56,12 +59,15 @@ export class Simulation {
       }
     }
 
-    // Step 2b: Mask land cell velocities to zero (before divergence computation)
+    // Step 2b: Mask land velocities to zero; clamp water velocities for stability
     const { landMask } = grid;
     for (let i = 0; i < ROWS * COLS; i++) {
       if (landMask[i]) {
         grid.waterU[i] = 0;
         grid.waterV[i] = 0;
+      } else {
+        grid.waterU[i] = Math.max(-MAX_VELOCITY, Math.min(MAX_VELOCITY, grid.waterU[i]));
+        grid.waterV[i] = Math.max(-MAX_VELOCITY, Math.min(MAX_VELOCITY, grid.waterV[i]));
       }
     }
 
@@ -71,10 +77,12 @@ export class Simulation {
       grid.eta[i] -= div[i] * dt;
     }
 
-    // Step 3b: Mask land cell eta to zero
+    // Step 3b: Mask land eta to zero; clamp water eta for stability
     for (let i = 0; i < ROWS * COLS; i++) {
       if (landMask[i]) {
         grid.eta[i] = 0;
+      } else {
+        grid.eta[i] = Math.max(-MAX_ETA, Math.min(MAX_ETA, grid.eta[i]));
       }
     }
 

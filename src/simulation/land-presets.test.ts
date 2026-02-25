@@ -92,13 +92,13 @@ describe("earth-like preset", () => {
 
   it("has land at Africa location (equator, ~20deg E)", () => {
     const mask = createLandMask("earth-like");
-    // Lat ~2.5°, lon ~-157.5° (central Africa in -180..180 system)
-    expect(mask[rowAtLatitude(2.5) * COLS + colAtLongitude(-157.5)]).toBe(1);
+    // Central Africa: lat ~0°, lon ~20°E
+    expect(mask[rowAtLatitude(0) * COLS + colAtLongitude(20)]).toBe(1);
   });
 
   it("has water at mid-Pacific", () => {
     const mask = createLandMask("earth-like");
-    // Lat ~2.5°, lon ~2.5° (mid-Pacific)
-    expect(mask[rowAtLatitude(2.5) * COLS + colAtLongitude(2.5)]).toBe(0);
+    // Mid-Pacific: lat ~0°, lon ~-157.5°
+    expect(mask[rowAtLatitude(0) * COLS + colAtLongitude(-157.5)]).toBe(0);
   });
 });
