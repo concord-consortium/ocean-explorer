@@ -1,7 +1,6 @@
 import { createLandMask } from "./land-presets";
-import { ROWS, COLS, latitudeAtRow } from "./grid";
-import { RESOLUTION_DEG } from "../constants";
-import { rowAtLatitude, colAtLongitude } from "../utils/grid-utils";
+import { ROWS, COLS, RESOLUTION_DEG } from "../constants";
+import { latitudeAtRow, rowAtLatitude, colAtLongitude, gridIndex } from "../utils/grid-utils";
 
 describe("createLandMask", () => {
   it("water-world has no land cells", () => {
@@ -20,7 +19,7 @@ describe("createLandMask", () => {
       const lat = latitudeAtRow(r);
       if (Math.abs(lat) <= 35) {
         for (let c = 0; c < COLS; c++) {
-          if (mask[r * COLS + c] === 1) hasLand = true;
+          if (mask[gridIndex(r, c)] === 1) hasLand = true;
         }
       }
     }
@@ -33,7 +32,7 @@ describe("createLandMask", () => {
       const lat = latitudeAtRow(r);
       if (Math.abs(lat) <= 40) continue;
       for (let c = 0; c < COLS; c++) {
-        expect(mask[r * COLS + c]).toBe(0);
+        expect(mask[gridIndex(r, c)]).toBe(0);
       }
     }
   });
@@ -44,14 +43,14 @@ describe("createLandMask", () => {
     // Check a mid-latitude row
     const midRow = Math.floor(ROWS / 2);
     // At least one of the first 3 columns should be land
-    const leftEdgeLand = mask[midRow * COLS + 0] === 1 ||
-                          mask[midRow * COLS + 1] === 1 ||
-                          mask[midRow * COLS + 2] === 1;
+    const leftEdgeLand = mask[gridIndex(midRow, 0)] === 1 ||
+                          mask[gridIndex(midRow, 1)] === 1 ||
+                          mask[gridIndex(midRow, 2)] === 1;
     expect(leftEdgeLand).toBe(true);
     // At least one of the last 3 columns should be land
-    const rightEdgeLand = mask[midRow * COLS + (COLS - 3)] === 1 ||
-                           mask[midRow * COLS + (COLS - 2)] === 1 ||
-                           mask[midRow * COLS + (COLS - 1)] === 1;
+    const rightEdgeLand = mask[gridIndex(midRow, COLS - 3)] === 1 ||
+                           mask[gridIndex(midRow, COLS - 2)] === 1 ||
+                           mask[gridIndex(midRow, COLS - 1)] === 1;
     expect(rightEdgeLand).toBe(true);
   });
 
@@ -59,10 +58,10 @@ describe("createLandMask", () => {
     const mask = createLandMask("north-south-continent");
     // Polar rows should be water
     for (let c = 0; c < COLS; c++) {
-      expect(mask[0 * COLS + c]).toBe(0);
-      expect(mask[1 * COLS + c]).toBe(0);
-      expect(mask[(ROWS - 2) * COLS + c]).toBe(0);
-      expect(mask[(ROWS - 1) * COLS + c]).toBe(0);
+      expect(mask[gridIndex(0, c)]).toBe(0);
+      expect(mask[gridIndex(1, c)]).toBe(0);
+      expect(mask[gridIndex(ROWS - 2, c)]).toBe(0);
+      expect(mask[gridIndex(ROWS - 1, c)]).toBe(0);
     }
   });
 
@@ -71,7 +70,7 @@ describe("createLandMask", () => {
     const midRow = Math.floor(ROWS / 2);
     let landCount = 0;
     for (let c = 0; c < COLS; c++) {
-      if (mask[midRow * COLS + c] === 1) landCount++;
+      if (mask[gridIndex(midRow, c)] === 1) landCount++;
     }
     expect(landCount).toBe(Math.round(30 / RESOLUTION_DEG));
   });
@@ -93,12 +92,12 @@ describe("earth-like preset", () => {
   it("has land at Africa location (equator, ~20deg E)", () => {
     const mask = createLandMask("earth-like");
     // Central Africa: lat ~0°, lon ~20°E
-    expect(mask[rowAtLatitude(0) * COLS + colAtLongitude(20)]).toBe(1);
+    expect(mask[gridIndex(rowAtLatitude(0), colAtLongitude(20))]).toBe(1);
   });
 
   it("has water at mid-Pacific", () => {
     const mask = createLandMask("earth-like");
     // Mid-Pacific: lat ~0°, lon ~-157.5°
-    expect(mask[rowAtLatitude(0) * COLS + colAtLongitude(-157.5)]).toBe(0);
+    expect(mask[gridIndex(rowAtLatitude(0), colAtLongitude(-157.5))]).toBe(0);
   });
 });

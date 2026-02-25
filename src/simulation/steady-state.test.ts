@@ -1,6 +1,6 @@
 import { Simulation } from "./simulation";
 import { ROWS, COLS } from "../constants";
-import { latitudeAtRow, rowAtLatitude } from "../utils/grid-utils";
+import { latitudeAtRow, rowAtLatitude, gridIndex } from "../utils/grid-utils";
 import { SimParams } from "./wind";
 import { coriolisParameter } from "./coriolis";
 import { divergence, pressureGradient } from "./spatial";
@@ -93,7 +93,7 @@ describe.skip("Steady-state with pressure gradients", () => {
       const f = coriolisParameter(lat, params.rotationRatio);
       if (Math.abs(f) < 1e-6) continue;
 
-      const i = r * COLS + 0; // any column (zonally symmetric)
+      const i = gridIndex(r, 0); // any column (zonally symmetric)
       const fu = f * sim.grid.waterU[i];
       const gDedy = -sim.g * dEtaDy[i];
 
@@ -141,7 +141,7 @@ describe("Steady-state with continents", () => {
       const lat = latitudeAtRow(r);
       const tSolar = temperature(lat, params.tempGradientRatio);
       for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
+        const i = gridIndex(r, c);
         sim.grid.temperatureField[i] = sim.grid.landMask[i] ? 0 : tSolar;
       }
     }

@@ -149,16 +149,24 @@ per row for efficiency, with the inner column loop selecting based on a neighbor
 
 **File: `src/utils/grid-utils.ts`**
 
+Add a `gridIndex(r, c)` function that converts (row, col) to a linear index
+(`r * COLS + c`). Use it everywhere instead of inline index arithmetic.
+
 Add two inverse functions alongside the existing `latitudeAtRow` and `longitudeAtCol`:
 
 ```ts
+function gridIndex(r: number, c: number): number
 function rowAtLatitude(lat: number): number
 function colAtLongitude(lon: number): number
 ```
 
 These are useful for:
+- Replacing inline `r * COLS + c` arithmetic throughout the codebase
 - Making land presets resolution-independent (section 3)
 - Making tests resolution-independent (section 7)
+
+`grid.ts` no longer re-exports constants or coordinate functions — consumers import
+directly from `constants.ts` and `grid-utils.ts`. `grid.ts` exports only the `Grid` class.
 
 ## 7. Tests
 
@@ -201,3 +209,11 @@ These files use `COLS`, `ROWS`, `DELTA_RAD` generically and require no modificat
    dampens the runaway acceleration at high-latitude coastal cells without introducing
    artifacts at mid-latitude coasts. `simulation.ts` moved from "Files not changed" to
    section 5.
+
+2. **2026-02-25 — Grid cleanup.** Three refactoring changes:
+   (a) Stopped re-exporting `RESOLUTION_DEG`, `COLS`, `ROWS`, and coordinate functions
+   from `grid.ts` — consumers now import directly from `constants.ts` and `grid-utils.ts`.
+   (b) Added `gridIndex(r, c)` to `grid-utils.ts` and replaced all `r * COLS + c` patterns
+   across the codebase (~40 occurrences in 14 files).
+   (c) Changed `getArrowSubset()` function in `arrow-utils.ts` to a precomputed
+   `arrowSubset` module-level constant.

@@ -10,12 +10,9 @@ export const COL_SKIP = Math.max(1, Math.round(COLS / TARGET_ARROWS_PER_DIM));
 export const ROW_SKIP = Math.max(1, Math.round(ROWS / TARGET_ARROWS_PER_DIM));
 
 /** Precomputed subset of (r, c) pairs for arrow rendering. */
-export function getArrowSubset(): { r: number; c: number }[] {
-  const subset: { r: number; c: number }[] = [];
-  for (let r = 0; r < ROWS; r += ROW_SKIP) {
-    for (let c = 0; c < COLS; c += COL_SKIP) {
-      subset.push({ r, c });
-    }
+export const arrowSubset: { r: number; c: number }[] = [];
+for (let r = 0; r < ROWS; r += ROW_SKIP) {
+  for (let c = 0; c < COLS; c += COL_SKIP) {
+    arrowSubset.push({ r, c });
   }
-  return subset;
 }

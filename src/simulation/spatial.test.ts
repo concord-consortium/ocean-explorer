@@ -1,7 +1,7 @@
 import { pressureGradient, divergence } from "./spatial";
-import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
-import { R_EARTH, DELTA_RAD } from "../constants";
-import { rowAtLatitude, colAtLongitude } from "../utils/grid-utils";
+import { Grid } from "./grid";
+import { ROWS, COLS, R_EARTH, DELTA_RAD } from "../constants";
+import { latitudeAtRow, rowAtLatitude, colAtLongitude, gridIndex } from "../utils/grid-utils";
 
 const rEq = rowAtLatitude(0);      // equatorial row
 const cMid = colAtLongitude(2.5);  // mid-column (away from wrap boundary)
@@ -15,7 +15,7 @@ describe("pressureGradient", () => {
     const { dEtaDx, dEtaDy } = pressureGradient(grid);
     for (let r = 1; r < ROWS - 1; r++) {
       for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
+        const i = gridIndex(r, c);
         expect(Math.abs(dEtaDx[i])).toBeLessThan(1e-15);
         expect(Math.abs(dEtaDy[i])).toBeLessThan(1e-15);
       }
@@ -36,7 +36,7 @@ describe("pressureGradient", () => {
     const lat = latitudeAtRow(rEq);
     const cosLat = Math.cos(lat * Math.PI / 180);
     const expectedGrad = 1.0 / (R_EARTH * cosLat * DELTA_RAD);
-    const i = rEq * COLS + cMid; // mid-column, away from wrap
+    const i = gridIndex(rEq, cMid); // mid-column, away from wrap
     expect(dEtaDx[i]).toBeCloseTo(expectedGrad, 10);
   });
 
@@ -50,8 +50,8 @@ describe("pressureGradient", () => {
 
     const { dEtaDx } = pressureGradient(grid);
     // Same dEta/dλ but different cos(lat) → different physical gradient
-    const iEquator = rEq * COLS + cMid;
-    const iHighLat = rowAtLatitude(62.5) * COLS + cMid;
+    const iEquator = gridIndex(rEq, cMid);
+    const iHighLat = gridIndex(rowAtLatitude(62.5), cMid);
     expect(Math.abs(dEtaDx[iHighLat])).toBeGreaterThan(Math.abs(dEtaDx[iEquator]));
   });
 
@@ -68,7 +68,7 @@ describe("pressureGradient", () => {
     // dEta/dy = 1.0 / (R * Δφ)
     const expectedGrad = 1.0 / (R_EARTH * DELTA_RAD);
     // Check interior row (not boundary)
-    const i = rEq * COLS + 0;
+    const i = gridIndex(rEq, 0);
     expect(dEtaDy[i]).toBeCloseTo(expectedGrad, 10);
   });
 });
@@ -76,19 +76,19 @@ describe("pressureGradient", () => {
 describe("pressureGradient with land", () => {
   it("returns zero gradient for land cells", () => {
     const grid = new Grid();
-    grid.landMask[rEq * COLS + cMid] = 1;
+    grid.landMask[gridIndex(rEq, cMid)] = 1;
     grid.setEta(rEq, cMid, 5.0);
     grid.setEta(rEq, cMid + 1, 10.0);
 
     const { dEtaDx, dEtaDy } = pressureGradient(grid);
-    expect(dEtaDx[rEq * COLS + cMid]).toBe(0);
-    expect(dEtaDy[rEq * COLS + cMid]).toBe(0);
+    expect(dEtaDx[gridIndex(rEq, cMid)]).toBe(0);
+    expect(dEtaDy[gridIndex(rEq, cMid)]).toBe(0);
   });
 
   it("uses zero-gradient at east land boundary", () => {
     const grid = new Grid();
     // Water cell at (rEq, cMid), land at (rEq, cMid+1)
-    grid.landMask[rEq * COLS + (cMid + 1)] = 1;
+    grid.landMask[gridIndex(rEq, cMid + 1)] = 1;
     grid.setEta(rEq, cMid - 1, 1.0);
     grid.setEta(rEq, cMid, 2.0);
     grid.setEta(rEq, cMid + 1, 99.0);  // should be ignored
@@ -99,13 +99,13 @@ describe("pressureGradient with land", () => {
     const lat = latitudeAtRow(rEq);
     const cosLat = Math.cos(lat * Math.PI / 180);
     const expected = (2.0 - 1.0) / (2 * R_EARTH * cosLat * DELTA_RAD);
-    expect(dEtaDx[rEq * COLS + cMid]).toBeCloseTo(expected, 10);
+    expect(dEtaDx[gridIndex(rEq, cMid)]).toBeCloseTo(expected, 10);
   });
 
   it("uses zero-gradient at north land boundary", () => {
     const grid = new Grid();
     // Water cell at (rEq, cMid), land at (rEq+1, cMid)
-    grid.landMask[(rEq + 1) * COLS + cMid] = 1;
+    grid.landMask[gridIndex(rEq + 1, cMid)] = 1;
     grid.setEta(rEq - 1, cMid, 1.0);
     grid.setEta(rEq, cMid, 2.0);
     grid.setEta(rEq + 1, cMid, 99.0);  // should be ignored
@@ -114,7 +114,7 @@ describe("pressureGradient with land", () => {
     // North neighbor is land → one-sided backward difference
     // dEtaDy = (etaHere - etaSouth) / (R * delta)
     const expected = (2.0 - 1.0) / (R_EARTH * DELTA_RAD);
-    expect(dEtaDy[rEq * COLS + cMid]).toBeCloseTo(expected, 10);
+    expect(dEtaDy[gridIndex(rEq, cMid)]).toBeCloseTo(expected, 10);
   });
 });
 
@@ -129,7 +129,7 @@ describe("divergence", () => {
     const div = divergence(grid);
     for (let r = 1; r < ROWS - 1; r++) {
       for (let c = 0; c < COLS; c++) {
-        expect(Math.abs(div[r * COLS + c])).toBeLessThan(1e-10);
+        expect(Math.abs(div[gridIndex(r, c)])).toBeLessThan(1e-10);
       }
     }
   });
@@ -145,7 +145,7 @@ describe("divergence", () => {
 
     const div = divergence(grid);
     // Interior cells should have positive divergence
-    const i = rEq * COLS + cMid;
+    const i = gridIndex(rEq, cMid);
     expect(div[i]).toBeGreaterThan(0);
   });
 
@@ -159,7 +159,7 @@ describe("divergence", () => {
 
     const div = divergence(grid);
     // Near equator: v changes from positive (south) to negative (north) → converging
-    const i = rEq * COLS + 0;
+    const i = gridIndex(rEq, 0);
     expect(div[i]).toBeLessThan(0);
   });
 });
@@ -167,17 +167,17 @@ describe("divergence", () => {
 describe("divergence with land", () => {
   it("returns zero divergence for land cells", () => {
     const grid = new Grid();
-    grid.landMask[rEq * COLS + cMid] = 1;
+    grid.landMask[gridIndex(rEq, cMid)] = 1;
     grid.setU(rEq, cMid, 1.0);
 
     const div = divergence(grid);
-    expect(div[rEq * COLS + cMid]).toBe(0);
+    expect(div[gridIndex(rEq, cMid)]).toBe(0);
   });
 
   it("treats land neighbor velocity as zero for flux", () => {
     const grid = new Grid();
     // Land at (rEq, cMid+1), water at (rEq, cMid) and (rEq, cMid-1)
-    grid.landMask[rEq * COLS + (cMid + 1)] = 1;
+    grid.landMask[gridIndex(rEq, cMid + 1)] = 1;
     grid.setU(rEq, cMid - 1, 0.5);
     grid.setU(rEq, cMid, 0.5);
     grid.setU(rEq, cMid + 1, 10.0);  // land cell — should be treated as 0
@@ -185,7 +185,7 @@ describe("divergence with land", () => {
     const div = divergence(grid);
     // At (rEq, cMid): east neighbor is land (u=0), west neighbor has u=0.5
     // du/dlam = (0 - 0.5) / (2 * DELTA_RAD) = negative
-    const i = rEq * COLS + cMid;
+    const i = gridIndex(rEq, cMid);
     expect(div[i]).toBeLessThan(0);  // converging (water piling up against coast)
   });
 });

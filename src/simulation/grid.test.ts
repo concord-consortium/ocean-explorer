@@ -1,6 +1,6 @@
-import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
-import { RESOLUTION_DEG } from "../constants";
-import { rowAtLatitude, colAtLongitude, longitudeAtCol } from "../utils/grid-utils";
+import { Grid } from "./grid";
+import { ROWS, COLS, RESOLUTION_DEG } from "../constants";
+import { latitudeAtRow, rowAtLatitude, colAtLongitude, longitudeAtCol, gridIndex } from "../utils/grid-utils";
 
 describe("Grid", () => {
   it("has 72 columns and 36 rows", () => {
@@ -83,13 +83,13 @@ describe("Grid", () => {
 
   it("isLand returns true after setting land", () => {
     const grid = new Grid();
-    grid.landMask[10 * COLS + 20] = 1;
+    grid.landMask[gridIndex(10, 20)] = 1;
     expect(grid.isLand(10, 20)).toBe(true);
   });
 
   it("isLand wraps longitude", () => {
     const grid = new Grid();
-    grid.landMask[5 * COLS + (COLS - 1)] = 1;
+    grid.landMask[gridIndex(5, COLS - 1)] = 1;
     expect(grid.isLand(5, -1)).toBe(true);
     expect(grid.isLand(5, COLS - 1)).toBe(true);
   });

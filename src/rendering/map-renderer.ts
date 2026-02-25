@@ -1,12 +1,11 @@
 import { Application, Graphics, GraphicsContext, Container } from "pixi.js";
-import { ROWS, COLS } from "../simulation/grid";
-import { WIND_SCALE, WATER_SCALE, LAND_COLOR, LEFT_MARGIN, RIGHT_MARGIN } from "../constants";
+import { ROWS, COLS, WIND_SCALE, WATER_SCALE, LAND_COLOR, LEFT_MARGIN, RIGHT_MARGIN } from "../constants";
 import { windU, SimParams } from "../simulation/wind";
 import type { IGrid } from "../types/grid-types";
 import type { Renderer, RendererOptions, RendererMetrics } from "../types/renderer-types";
 import { tempToColor, sshToColor } from "../utils/color-utils";
-import { latitudeAtRow, computeSshRange } from "../utils/grid-utils";
-import { getArrowSubset, COL_SKIP, ROW_SKIP } from "../utils/arrow-utils";
+import { latitudeAtRow, gridIndex, computeSshRange } from "../utils/grid-utils";
+import { arrowSubset, COL_SKIP, ROW_SKIP } from "../utils/arrow-utils";
 
 export async function createMapRenderer(canvas: HTMLCanvasElement, width: number, height: number):
     Promise<Renderer> {
@@ -18,8 +17,6 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
   const windContainer = new Container();
   const waterContainer = new Container();
   app.stage.addChild(bgContainer, windContainer, waterContainer);
-
-  const arrowSubset = getArrowSubset();
 
   // Shared arrow shape — horizontal arrow pointing right, centered at origin.
   // Each Graphics instance shares this context and varies only by transform + tint.
@@ -88,7 +85,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       const displayRow = ROWS - 1 - r;
 
       for (let c = 0; c < COLS; c++) {
-        const cellIdx = r * COLS + c;
+        const cellIdx = gridIndex(r, c);
         const bg = bgCells[cellIdx];
         bg.position.set(LEFT_MARGIN + c * cellW, displayRow * cellH);
         bg.scale.set(cellW + 0.5, cellH + 0.5);
@@ -118,7 +115,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       const displayRow = ROWS - 1 - r;
       const cy = displayRow * cellH + cellH / 2;
       const cx = LEFT_MARGIN + c * cellW + cellW * COL_SKIP / 2;
-      const cellIdx = r * COLS + c;
+      const cellIdx = gridIndex(r, c);
 
       // Wind arrow
       const wg = windArrows[ai];

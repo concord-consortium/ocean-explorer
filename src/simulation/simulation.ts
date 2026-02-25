@@ -1,9 +1,10 @@
-import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
+import { Grid } from "./grid";
 import { windU, SimParams } from "./wind";
 import {
-  DT, WIND_DRAG_COEFFICIENT, DRAG, G_STIFFNESS, RELAXATION_TIMESCALE,
+  ROWS, COLS, DT, WIND_DRAG_COEFFICIENT, DRAG, G_STIFFNESS, RELAXATION_TIMESCALE,
   MAX_VELOCITY, MAX_ETA, COASTAL_DRAG_MULTIPLIER, COASTAL_DRAG_MIN_LAT,
 } from "../constants";
+import { latitudeAtRow, gridIndex } from "../utils/grid-utils";
 import { coriolisParameter } from "./coriolis";
 import { pressureGradient, divergence } from "./spatial";
 import { advect } from "./advection";
@@ -50,14 +51,14 @@ export class Simulation {
       const detCoastal = dfCoastal * dfCoastal + coriolisFactor * coriolisFactor;
 
       for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
+        const i = gridIndex(r, c);
 
         // Enhanced drag for coastal cells at high latitudes (pole problem compensation)
         const coastal = highLat && (
-          landMask[r * COLS + ((c + 1) % COLS)] ||
-          landMask[r * COLS + ((c - 1 + COLS) % COLS)] ||
-          (r < ROWS - 1 && landMask[(r + 1) * COLS + c]) ||
-          (r > 0 && landMask[(r - 1) * COLS + c]));
+          landMask[gridIndex(r, (c + 1) % COLS)] ||
+          landMask[gridIndex(r, (c - 1 + COLS) % COLS)] ||
+          (r < ROWS - 1 && landMask[gridIndex(r + 1, c)]) ||
+          (r > 0 && landMask[gridIndex(r - 1, c)]));
         const df = coastal ? dfCoastal : dfOpen;
         const det = coastal ? detCoastal : detOpen;
 
@@ -111,7 +112,7 @@ export class Simulation {
       const lat = latitudeAtRow(r);
       const tSolar = temperature(lat, params.tempGradientRatio);
       for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
+        const i = gridIndex(r, c);
         grid.temperatureField[i] += (tSolar - grid.temperatureField[i]) / this.relaxationTimescale * dt;
       }
     }

@@ -1,15 +1,14 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { ROWS, COLS } from "../simulation/grid";
 import { windU, SimParams } from "../simulation/wind";
 import {
   GLOBE_WIDTH_SEGMENTS, GLOBE_HEIGHT_SEGMENTS, GLOBE_BG_COLOR,
   GLOBE_MIN_DISTANCE, GLOBE_MAX_DISTANCE, GLOBE_INITIAL_DISTANCE,
-  WIND_SCALE, WATER_SCALE, LAND_COLOR,
+  WIND_SCALE, WATER_SCALE, LAND_COLOR, ROWS, COLS,
 } from "../constants";
 import { tempToColor, sshToColor } from "../utils/color-utils";
-import { latitudeAtRow, longitudeAtCol, computeSshRange } from "../utils/grid-utils";
-import { getArrowSubset } from "../utils/arrow-utils";
+import { latitudeAtRow, longitudeAtCol, gridIndex, computeSshRange } from "../utils/grid-utils";
+import { arrowSubset } from "../utils/arrow-utils";
 import { buildArrowGeometry, buildArrowMatrix } from "./globe-arrows";
 import type { IGrid } from "../types/grid-types";
 import type { Renderer, RendererOptions, RendererMetrics, GlobeCameraState } from "../types/renderer-types";
@@ -73,7 +72,6 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
 
   // --- Arrow InstancedMeshes ---
   const arrowGeo = buildArrowGeometry();
-  const arrowSubset = getArrowSubset();
   const instanceCount = arrowSubset.length;
 
   const windMat = new THREE.MeshBasicMaterial({ color: 0xcccccc });
@@ -118,8 +116,8 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
       const gridRow = ROWS - 1 - r;
 
       for (let c = 0; c < COLS; c++) {
-        const cellIdx = gridRow * COLS + c;
-        const pixelIdx = (r * COLS + c) * 4;
+        const cellIdx = gridIndex(gridRow, c);
+        const pixelIdx = gridIndex(r, c) * 4;
 
         let color: number;
         if (grid.landMask[cellIdx]) {
@@ -153,7 +151,7 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
       const lat = latitudeAtRow(r);
       const wU = windU(lat, params);
       const lon = longitudeAtCol(c);
-      const cellIdx = r * COLS + c;
+      const cellIdx = gridIndex(r, c);
       const isLand = grid.landMask[cellIdx] === 1;
 
       // --- Wind arrow ---

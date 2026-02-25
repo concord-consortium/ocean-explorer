@@ -7,8 +7,8 @@ import { SimulationStepper } from "../simulation/simulation-stepper";
 import { SimParams } from "../simulation/wind";
 import { LandPreset, createLandMask } from "../simulation/land-presets";
 import { temperature } from "../simulation/temperature";
-import { latitudeAtRow } from "../simulation/grid";
 import { ROWS, COLS, TARGET_FPS } from "../constants";
+import { latitudeAtRow, gridIndex } from "../utils/grid-utils";
 import { FrameHeadroomBenchmark } from "../benchmark/frame-headroom-benchmark";
 
 interface Props {
@@ -201,7 +201,7 @@ export const SimulationCanvas: React.FC<Props> = ({
       const lat = latitudeAtRow(r);
       const tSolar = temperature(lat, paramsRef.current.tempGradientRatio);
       for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
+        const i = gridIndex(r, c);
         sim.grid.temperatureField[i] = sim.grid.landMask[i] ? 0 : tSolar;
       }
     }

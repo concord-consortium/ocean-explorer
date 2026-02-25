@@ -1,8 +1,8 @@
 import { Simulation } from "./simulation";
-import { ROWS, COLS, latitudeAtRow } from "./grid";
+import { ROWS, COLS } from "../constants";
+import { latitudeAtRow, rowAtLatitude, colAtLongitude, gridIndex } from "../utils/grid-utils";
 import { windU, SimParams } from "./wind";
 import { temperature } from "./temperature";
-import { rowAtLatitude, colAtLongitude } from "../utils/grid-utils";
 
 const rEq = rowAtLatitude(2.5);      // near equator (18 at 5°)
 const cMid = colAtLongitude(2.5);    // mid-column (36 at 5°)
@@ -142,7 +142,7 @@ describe("Land masking in simulation step", () => {
   it("land cells have zero velocity after step even with wind forcing", () => {
     const sim = new Simulation();
     // Mark a cell as land
-    sim.grid.landMask[rEq * COLS + cMid] = 1;
+    sim.grid.landMask[gridIndex(rEq, cMid)] = 1;
     sim.step(defaultParams);
     expect(sim.grid.getU(rEq, cMid)).toBe(0);
     expect(sim.grid.getV(rEq, cMid)).toBe(0);
@@ -150,7 +150,7 @@ describe("Land masking in simulation step", () => {
 
   it("land cells have zero eta after step", () => {
     const sim = new Simulation();
-    sim.grid.landMask[rEq * COLS + cMid] = 1;
+    sim.grid.landMask[gridIndex(rEq, cMid)] = 1;
     // Give it initial eta to verify it gets cleared
     sim.grid.setEta(rEq, cMid, 5.0);
     sim.step(defaultParams);
@@ -159,7 +159,7 @@ describe("Land masking in simulation step", () => {
 
   it("water cells adjacent to land still evolve", () => {
     const sim = new Simulation();
-    sim.grid.landMask[rEq * COLS + (cMid + 1)] = 1;
+    sim.grid.landMask[gridIndex(rEq, cMid + 1)] = 1;
     sim.step(defaultParams);
     // Water cell at (rEq, cMid) should still have nonzero velocity from wind
     expect(sim.grid.getU(rEq, cMid)).not.toBe(0);
@@ -229,33 +229,33 @@ describe("Pressure gradient integration", () => {
 describe("Temperature in simulation step", () => {
   it("land cells have zero temperature after step", () => {
     const sim = new Simulation();
-    sim.grid.landMask[rEq * COLS + cMid] = 1;
+    sim.grid.landMask[gridIndex(rEq, cMid)] = 1;
     // Initialize with nonzero temperature
-    sim.grid.temperatureField[rEq * COLS + cMid] = 25;
+    sim.grid.temperatureField[gridIndex(rEq, cMid)] = 25;
     sim.step(defaultParams);
-    expect(sim.grid.temperatureField[rEq * COLS + cMid]).toBe(0);
+    expect(sim.grid.temperatureField[gridIndex(rEq, cMid)]).toBe(0);
   });
 
   it("relaxation warms a cell colder than T_solar", () => {
     const sim = new Simulation();
     const tSolar = temperature(latitudeAtRow(rEq), defaultParams.tempGradientRatio);
     // Set temperature well below solar target
-    sim.grid.temperatureField[rEq * COLS + cMid] = tSolar - 10;
-    const tBefore = sim.grid.temperatureField[rEq * COLS + cMid];
+    sim.grid.temperatureField[gridIndex(rEq, cMid)] = tSolar - 10;
+    const tBefore = sim.grid.temperatureField[gridIndex(rEq, cMid)];
     sim.step(defaultParams);
     // Temperature should have increased (moved toward T_solar)
-    expect(sim.grid.temperatureField[rEq * COLS + cMid]).toBeGreaterThan(tBefore);
+    expect(sim.grid.temperatureField[gridIndex(rEq, cMid)]).toBeGreaterThan(tBefore);
   });
 
   it("relaxation cools a cell warmer than T_solar", () => {
     const sim = new Simulation();
     const tSolar = temperature(latitudeAtRow(rEq), defaultParams.tempGradientRatio);
     // Set temperature above solar target
-    sim.grid.temperatureField[rEq * COLS + cMid] = tSolar + 10;
-    const tBefore = sim.grid.temperatureField[rEq * COLS + cMid];
+    sim.grid.temperatureField[gridIndex(rEq, cMid)] = tSolar + 10;
+    const tBefore = sim.grid.temperatureField[gridIndex(rEq, cMid)];
     sim.step(defaultParams);
     // Temperature should have decreased
-    expect(sim.grid.temperatureField[rEq * COLS + cMid]).toBeLessThan(tBefore);
+    expect(sim.grid.temperatureField[gridIndex(rEq, cMid)]).toBeLessThan(tBefore);
   });
 
   it("temperature at T_solar with no currents stays at T_solar", () => {
@@ -266,7 +266,7 @@ describe("Temperature in simulation step", () => {
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const lat = latitudeAtRow(r);
-        sim.grid.temperatureField[r * COLS + c] = temperature(lat, params.tempGradientRatio);
+        sim.grid.temperatureField[gridIndex(r, c)] = temperature(lat, params.tempGradientRatio);
       }
     }
     const before = new Float64Array(sim.grid.temperatureField);

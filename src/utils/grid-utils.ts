@@ -1,6 +1,11 @@
 import { RESOLUTION_DEG, COLS, ROWS } from "../constants";
 import type { IGrid } from "../types/grid-types";
 
+/** Convert (row, col) to linear index in row-major grid arrays. */
+export function gridIndex(r: number, c: number): number {
+  return r * COLS + c;
+}
+
 /** Returns latitude in degrees for the center of the given row.
  *  Row 0 is the southernmost band, Row ROWS-1 is the northernmost. */
 export function latitudeAtRow(row: number): number {

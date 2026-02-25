@@ -1,5 +1,5 @@
 import { ROWS, COLS } from "../constants";
-import { latitudeAtRow, longitudeAtCol, colAtLongitude } from "../utils/grid-utils";
+import { latitudeAtRow, longitudeAtCol, colAtLongitude, gridIndex } from "../utils/grid-utils";
 import { EARTH_MASK_ROWS } from "./earth-land-mask";
 
 export type LandPreset = "water-world" | "equatorial-continent" | "north-south-continent" | "earth-like";
@@ -48,18 +48,18 @@ function fillDeadEnds(mask: Uint8Array): void {
     changed = false;
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
+        const i = gridIndex(r, c);
         if (mask[i]) continue; // already land
 
         let landNeighbors = 0;
         // East (wrapping)
-        if (mask[r * COLS + ((c + 1) % COLS)]) landNeighbors++;
+        if (mask[gridIndex(r, (c + 1) % COLS)]) landNeighbors++;
         // West (wrapping)
-        if (mask[r * COLS + ((c - 1 + COLS) % COLS)]) landNeighbors++;
+        if (mask[gridIndex(r, (c - 1 + COLS) % COLS)]) landNeighbors++;
         // North (treat out-of-bounds as open water for polar rows)
-        if (r < ROWS - 1 && mask[(r + 1) * COLS + c]) landNeighbors++;
+        if (r < ROWS - 1 && mask[gridIndex(r + 1, c)]) landNeighbors++;
         // South
-        if (r > 0 && mask[(r - 1) * COLS + c]) landNeighbors++;
+        if (r > 0 && mask[gridIndex(r - 1, c)]) landNeighbors++;
 
         if (landNeighbors >= 3) {
           mask[i] = 1;
@@ -81,7 +81,7 @@ function fillEquatorialContinent(mask: Uint8Array): void {
     const lat = latitudeAtRow(r);
     if (Math.abs(lat) > 37.5) continue;
     for (let c = cMin; c <= cMax; c++) {
-      mask[r * COLS + c] = 1;
+      mask[gridIndex(r, c)] = 1;
     }
   }
 }
@@ -97,7 +97,7 @@ function fillNorthSouthContinent(mask: Uint8Array): void {
     for (let c = 0; c < COLS; c++) {
       const lon = longitudeAtCol(c);
       if (lon >= 165 || lon <= -165) {
-        mask[r * COLS + c] = 1;
+        mask[gridIndex(r, c)] = 1;
       }
     }
   }
@@ -112,7 +112,7 @@ function fillEarthLike(mask: Uint8Array): void {
     const row = EARTH_MASK_ROWS[r];
     for (let c = 0; c < COLS; c++) {
       if (row[c] === "1") {
-        mask[r * COLS + c] = 1;
+        mask[gridIndex(r, c)] = 1;
       }
     }
   }
