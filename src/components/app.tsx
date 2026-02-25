@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { SimulationCanvas } from "./simulation-canvas";
 import { SimParams } from "../simulation/wind";
+import { LandPreset } from "../simulation/land-presets";
 import { FrameHeadroomBenchmark, BenchmarkResult } from "../benchmark/frame-headroom-benchmark";
 import { TARGET_FPS, DEFAULT_STEPS_PER_SECOND } from "../constants";
 
@@ -16,6 +17,7 @@ export const App = () => {
   const [paused, setPaused] = useState(true);
   const [arrowScale, setArrowScale] = useState(1.0);
   const [backgroundMode, setBackgroundMode] = useState<"temperature" | "ssh">("temperature");
+  const [landPreset, setLandPreset] = useState<LandPreset>("water-world");
 
   const controlsRef = useRef<HTMLDivElement>(null);
   const benchmarkRef = useRef<FrameHeadroomBenchmark | null>(null);
@@ -93,6 +95,15 @@ export const App = () => {
             <option value="ssh">Sea Surface Height</option>
           </select>
         </label>
+        <label>
+          Continents:
+          <select value={landPreset} onChange={e => setLandPreset(e.target.value as LandPreset)}>
+            <option value="water-world">Water World</option>
+            <option value="equatorial-continent">Equatorial Continent</option>
+            <option value="north-south-continent">North-South Continent</option>
+            <option value="earth-like">Earth-Like</option>
+          </select>
+        </label>
         <button
           onClick={() => {
             if (benchmarkRef.current && !benchmarkRunning) {
@@ -123,6 +134,7 @@ export const App = () => {
           paused={paused}
           arrowScale={arrowScale}
           backgroundMode={backgroundMode}
+          landPreset={landPreset}
           benchmarkRef={benchmarkRef}
         />
       </div>

@@ -65,4 +65,29 @@ describe("Grid", () => {
     // Middle row 18 should be 2.5 (just north of equator)
     expect(latitudeAtRow(18)).toBe(2.5);
   });
+
+  it("initializes landMask to all water (zeros)", () => {
+    const grid = new Grid();
+    for (let i = 0; i < ROWS * COLS; i++) {
+      expect(grid.landMask[i]).toBe(0);
+    }
+  });
+
+  it("isLand returns false for water cells", () => {
+    const grid = new Grid();
+    expect(grid.isLand(10, 20)).toBe(false);
+  });
+
+  it("isLand returns true after setting land", () => {
+    const grid = new Grid();
+    grid.landMask[10 * COLS + 20] = 1;
+    expect(grid.isLand(10, 20)).toBe(true);
+  });
+
+  it("isLand wraps longitude", () => {
+    const grid = new Grid();
+    grid.landMask[5 * COLS + 71] = 1;
+    expect(grid.isLand(5, -1)).toBe(true);
+    expect(grid.isLand(5, 71)).toBe(true);
+  });
 });

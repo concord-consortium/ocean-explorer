@@ -171,6 +171,14 @@ where Ω is the planetary rotation rate. This means:
 - **Low rotation speed**: deflection approaches zero everywhere.
 - **The transition is smooth**, not a sudden jump.
 
+At a given latitude, the deflection is the same regardless of which direction the water is
+moving. The Coriolis acceleration is always perpendicular to the velocity vector, with
+magnitude *f* × speed. Northward flow, eastward flow, or any angle in between all get
+turned at the same rate. This is because the Coriolis term is a cross product with the
+vertical component of Earth's angular velocity, which is uniform in all horizontal
+directions. The turning rate (*f* radians per second) depends only on latitude and
+planetary rotation rate.
+
 For the simulation, the Ekman deflection angle should be computed as a function of the local
 Coriolis parameter, varying smoothly from near 0 deg at the equator to near 90 deg at higher
 latitudes. This is not much harder to implement than a fixed 90 deg rule and correctly

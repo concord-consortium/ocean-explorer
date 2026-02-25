@@ -53,10 +53,26 @@ export class Simulation {
       }
     }
 
+    // Step 2b: Mask land cell velocities to zero (before divergence computation)
+    const { landMask } = grid;
+    for (let i = 0; i < ROWS * COLS; i++) {
+      if (landMask[i]) {
+        grid.waterU[i] = 0;
+        grid.waterV[i] = 0;
+      }
+    }
+
     // Step 3: Update eta from velocity divergence
     const div = divergence(grid);
     for (let i = 0; i < ROWS * COLS; i++) {
       grid.eta[i] -= div[i] * dt;
+    }
+
+    // Step 3b: Mask land cell eta to zero
+    for (let i = 0; i < ROWS * COLS; i++) {
+      if (landMask[i]) {
+        grid.eta[i] = 0;
+      }
     }
   }
 }

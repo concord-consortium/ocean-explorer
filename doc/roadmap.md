@@ -36,11 +36,13 @@ evaluate and give feedback on the simulation behavior.
 
 Each phase follows the same workflow:
 
-1. **Create a branch.** Branch from the **previous phase's branch** (not main). Name it with
-   the Jira story prefix and the phase name (e.g., `OE-2-phase-3` branching from
-   `OE-2-phase-2`). Phase 1 branches from main. The Jira story may change between phases —
-   use the active story at the time. When creating a PR, target the previous phase's branch
-   as the base so the diff shows only the current phase's changes.
+1. **Create a branch first.** Before any other work (including the design doc), branch from
+   the **previous phase's branch** (not main). Name it with the Jira story prefix and the
+   phase name (e.g., `OE-2-phase-3` branching from `OE-2-phase-2`). Phase 1 branches from
+   main. The Jira story may change between phases — use the active story at the time. When
+   creating a PR, target the previous phase's branch as the base so the diff shows only the
+   current phase's changes. All commits for the phase — design doc, implementation plan, code,
+   and user guide updates — go on this branch.
 
 2. **Write a detailed design doc.** Use the `brainstorming` skill to create
    `doc/phase-N-design.md`. Follow the structure of the existing design docs

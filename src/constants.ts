@@ -11,8 +11,8 @@ export const ROWS = 180 / RESOLUTION_DEG;   // 36
 
 // ── Simulation ──
 
-/** Simulation timestep in seconds (1 hour). */
-export const DT = 3600;
+/** Simulation timestep in seconds (15 minutes). */
+export const DT = 900;
 
 /** Fraction of wind speed transferred to water acceleration (s⁻¹). */
 export const WIND_DRAG_COEFFICIENT = 5e-6;
@@ -62,3 +62,8 @@ export const R_EARTH = 6.371e6;
 
 /** Grid spacing in radians (5° converted). */
 export const DELTA_RAD = RESOLUTION_DEG * Math.PI / 180;
+
+// ── Phase 4: Continental boundaries ──
+
+/** Color for land cells (gray-brown). */
+export const LAND_COLOR = 0x8B7355;

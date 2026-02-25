@@ -1,6 +1,6 @@
 import { Application, Graphics, GraphicsContext, Container, Text, TextStyle } from "pixi.js";
 import { Grid, ROWS, COLS, latitudeAtRow } from "../simulation/grid";
-import { TARGET_FPS, COLOR_MIN, COLOR_MAX, WIND_SCALE, WATER_SCALE } from "../constants";
+import { TARGET_FPS, COLOR_MIN, COLOR_MAX, WIND_SCALE, WATER_SCALE, LAND_COLOR } from "../constants";
 import { windU, SimParams } from "../simulation/wind";
 import { temperature } from "../simulation/temperature";
 
@@ -189,6 +189,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     let minEta = 0, maxEta = 0;
     if (opts.backgroundMode === "ssh") {
       for (let i = 0; i < ROWS * COLS; i++) {
+        if (grid.landMask[i]) continue;
         if (grid.eta[i] < minEta) minEta = grid.eta[i];
         if (grid.eta[i] > maxEta) maxEta = grid.eta[i];
       }
@@ -205,7 +206,9 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
         bg.position.set(LEFT_MARGIN + c * cellW, displayRow * cellH);
         bg.scale.set(cellW + 0.5, cellH + 0.5);
 
-        if (opts.backgroundMode === "ssh") {
+        if (grid.landMask[cellIdx]) {
+          bg.tint = LAND_COLOR;
+        } else if (opts.backgroundMode === "ssh") {
           bg.tint = sshToColor(grid.eta[cellIdx], minEta, maxEta);
         } else {
           const t = temperature(lat, params.tempGradientRatio);
@@ -259,7 +262,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
         const speed = Math.sqrt(uVal ** 2 + vVal ** 2);
         if (speed > maxWaterSpeed) maxWaterSpeed = speed;
 
-        if (opts.showWater && showArrowAtCol) {
+        if (opts.showWater && showArrowAtCol && !grid.landMask[arrowIdx]) {
           const len = Math.min(speed / WATER_SCALE, 1) * maxArrowLen;
           if (len < 0.5) {
             wa.visible = false;

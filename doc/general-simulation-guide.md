@@ -216,6 +216,66 @@ data range. Fixed scales make parameter sensitivity visible — when the user ch
 parameter, arrows grow or shrink against the same legend, showing how the system responds.
 Auto-scaling hides this by always filling the visual range.
 
+## Numerical stability
+
+### CFL condition with variable grid spacing
+
+The Courant-Friedrichs-Lewy (CFL) condition for explicit time-stepping requires `c·dt/dx < 1`,
+where `c` is the fastest wave speed, `dt` is the timestep, and `dx` is the grid spacing.
+
+On grids where cell size varies spatially (e.g., lat-lon grids where zonal width shrinks as
+`cos(lat)` toward the poles), check the CFL number at the **smallest cells**, not just typical
+ones. A timestep that is stable for mid-latitude cells can violate CFL at the poles by a factor
+of 3 or more.
+
+Symmetry can mask CFL violations: if the forcing and geometry produce no gradients in the
+narrow-cell direction, the CFL constraint in that direction is never activated. Adding features
+that break the symmetry (e.g., land boundaries) can trigger previously-dormant CFL violations.
+When adding solid boundaries or other symmetry-breaking features, re-check CFL at the smallest
+cells.
+
+### Arakawa grid classification
+
+Arakawa and Lamb (1977) classified five ways to arrange velocity and scalar variables on a
+structured grid, labeled A through E:
+
+| Grid | Scalars (η, T) | Velocity (u, v) | Notes |
+|------|----------------|-----------------|-------|
+| **A** | Cell centers | Cell centers (collocated) | Simplest. Pressure gradients span 2Δx, admitting a checkerboard mode. |
+| **B** | Cell centers | Cell corners | Both velocity components at the same location — natural for Coriolis coupling. |
+| **C** | Cell centers | u at east/west faces, v at north/south faces | Pressure gradients and divergence use Δx spacing — no checkerboard mode. Most widely used in ocean/atmosphere models. |
+| **D** | Cell centers | u at north/south faces, v at east/west faces | Transpose of C. Rarely used. |
+| **E** | Cell centers | Cell corners, rotated 45° | Equivalent to B on a rotated mesh. |
+
+The key trade-off is between collocated (A-grid) simplicity and staggered (C-grid) numerical
+properties. On a C-grid, the velocity component that drives flux across a cell face lives at
+that face, so pressure gradients and divergence are computed over Δx (one cell width) rather
+than 2Δx. This eliminates the checkerboard decoupling mode where alternating cells can hold
+opposite values without generating a corrective gradient.
+
+The cost is that Coriolis coupling becomes non-local: the cross-velocity needed for the
+Coriolis term must be averaged from neighboring face values (typically a 4-point average),
+which introduces cross-latitude coupling and can degrade geostrophic balance.
+
+For prototyping or coarse-resolution models, the A-grid's simplicity may outweigh the C-grid's
+numerical advantages — but land boundaries and narrow channels tend to activate the
+checkerboard mode that the A-grid admits (see below).
+
+### Collocated grids and narrow channels
+
+On a collocated grid (all variables at cell centers), water cells in narrow pockets (1–2 cells
+wide, bounded by solid walls) can develop numerical instabilities. The divergence at each cell
+depends on *neighbor* velocities, while friction/drag acts on the cell's *own* velocity. In a
+narrow pocket both cells see the same pressure gradient, and divergence pumps the height field
+in opposite directions — a positive feedback loop that local drag cannot counteract.
+
+A staggered grid (e.g., Arakawa C-grid, with velocities at cell faces and scalars at centers)
+avoids this because velocity directly couples pressure to divergence at the same location.
+
+For collocated grids, the practical fix is to eliminate narrow pockets during geometry setup —
+for example, converting dead-end cells (3+ solid neighbors out of 4) to solid, iterating until
+no dead-ends remain. This prevents the instability without requiring a grid architecture change.
+
 ## Testing
 
 ### Physics validation
@@ -235,6 +295,24 @@ threshold (e.g., max velocity change < 1e-6 per step). Record the stabilization 
 of steps). Compare the resulting field against expected values within tolerance. When parameter
 tuning shifts stabilization time, the test failure reports both old and new values, making
 regressions visible.
+
+### Detect divergence in convergence tests
+
+A convergence test that checks `maxDelta < threshold` can silently pass when the simulation
+has blown up. If values overflow to `Infinity` or `NaN`, the delta computation produces `NaN`,
+and `NaN > threshold` evaluates to `false` in JavaScript (and most languages). The max-delta
+tracker stays at its initial value (typically 0), which passes the threshold check — the test
+reports convergence when the simulation has actually diverged.
+
+Always add an explicit divergence check before the convergence test:
+
+```typescript
+if (!isFinite(maxDelta)) {
+  throw new Error(`Simulation diverged at iteration ${iter}`);
+}
+```
+
+This catches overflow immediately rather than letting the test produce a false positive.
 
 ### Visual output
 

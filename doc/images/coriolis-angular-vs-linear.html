@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Angular vs Linear Velocity — Why Ω Is the Same Everywhere</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
+
+    #info {
+      position: absolute; top: 16px; left: 16px; z-index: 10;
+      color: #e2e8f0; max-width: 400px;
+    }
+    #info h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    #info p { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 6px; }
+    #info .key { color: #e2e8f0; font-weight: 500; }
+
+    #controls {
+      position: absolute; top: 16px; right: 16px; z-index: 10;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    button {
+      background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #93c5fd; padding: 8px 16px; border-radius: 6px; cursor: pointer;
+      font-size: 13px; font-family: inherit; transition: background 0.15s;
+    }
+    button:hover { background: rgba(59, 130, 246, 0.35); }
+    button.active { background: rgba(59, 130, 246, 0.5); border-color: #3b82f6; color: #fff; }
+    .speed-control { color: #94a3b8; font-size: 12px; }
+    .speed-control input { width: 100px; vertical-align: middle; }
+
+    #legend {
+      position: absolute; bottom: 20px; left: 20px; z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px; padding: 12px 16px;
+      color: #cbd5e1; font-size: 12px; line-height: 2;
+    }
+    .legend-row { display: flex; align-items: center; gap: 10px; }
+    .swatch { width: 24px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+
+    .point-label {
+      color: #f1f5f9; font-size: 13px; font-weight: 600;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+      pointer-events: none; white-space: nowrap;
+    }
+    .comp-label {
+      font-size: 11px; font-weight: 500;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.95);
+      pointer-events: none; white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <h2>Angular vs Linear Velocity</h2>
+    <p>
+      <span class="key">Angular velocity (Ω)</span> is the same at every point on Earth —
+      every point completes one full rotation in the same time.
+    </p>
+    <p>
+      <span class="key">Linear speed</span> differs: it equals Ω × distance from the axis.
+      The equator traces a huge circle (fast), while the pole barely moves (slow).
+    </p>
+    <p>
+      The Coriolis parameter f = 2Ω sin φ uses the <em>angular</em> velocity, which is why
+      it's a single value for the whole planet. The sin φ comes from decomposing Ω
+      relative to the local surface (see the decomposition visualization).
+    </p>
+    <p style="color:#64748b; margin-top:8px">Drag to rotate · Scroll to zoom</p>
+  </div>
+
+  <div id="controls">
+    <button id="spinBtn" class="active">Spinning</button>
+    <div class="speed-control">
+      Speed <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1">
+    </div>
+  </div>
+
+  <div id="legend">
+    <div class="legend-row">
+      <span class="swatch" style="background:#f59e0b"></span>
+      Tangential velocity — proportional to distance from axis
+    </div>
+    <div class="legend-row">
+      <span class="swatch" style="background:#6366f1; opacity:0.5"></span>
+      Distance from rotation axis (orbit radius)
+    </div>
+    <div class="legend-row">
+      <span class="swatch" style="background:#94a3b8; opacity:0.3"></span>
+      Circular orbit path
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+    // ── Scene ──
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100);
+    camera.position.set(1.8, 2.2, 2.2);
+
+    const gl = new THREE.WebGLRenderer({ antialias: true });
+    gl.setSize(innerWidth, innerHeight);
+    gl.setPixelRatio(devicePixelRatio);
+    gl.setClearColor(0x0f172a);
+    document.body.appendChild(gl.domElement);
+
+    const cssRenderer = new CSS2DRenderer();
+    cssRenderer.setSize(innerWidth, innerHeight);
+    cssRenderer.domElement.style.position = 'absolute';
+    cssRenderer.domElement.style.top = '0';
+    cssRenderer.domElement.style.pointerEvents = 'none';
+    document.body.appendChild(cssRenderer.domElement);
+
+    const orbit = new OrbitControls(camera, gl.domElement);
+    orbit.target.set(0, 0.2, 0);
+    orbit.enableDamping = true;
+    orbit.dampingFactor = 0.08;
+    orbit.update();
+
+    // ── State ──
+    let spinning = true;
+    let speedMul = 1;
+    let angle = 0;
+
+    const spinBtn = document.getElementById('spinBtn');
+    spinBtn.addEventListener('click', () => {
+      spinning = !spinning;
+      spinBtn.textContent = spinning ? 'Spinning' : 'Paused';
+      spinBtn.classList.toggle('active', spinning);
+    });
+    document.getElementById('speedSlider').addEventListener('input', e => {
+      speedMul = parseFloat(e.target.value);
+    });
+
+    // ── Helpers ──
+    function makeLabel(text, cls, color) {
+      const el = document.createElement('div');
+      el.className = cls;
+      if (color) el.style.color = color;
+      el.textContent = text;
+      return new CSS2DObject(el);
+    }
+
+    // ── Earth ──
+    scene.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1, 64, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0x3b82f6, transparent: true, opacity: 0.07, side: THREE.DoubleSide
+      })
+    ));
+    scene.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1.002, 24, 12),
+      new THREE.MeshBasicMaterial({
+        color: 0x60a5fa, wireframe: true, transparent: true, opacity: 0.08
+      })
+    ));
+
+    // ── Rotation axis ──
+    const axLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, -1.5, 0), new THREE.Vector3(0, 1.5, 0)
+      ]),
+      new THREE.LineDashedMaterial({
+        color: 0x3b82f6, dashSize: 0.06, gapSize: 0.04, transparent: true, opacity: 0.35
+      })
+    );
+    axLine.computeLineDistances();
+    scene.add(axLine);
+
+    scene.add(new THREE.ArrowHelper(
+      new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1.3, 0),
+      0.2, 0x3b82f6, 0.08, 0.035
+    ));
+    const axLbl = makeLabel('Ω (same everywhere)', 'comp-label', '#60a5fa');
+    axLbl.position.set(0, 1.58, 0);
+    scene.add(axLbl);
+
+    // ── Equator reference circle ──
+    const eqPts = [];
+    for (let i = 0; i <= 128; i++) {
+      eqPts.push(new THREE.Vector3(
+        Math.cos((i / 128) * Math.PI * 2), 0,
+        Math.sin((i / 128) * Math.PI * 2)
+      ));
+    }
+    scene.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(eqPts),
+      new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.15 })
+    ));
+
+    // ── Latitude sites ──
+    const latitudes = [
+      { lat: 0,           name: 'Equator', color: 0xfbbf24 },
+      { lat: Math.PI / 4, name: '45°',     color: 0xa78bfa },
+      { lat: Math.PI / 2, name: 'Pole',    color: 0x38bdf8 },
+    ];
+
+    // Groups that rotate with Earth
+    const earthGroup = new THREE.Group();
+    scene.add(earthGroup);
+
+    // Objects we need to update each frame
+    const dynamicObjects = [];
+
+    for (const { lat, name, color } of latitudes) {
+      const cL = Math.cos(lat), sL = Math.sin(lat);
+      // Distance from rotation axis = R cos(lat)
+      const orbitRadius = cL;
+      const y = sL;
+
+      // ── Orbit circle (static, doesn't rotate) ──
+      if (orbitRadius > 0.01) {
+        const oPts = [];
+        for (let i = 0; i <= 128; i++) {
+          const a = (i / 128) * Math.PI * 2;
+          oPts.push(new THREE.Vector3(Math.cos(a) * orbitRadius, y, Math.sin(a) * orbitRadius));
+        }
+        scene.add(new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(oPts),
+          new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.2 })
+        ));
+      }
+
+      // ── Distance-from-axis line (rotates with Earth) ──
+      const axisLine = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(0, y, 0),
+          new THREE.Vector3(orbitRadius, y, 0)
+        ]),
+        new THREE.LineDashedMaterial({
+          color: 0x6366f1, dashSize: 0.04, gapSize: 0.03, transparent: true, opacity: 0.5
+        })
+      );
+      axisLine.computeLineDistances();
+      earthGroup.add(axisLine);
+
+      // ── Point dot (two-toned so rotation is visible) ──
+      const dotGroup = new THREE.Group();
+      dotGroup.position.set(orbitRadius, y, 0);
+      const dotR = 0.035;
+      const half1 = new THREE.Mesh(
+        new THREE.SphereGeometry(dotR, 16, 8, 0, Math.PI),
+        new THREE.MeshBasicMaterial({ color })
+      );
+      const half2 = new THREE.Mesh(
+        new THREE.SphereGeometry(dotR, 16, 8, Math.PI, Math.PI),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      dotGroup.add(half1, half2);
+      earthGroup.add(dotGroup);
+
+      // ── Tangential velocity arrow (rotates with Earth) ──
+      // Tangential velocity direction is perpendicular to radius, in the horizontal plane
+      // At initial position (x=orbitRadius, z=0), tangential direction is (0, 0, -1)
+      // (positive Y rotation moves +X toward -Z)
+      // Arrow length proportional to orbit radius (v = Ω × r)
+      const arrowLen = orbitRadius * 0.6;
+      if (arrowLen > 0.02) {
+        const arrow = new THREE.ArrowHelper(
+          new THREE.Vector3(0, 0, -1),
+          new THREE.Vector3(orbitRadius, y, 0),
+          arrowLen, 0xf59e0b, 0.06, 0.025
+        );
+        earthGroup.add(arrow);
+
+        // Speed label
+        const speedText = lat === 0 ? 'v = ΩR (fastest)'
+          : `v = ΩR cos ${name} (${(cL * 100).toFixed(0)}%)`;
+        const sLbl = makeLabel(speedText, 'comp-label', '#fbbf24');
+        sLbl.position.set(orbitRadius, y, -(arrowLen + 0.08));
+        earthGroup.add(sLbl);
+      }
+
+      // ── Point label ──
+      const pLbl = makeLabel(name, 'point-label', '#' + color.toString(16).padStart(6, '0'));
+      pLbl.position.set(orbitRadius + 0.12, y + 0.08, 0);
+      earthGroup.add(pLbl);
+
+      // ── Orbit radius label ──
+      if (orbitRadius > 0.01 && lat !== 0) {
+        const rLbl = makeLabel(
+          lat === Math.PI / 2 ? 'r = 0' : `r = R cos ${name}`,
+          'comp-label', '#818cf8'
+        );
+        rLbl.position.set(orbitRadius / 2, y + 0.08, 0);
+        earthGroup.add(rLbl);
+      }
+      if (lat === 0) {
+        const rLbl = makeLabel('r = R (max distance from axis)', 'comp-label', '#818cf8');
+        rLbl.position.set(0.5, y + 0.1, 0);
+        earthGroup.add(rLbl);
+      }
+
+      // Pole special: label showing v = 0
+      if (lat === Math.PI / 2) {
+        const zLbl = makeLabel('v = 0 (on the axis)', 'comp-label', '#fbbf24');
+        zLbl.position.set(0.15, y + 0.15, 0);
+        earthGroup.add(zLbl);
+      }
+    }
+
+    // ── "Same time per revolution" annotation ──
+    const sameLbl = makeLabel('All three complete one revolution in the same time', 'comp-label', '#e2e8f0');
+    sameLbl.position.set(0, -0.15, 0);
+    scene.add(sameLbl);
+
+    // ── Resize ──
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      gl.setSize(innerWidth, innerHeight);
+      cssRenderer.setSize(innerWidth, innerHeight);
+    });
+
+    // ── Render loop ──
+    const clock = new THREE.Clock();
+    (function loop() {
+      requestAnimationFrame(loop);
+      const dt = clock.getDelta();
+
+      if (spinning) {
+        angle += dt * 0.4 * speedMul;
+        earthGroup.rotation.y = angle;
+      }
+
+      orbit.update();
+      gl.render(scene, camera);
+      cssRenderer.render(scene, camera);
+    })();
+  </script>
+</body>
+</html>
