@@ -1,13 +1,41 @@
-#app {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+.app {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #242424;
-  background-color: #dfdfdf;
+  flex-direction: column;
+  background-color: #1a1a2e;
+  height: 100vh;
+  overflow: hidden;
+  color: #e0e0e0;
 }
 
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 8px 12px;
+  background: #16213e;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  input[type="range"] {
+    width: 120px;
+  }
+
+  select {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    border: 1px solid #444;
+    padding: 2px 4px;
+    font-size: 13px;
+  }
+}
+
+.canvas-container {
+  flex: 1;
+  overflow: hidden;
+}

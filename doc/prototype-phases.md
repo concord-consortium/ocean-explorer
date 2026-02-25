@@ -77,6 +77,23 @@ slider. These are the wind field inputs — users can see how each affects the w
 **Exit criteria:** We can see wind-driven water flow on a 2D map updating in real time. If
 this doesn't work, we have a fundamental rendering or architecture problem.
 
+### Phase 1 Findings
+
+- **Terminal velocities are unrealistically high.** With `windDragCoefficient = 0.001`,
+  `baseWindSpeed = 10 m/s` (scaled up to ~20 m/s by `tempGradientRatio`), and `drag = 1e-5`,
+  the steady-state terminal velocity is `windDrag * windSpeed / drag ≈ 2000 m/s` — three
+  orders of magnitude above real ocean surface currents (0.1–1.0 m/s). This doesn't affect
+  Phase 1's goal (verifying wind-driven flow direction and rendering), but Phase 2 must retune
+  force and drag coefficients when adding Coriolis. The Coriolis term depends on absolute
+  velocity, so simply bolting deflection onto 2000 m/s flow will produce wrong results.
+- **Arrow density required subsampling.** At 72 columns, rendering an arrow in every cell
+  created visual clutter. Skipping every other column made the field readable — Phase 2 and
+  beyond should account for this in their arrow rendering specs.
+- **Rendering infrastructure is ahead of schedule.** Playback speed control (0.1x–10x),
+  play/pause, and dynamic viewport sizing were added during Phase 1 revisions. These are
+  available for all subsequent phases without additional work.
+- **Chromebook performance check still pending.** Should be done before starting Phase 2.
+
 ## Phase 2: Coriolis + Ekman Transport
 
 **Build:** Add the Coriolis effect to the water velocity computation. Water is now deflected

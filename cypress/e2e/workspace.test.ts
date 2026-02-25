@@ -1,13 +1,12 @@
-import { AppElements as ae } from "../support/elements/app-elements";
+import { AppElements } from "../support/elements/app-elements";
 
-context("Test the overall app", () => {
-  beforeEach(() => {
-    cy.visit("");
-  });
+const app = new AppElements();
 
-  describe("Desktop functionalities", () => {
-    it("renders with text", () => {
-      ae.getApp().should("have.text", "Hello World");
-    });
+context("Ocean Explorer", () => {
+  it("renders the simulation controls and canvas", () => {
+    app.visit();
+    cy.contains("Rotation rate").should("be.visible");
+    cy.contains("Temp gradient").should("be.visible");
+    cy.get("canvas").should("exist");
   });
 });
