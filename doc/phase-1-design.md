@@ -402,6 +402,25 @@ incorporated into the main body of this document:
    latitude, since the corrected temperature formula gives polar temps around -5°C. *(Updated
    "Background temperature coloring" section.)*
 
+## Findings
+
+- **Terminal velocities are unrealistically high.** With `windDragCoefficient = 0.001`,
+  `baseWindSpeed = 10 m/s` (scaled up to ~20 m/s by `tempGradientRatio`), and `drag = 1e-5`,
+  the steady-state terminal velocity is `windDrag * windSpeed / drag ≈ 2000 m/s` — three
+  orders of magnitude above real ocean surface currents (0.1–1.0 m/s). This doesn't affect
+  Phase 1's goal (verifying wind-driven flow direction and rendering), but Phase 2 must retune
+  force and drag coefficients when adding Coriolis. The Coriolis term depends on absolute
+  velocity, so simply bolting deflection onto 2000 m/s flow will produce wrong results.
+- **Arrow density required subsampling.** At 72 columns, rendering an arrow in every cell
+  created visual clutter. Skipping every other column made the field readable — Phase 2 and
+  beyond should account for this in their arrow rendering specs.
+- **Rendering infrastructure is ahead of schedule.** Playback speed control (steps/s model,
+  decoupled from frame rate), play/pause, dynamic viewport sizing, and a performance metrics
+  overlay (fps, steps/s, step time, draw time) were added during Phase 1. An automated frame
+  headroom benchmark measures how much per-frame budget remains before the frame rate drops.
+  These are available for all subsequent phases without additional work.
+- **Chromebook performance check still pending.** Should be done before starting Phase 2.
+
 ### Revision 3: Variable wind band amplitudes
 
 On Earth, the three wind bands have different peak speeds — westerlies are strongest, trade

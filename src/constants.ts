@@ -14,11 +14,14 @@ export const ROWS = 180 / RESOLUTION_DEG;   // 36
 /** Simulation timestep in seconds (1 hour). */
 export const DT = 3600;
 
-/** Fraction of wind speed transferred to water per timestep. */
-export const WIND_DRAG_COEFFICIENT = 0.001;
+/** Fraction of wind speed transferred to water acceleration (s⁻¹). */
+export const WIND_DRAG_COEFFICIENT = 5e-6;
 
 /** Rayleigh drag coefficient applied to water velocity (s⁻¹). */
-export const DRAG = 1e-5;
+export const DRAG = 1e-4;
+
+/** Earth's angular velocity in rad/s. */
+export const OMEGA_EARTH = 7.2921e-5;
 
 /** Attenuation factor reducing wind band amplitude near the poles. */
 export const POLAR_ATTEN = 0.5;
@@ -47,4 +50,4 @@ export const COLOR_MAX = 35;
 export const WIND_SCALE = 20;
 
 /** Reference water speed in m/s used to normalize arrow lengths. */
-export const WATER_SCALE = 2000;
+export const WATER_SCALE = 1.0;

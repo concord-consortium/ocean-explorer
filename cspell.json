@@ -1,0 +1,36 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "advected",
+    "ATTEN",
+    "backgrounded",
+    "Boccaletti",
+    "ENSO",
+    "Cramer's",
+    "Ekman",
+    "equatorward",
+    "equirectangular",
+    "Ferrel",
+    "Hadley",
+    "haline",
+    "Kaspi",
+    "Mesoscale",
+    "NGSS",
+    "Niño",
+    "prograde",
+    "reconverges",
+    "reimplementation",
+    "retuned",
+    "Rossby",
+    "RRGGBB",
+    "sinφ",
+    "subsampling",
+    "substellar",
+    "thermohaline",
+    "timestepping"
+  ],
+  "ignoreRegExpList": [
+    "/t\\.[a-z0-9]+/g"
+  ]
+}

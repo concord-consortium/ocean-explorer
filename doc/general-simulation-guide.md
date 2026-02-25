@@ -75,6 +75,41 @@ playback speed. Only the number of steps per frame changes. This ensures physics
 identical regardless of speed setting — important for reproducibility and for avoiding
 numerical instability at large `dt` values.
 
+## Integration schemes for rotational forces
+
+When a simulation includes rotational forces (like the Coriolis effect) that couple
+velocity components, the choice of integration scheme matters for stability.
+
+### Why explicit Euler fails for rotation
+
+Explicit Euler applies forces using the *current* velocities:
+
+```
+u_new = u + (f*v - drag*u) * dt
+v_new = v + (-f*u - drag*v) * dt
+```
+
+The rotation terms `f*v` and `-f*u` form a skew-symmetric matrix whose eigenvalues are
+purely imaginary (±if). Explicit Euler maps these to `1 ± if*dt`, which has magnitude
+`sqrt(1 + f²*dt²) > 1`. This means each step amplifies the velocity — the simulation
+spirals outward and eventually blows up. Reducing `dt` slows the blowup but never
+eliminates it.
+
+### Semi-implicit scheme
+
+Treating the rotational and drag terms implicitly — using the *new* (unknown) velocities —
+produces a scheme that is unconditionally stable:
+
+```
+u_new = velocityFromForcing_u + (f * v_new - drag * u_new) * dt
+v_new = velocityFromForcing_v + (-f * u_new - drag * v_new) * dt
+```
+
+This is a 2×2 linear system solved via Cramer's rule. The determinant
+`(1 + drag*dt)² + (f*dt)²` is always ≥ 1, so division is safe and the amplification
+factor is always ≤ 1. The scheme damps correctly, rotates correctly, and remains stable
+at any timestep size, rotation rate, or latitude.
+
 ## Performance metrics overlay
 
 Display real-time performance metrics in the rendering overlay:

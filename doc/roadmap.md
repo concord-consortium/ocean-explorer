@@ -1,4 +1,4 @@
-# Ocean Surface Currents Prototype: Testable Phases
+# Ocean Surface Currents Prototype: Roadmap
 
 ## Goal
 
@@ -22,7 +22,7 @@ evaluate and give feedback on the simulation behavior.
 - Quick Chromebook performance checks should happen after each phase to catch bottlenecks
   early. Dedicated optimization remains the final phase, but knowing where we stand
   throughout avoids late surprises
-- Follow `doc/simulation-guide.md` for simulation stepping, performance metrics, frame rate
+- Follow `doc/general-simulation-guide.md` for simulation stepping, performance metrics, frame rate
   management, and rendering patterns. These should be implemented during Phase 1 as part of
   the engine foundation
 - **Documenting lessons learned is critical.** Since code is generated, the real investment is
@@ -31,6 +31,37 @@ evaluate and give feedback on the simulation behavior.
   findings as the phase progresses. If we ever need to change the grid type (e.g., from
   lat/lon to icosahedral), these documents ensure we can regenerate code without re-learning
   the physics and design decisions
+
+## Implementing each phase
+
+Each phase follows the same workflow:
+
+1. **Create a branch.** Branch from the current main branch. Name it with the Jira story
+   prefix and the phase name (e.g., `OE-2-phase-2`). The Jira story may change between
+   phases — use the active story at the time.
+
+2. **Write a detailed design doc.** Use the `brainstorming` skill to create
+   `doc/phase-N-design.md`. Follow the structure of the existing design docs
+   (`doc/phase-1-design.md`, `doc/phase-2-design.md`). The design doc must be reviewed and
+   approved before moving on — it is the source of truth for what to build.
+
+3. **Create an implementation plan.** Use the `writing-plans` skill to produce a step-by-step
+   plan in `docs/plans/`. The plan breaks the design into discrete tasks with test-first
+   steps, exact file paths, and commit points.
+
+4. **Execute the plan.** Use the `executing-plans` skill to implement the plan task-by-task
+   with review checkpoints.
+
+5. **Update the user guide.** Update `doc/user-guide.md` to reflect the current phase. In
+   particular, compare the "Visual/manual tests" section of the design doc with the "What to
+   try" section in the user guide — new observable behaviors should be called out so users
+   know what to look for.
+
+6. **Retrospective.** Review what was learned during the phase. Add a "Findings" section to
+   the phase's design doc (`doc/phase-N-design.md`) capturing lessons learned — what worked,
+   what surprised us, what parameter values were tuned, what numerical approaches succeeded
+   or failed. Also revise the phase descriptions in this document if anything changed (e.g.,
+   a risk was resolved, a new risk was discovered, or a later phase's scope shifted).
 
 ## Phase overview
 
@@ -80,25 +111,6 @@ slider. These are the wind field inputs — users can see how each affects the w
 **Exit criteria:** We can see wind-driven water flow on a 2D map updating in real time. If
 this doesn't work, we have a fundamental rendering or architecture problem.
 
-### Phase 1 Findings
-
-- **Terminal velocities are unrealistically high.** With `windDragCoefficient = 0.001`,
-  `baseWindSpeed = 10 m/s` (scaled up to ~20 m/s by `tempGradientRatio`), and `drag = 1e-5`,
-  the steady-state terminal velocity is `windDrag * windSpeed / drag ≈ 2000 m/s` — three
-  orders of magnitude above real ocean surface currents (0.1–1.0 m/s). This doesn't affect
-  Phase 1's goal (verifying wind-driven flow direction and rendering), but Phase 2 must retune
-  force and drag coefficients when adding Coriolis. The Coriolis term depends on absolute
-  velocity, so simply bolting deflection onto 2000 m/s flow will produce wrong results.
-- **Arrow density required subsampling.** At 72 columns, rendering an arrow in every cell
-  created visual clutter. Skipping every other column made the field readable — Phase 2 and
-  beyond should account for this in their arrow rendering specs.
-- **Rendering infrastructure is ahead of schedule.** Playback speed control (steps/s model,
-  decoupled from frame rate), play/pause, dynamic viewport sizing, and a performance metrics
-  overlay (fps, steps/s, step time, draw time) were added during Phase 1. An automated frame
-  headroom benchmark measures how much per-frame budget remains before the frame rate drops.
-  These are available for all subsequent phases without additional work.
-- **Chromebook performance check still pending.** Should be done before starting Phase 2.
-
 ## Phase 2: Coriolis + Ekman Transport
 
 **Build:** Add the Coriolis effect to the water velocity computation. Water is now deflected
@@ -121,6 +133,7 @@ temperature gradient) already drive the Coriolis parameters.
 - Deflection is to the right in the northern hemisphere, left in the southern hemisphere
 - Reversing rotation direction flips the deflection
 - Increasing rotation speed increases deflection at a given latitude
+- Increasing rotation speed reduces steady-state water speed (Water max drops)
 - Product owners can look at the two arrow layers and see the Coriolis effect in action
 
 **Key risks:**
