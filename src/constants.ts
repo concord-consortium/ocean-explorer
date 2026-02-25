@@ -106,3 +106,9 @@ export const MAX_VELOCITY = 10;
 
 /** Maximum sea surface height magnitude in meters. Prevents runaway growth near complex coastlines. */
 export const MAX_ETA = 10;
+
+/** Drag multiplier for coastal cells at high latitudes. Compensates for the pole problem. */
+export const COASTAL_DRAG_MULTIPLIER = 50;
+
+/** Minimum absolute latitude (degrees) at which coastal drag enhancement is applied. */
+export const COASTAL_DRAG_MIN_LAT = 60;
