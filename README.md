@@ -69,25 +69,23 @@ To deploy a production release:
 
 ### Testing
 
-Run `npm test` to run jest tests. Run `npm run test:full` to run jest and Cypress tests.
+Run `npm test` to run Jest unit tests. Run `npm run test:full` to run both Jest and Playwright tests.
 
-##### Cypress Run Options
+##### Playwright E2E Tests
 
-Inside of your `package.json` file:
-1. `--browser browser-name`: define browser for running tests
-2. `--group group-name`: assign a group name for tests running
-3. `--spec`: define the spec files to run
-4. `--headed`: show cypress test runner GUI while running test (will exit by default when done)
-5. `--no-exit`: keep cypress test runner GUI open when done running
-6. `--record`: decide whether or not tests will have video recordings
-7. `--key`: specify your secret record key
-8. `--reporter`: specify a mocha reporter
+E2E tests use [Playwright](https://playwright.dev/) and live in the `playwright/` directory.
 
-##### Cypress Run Examples
+To run them locally:
 
-1. `cypress run --browser chrome` will run cypress in a chrome browser
-2. `cypress run --headed --no-exit` will open cypress test runner when tests begin to run, and it will remain open when tests are finished running.
-3. `cypress run --spec 'cypress/integration/examples/smoke-test.js'` will point to a smoke-test file rather than running all of the test files for a project.
+1. Start the dev server: `npm start`
+2. Run the tests: `npm run test:playwright`
+3. Or open the interactive UI: `npm run test:playwright:open`
+
+The dev server advertises itself via [Bonjour/mDNS](https://en.wikipedia.org/wiki/Zero-configuration_networking) (configured in `webpack.config.js`). When Playwright tests run locally, a custom test fixture (`playwright/lib/base-url.ts`) discovers the dev server's port automatically via Bonjour — so tests work regardless of which port the dev server happens to be on.
+
+On CI, the Playwright config starts the dev server on a fixed port (8080) and skips Bonjour discovery.
+
+If you need to debug Bonjour service discovery, run `npm run discover-services` to list all HTTP services being advertised on your local network.
 
 ## License
 

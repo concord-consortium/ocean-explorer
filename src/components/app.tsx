@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { SimulationCanvas } from "./simulation-canvas";
 import { SimParams } from "../simulation/wind";
+import { FrameHeadroomBenchmark, BenchmarkResult } from "../benchmark/frame-headroom-benchmark";
+import { TARGET_FPS, DEFAULT_STEPS_PER_SECOND } from "../constants";
 
 import "./app.scss";
 
@@ -10,11 +12,14 @@ export const App = () => {
   const [tempGradientRatio, setTempGradientRatio] = useState(1.0);
   const [showWind, setShowWind] = useState(true);
   const [showWater, setShowWater] = useState(true);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
-  const [paused, setPaused] = useState(false);
+  const [targetStepsPerSecond, setTargetStepsPerSecond] = useState(DEFAULT_STEPS_PER_SECOND);
+  const [paused, setPaused] = useState(true);
   const [arrowScale, setArrowScale] = useState(1.0);
 
   const controlsRef = useRef<HTMLDivElement>(null);
+  const benchmarkRef = useRef<FrameHeadroomBenchmark | null>(null);
+  const [benchmarkRunning, setBenchmarkRunning] = useState(false);
+  const [benchmarkResult, setBenchmarkResult] = useState<BenchmarkResult | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
   const updateCanvasSize = useCallback(() => {
@@ -38,7 +43,7 @@ export const App = () => {
     tempGradientRatio,
   };
 
-  const speedOptions = [0.1, 0.25, 0.5, 1, 2, 5, 10];
+  const speedOptions = [6, 15, 30, 60, 120, 300, 600];
 
   return (
     <div className="app">
@@ -60,9 +65,9 @@ export const App = () => {
         </label>
         <button onClick={() => setPaused(p => !p)}>{paused ? "Play" : "Pause"}</button>
         <label>
-          Speed: {playbackSpeed}x
-          <select value={playbackSpeed} onChange={e => setPlaybackSpeed(Number(e.target.value))}>
-            {speedOptions.map(s => <option key={s} value={s}>{s}x</option>)}
+          Speed: {targetStepsPerSecond} steps/s
+          <select value={targetStepsPerSecond} onChange={e => setTargetStepsPerSecond(Number(e.target.value))}>
+            {speedOptions.map(s => <option key={s} value={s}>{s} steps/s</option>)}
           </select>
         </label>
         <label>
@@ -80,6 +85,24 @@ export const App = () => {
             onChange={e => setShowWater(e.target.checked)} />
           Show water
         </label>
+        <button
+          onClick={() => {
+            if (benchmarkRef.current && !benchmarkRunning) {
+              setBenchmarkRunning(true);
+              setBenchmarkResult(null);
+              benchmarkRef.current.start(TARGET_FPS, (result) => {
+                setBenchmarkResult(result);
+                setBenchmarkRunning(false);
+              });
+            }
+          }}
+          disabled={benchmarkRunning}
+        >
+          {benchmarkRunning ? "Benchmarking..." : "Benchmark"}
+        </button>
+        {benchmarkResult && (
+          <span>Headroom: {benchmarkResult.headroomMs.toFixed(1)}ms</span>
+        )}
       </div>
       <div className="canvas-container">
         <SimulationCanvas
@@ -88,9 +111,10 @@ export const App = () => {
           params={params}
           showWind={showWind}
           showWater={showWater}
-          playbackSpeed={playbackSpeed}
+          targetStepsPerSecond={targetStepsPerSecond}
           paused={paused}
           arrowScale={arrowScale}
+          benchmarkRef={benchmarkRef}
         />
       </div>
     </div>

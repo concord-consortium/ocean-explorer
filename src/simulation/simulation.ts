@@ -1,12 +1,12 @@
 import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
 import { windU, SimParams } from "./wind";
+import { DT, WIND_DRAG_COEFFICIENT, DRAG } from "../constants";
 
 export class Simulation {
   readonly grid = new Grid();
-  dt = 3600;                     // 1 hour in seconds
-  stepsPerFrame = 1;
-  windDragCoefficient = 0.001;
-  drag = 1e-5;                   // Rayleigh drag coefficient (s^-1)
+  dt = DT;
+  windDragCoefficient = WIND_DRAG_COEFFICIENT;
+  drag = DRAG;
 
   /**
    * Advance one timestep: for every cell, apply wind forcing and friction.
