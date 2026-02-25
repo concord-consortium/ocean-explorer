@@ -1,5 +1,6 @@
 import { Simulation } from "./simulation";
-import { ROWS, COLS, latitudeAtRow } from "./grid";
+import { ROWS, COLS } from "../constants";
+import { latitudeAtRow, rowAtLatitude } from "../utils/grid-utils";
 import { SimParams } from "./wind";
 import { coriolisParameter } from "./coriolis";
 import { divergence, pressureGradient } from "./spatial";
@@ -57,8 +58,8 @@ describe("Steady-state with pressure gradients", () => {
     expect(steps).toBeLessThan(50000);
 
     // SSH shows highs at subtropical latitudes
-    const etaSubtropical = sim.grid.getEta(24, 0);
-    const etaEquator = sim.grid.getEta(18, 0);
+    const etaSubtropical = sim.grid.getEta(rowAtLatitude(32.5), 0);
+    const etaEquator = sim.grid.getEta(rowAtLatitude(2.5), 0);
     expect(etaSubtropical).toBeGreaterThan(etaEquator);
 
     // Velocity field is approximately non-divergent (dη/dt ≈ 0 → ∇·v ≈ 0)
@@ -74,7 +75,10 @@ describe("Steady-state with pressure gradients", () => {
     let worstResidualRatio = 0;
     let checked = 0;
 
-    for (const r of [12, 15, 21, 24, 27]) {
+    for (const r of [
+      rowAtLatitude(-27.5), rowAtLatitude(-12.5), rowAtLatitude(17.5),
+      rowAtLatitude(32.5), rowAtLatitude(47.5),
+    ]) {
       const lat = latitudeAtRow(r);
       const f = coriolisParameter(lat, params.rotationRatio);
       if (Math.abs(f) < 1e-6) continue;
