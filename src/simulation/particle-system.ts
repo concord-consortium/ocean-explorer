@@ -11,6 +11,7 @@ const MAX_AGE = 90;
 
 /** Minimum speed (m/s) below which particles are respawned. */
 const MIN_SPEED = 0.02;
+const MIN_SPEED_SQUARED = MIN_SPEED * MIN_SPEED;
 
 /** Velocity scalar to make currents visible. */
 const VELOCITY_SCALE = 50;
@@ -70,6 +71,16 @@ export class ParticleSystem {
     }
   }
 
+  private isLegalLocation(x: number, y: number, grid: IGrid): boolean {
+    // Not legal if on land or outside latitudinal bounds
+    const c = Math.floor(x);
+    const r = Math.ceil(y);
+    if (r < 0 || r >= ROWS) return false;
+    if (grid.landMask[gridIndex(r, wrapCol(c))] === 1) return false;
+
+    return true;
+  }
+
   private spawn(i: number, grid: IGrid): void {
     let r: number, c: number;
     let attempts = 0;
@@ -78,7 +89,7 @@ export class ParticleSystem {
       c = Math.floor(Math.random() * COLS);
       attempts++;
       if (attempts > 10000) break;
-    } while (grid.landMask[gridIndex(r, c)] === 1);
+    } while (!this.isLegalLocation(c, r, grid));
 
     this.x[i] = c + Math.random();
     this.y[i] = r - Math.random();
@@ -110,20 +121,22 @@ export class ParticleSystem {
       // tied to frame count: ~60-90 frames = 2-3s at 30fps.
       this.age[i]++;
 
-      const speed = Math.sqrt(u * u + v * v);
-      const ri = Math.ceil(this.y[i]);
-      const ci = Math.floor(this.x[i]);
-      const onLand =
-        ri >= 0 && ri < ROWS &&
-        grid.landMask[gridIndex(ri, wrapCol(ci))] === 1;
-
+      const speedSquared = u * u + v * v;
       if (
         this.age[i] >= this.maxAge[i] ||
-        this.y[i] < 0 || this.y[i] >= ROWS ||
-        onLand ||
-        speed < MIN_SPEED
+        !this.isLegalLocation(this.x[i], this.y[i], grid) || speedSquared < MIN_SPEED_SQUARED
       ) {
-        this.spawn(i, grid);
+        let newSpeedSquared: number;
+        let attempts = 0;
+        do {
+          this.spawn(i, grid);
+
+          // Make sure the new particle has some visible velocity
+          const { u: newU, v: newV } = sampleVelocity(this.x[i], this.y[i], grid);
+          newSpeedSquared = newU * newU + newV * newV;
+          attempts++;
+          if (attempts > 100) break;
+        } while (newSpeedSquared < MIN_SPEED_SQUARED);
       }
     }
   }

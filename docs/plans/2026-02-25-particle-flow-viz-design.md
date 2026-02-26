@@ -49,11 +49,18 @@ Wrap zonally, clamp at poles.
 **Max age:** Randomized around 60–90 frames (2–3 seconds at 30fps). Randomization prevents
 visible pulsing from synchronized respawns.
 
-**Kill conditions** (respawn immediately at a new random water cell):
+**Location validity:** An `isLegalLocation(x, y)` method consolidates the bounds check
+(y within 0–ROWS) and land check (`ceil(y)` to match display-space cell) into a single
+reusable predicate used by both spawning and kill-condition logic.
+
+**Kill conditions** (respawn at a new random water cell with sufficient velocity):
 - Age exceeds max age
-- Particle drifts onto a land cell
-- Particle exits grid bounds (beyond poles)
-- Velocity at particle position is below 0.02 m/s (avoids particles sitting still in weak currents)
+- Position fails `isLegalLocation` (on land or beyond poles)
+- Velocity at particle position is below 0.02 m/s (avoids particles sitting still in weak
+  currents). Speed is compared as squared values to avoid a per-particle `sqrt`.
+
+On respawn, the new position is checked for sufficient velocity (re-rolling up to 100 times)
+so particles don't spawn into stagnant water only to be immediately killed.
 
 ### ParticleFlowLayer (map rendering layer)
 
@@ -133,3 +140,13 @@ visually occupied, causing particles to render over land:
   cell for grid row `r+1` instead of `r`.
 - **Land check:** Changed from `Math.floor(y)` to `Math.ceil(y)`. A particle at y=34.5
   visually occupies grid row 35's cell, so the land lookup must use `ceil` to match.
+
+### Revision 3: Spawn quality and code consolidation
+
+- **`isLegalLocation` method:** Consolidated bounds + land checks into a single predicate,
+  reused by both `spawn` and `update`.
+- **Squared speed comparison:** Replaced `sqrt(u²+v²) < MIN_SPEED` with
+  `u²+v² < MIN_SPEED_SQUARED` to avoid a per-particle square root.
+- **Respawn velocity check:** On kill, the respawn loop re-rolls (up to 100 attempts) if the
+  new position has velocity below threshold, preventing particles from spawning into stagnant
+  water.
