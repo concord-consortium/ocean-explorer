@@ -10,7 +10,10 @@ const MIN_AGE = 60;
 const MAX_AGE = 90;
 
 /** Minimum speed (m/s) below which particles are respawned. */
-const MIN_SPEED = 0.001;
+const MIN_SPEED = 0.02;
+
+/** Velocity scalar to make currents visible. */
+const VELOCITY_SCALE = 50;
 
 /** Wrap column index to [0, COLS). */
 function wrapCol(c: number): number {
@@ -86,7 +89,7 @@ export class ParticleSystem {
   update(grid: IGrid, stepsThisFrame: number): void {
     if (stepsThisFrame <= 0) return;
 
-    const dt = stepsThisFrame * DT;
+    const dt = stepsThisFrame * DT * VELOCITY_SCALE;
 
     for (let i = 0; i < this.count; i++) {
       const { u, v } = sampleVelocity(this.x[i], this.y[i], grid);

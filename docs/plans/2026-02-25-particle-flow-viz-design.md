@@ -32,8 +32,9 @@ y += waterV(x, y) * velocityScale
 ```
 
 `velocityScale` converts m/s to grid-cells-per-frame, accounting for timestep, simulation steps
-this frame, and latitude-dependent cell size for the zonal component. Zonal wrapping is applied
-after the position update.
+this frame, a 50× visual speed multiplier (`VELOCITY_SCALE`), and latitude-dependent cell size
+for the zonal component. The multiplier makes currents visually apparent at realistic ocean
+velocities. Zonal wrapping is applied after the position update.
 
 **Bilinear interpolation:** Sample the four surrounding grid cells for `waterU` and `waterV`.
 Wrap zonally, clamp at poles.
@@ -50,7 +51,7 @@ visible pulsing from synchronized respawns.
 - Age exceeds max age
 - Particle drifts onto a land cell
 - Particle exits grid bounds (beyond poles)
-- Velocity at particle position is below ~0.001 m/s (avoids particles sitting still)
+- Velocity at particle position is below 0.02 m/s (avoids particles sitting still in weak currents)
 
 ### ParticleFlowLayer (map rendering layer)
 
@@ -64,7 +65,7 @@ via an offscreen Canvas 2D.
    ~0.03–0.05. This dims old positions, producing trails. Faster particles naturally leave
    longer visible trails.
 2. **Draw:** For each live particle, convert grid-space position to pixel coordinates and draw
-   a small filled rect (2–3 px) in white or light blue.
+   a 1 px filled rect in light blue.
 3. **Upload:** Update the PixiJS texture in place via `texture.source.update()`. A single
    `Sprite` displays the texture between the background cells and the arrows.
 
@@ -79,11 +80,14 @@ as-is.
 
 ## UI controls
 
-Two independent checkboxes in the control panel:
-- **Flow particles** — checked by default (`showFlow: true`)
-- **Arrows** — unchecked by default (`showArrows: false`)
+The `showWater` boolean checkbox is replaced by a **Water** dropdown (`WaterViz` type) with
+three options:
+- **Particles** (default) — advected particle trails
+- **Arrows** — traditional velocity arrows
+- **None** — no water current visualization
 
-No other new controls. Particle count, fade rate, and max age are internal constants.
+`showWind` remains a separate checkbox. Particle count, fade rate, and max age are internal
+constants, not user-facing.
 
 ## Performance notes
 
@@ -107,4 +111,13 @@ the initial implementation but are documented here for future reference.
 
 ## Revision log
 
-(No revisions yet.)
+### Revision 1: Visual tuning
+
+After initial implementation, tuned constants for visual clarity:
+- `VELOCITY_SCALE = 50`: Particles move 50× faster than physical velocity so currents are
+  visible at realistic ocean speeds (~0.1–1 m/s).
+- `MIN_SPEED`: Raised from 0.001 to 0.02 m/s to filter out particles in very weak currents
+  that would otherwise sit nearly still.
+- `PARTICLE_SIZE`: Reduced from 2 px to 1 px for finer, less blocky trails.
+- UI: Implemented as a `WaterViz` dropdown (Particles/Arrows/None) rather than two separate
+  checkboxes, keeping `showWind` as a separate toggle.

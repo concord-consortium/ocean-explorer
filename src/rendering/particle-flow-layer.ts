@@ -9,7 +9,7 @@ const FADE_ALPHA = 0.04;
 const PARTICLE_COLOR = "rgba(200, 230, 255, 0.9)";
 
 /** Size of each particle dot in pixels. */
-const PARTICLE_SIZE = 2;
+const PARTICLE_SIZE = 1;
 
 export class ParticleFlowLayer {
   private canvas: HTMLCanvasElement;
