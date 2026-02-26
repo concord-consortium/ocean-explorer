@@ -142,7 +142,7 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
 
     // Update arrows (subsampled to ~36 per dimension)
     windMesh.visible = opts.showWind;
-    waterMesh.visible = opts.showWater;
+    waterMesh.visible = opts.waterViz === "arrows";
 
     let waterMax = 0;
 
@@ -175,7 +175,7 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
       const speed = Math.sqrt(uVal * uVal + vVal * vVal);
       if (speed > waterMax) waterMax = speed;
 
-      if (opts.showWater && !isLand) {
+      if (opts.waterViz === "arrows" && !isLand) {
         const scaledLen = Math.min(speed / WATER_SCALE, 1) * REF_ARROW_LEN * opts.arrowScale;
 
         if (speed < SPEED_THRESHOLD) {

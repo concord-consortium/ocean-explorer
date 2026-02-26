@@ -104,7 +104,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
     // Draw arrows (subsampled to ~36 per dimension)
     windContainer.visible = opts.showWind;
-    waterContainer.visible = opts.showWater;
+    waterContainer.visible = opts.waterViz === "arrows";
 
     let maxWaterSpeed = 0;
 
@@ -142,7 +142,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       const speed = Math.sqrt(uVal ** 2 + vVal ** 2);
       if (speed > maxWaterSpeed) maxWaterSpeed = speed;
 
-      if (opts.showWater && !grid.landMask[cellIdx]) {
+      if (opts.waterViz === "arrows" && !grid.landMask[cellIdx]) {
         const len = Math.min(speed / WATER_SCALE, 1) * maxArrowLen;
         if (len < 0.5) {
           wa.visible = false;
