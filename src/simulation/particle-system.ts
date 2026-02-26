@@ -2,15 +2,25 @@ import { ROWS, COLS, R_EARTH, DELTA_RAD, DT } from "../constants";
 import { gridIndex, latitudeAtRow } from "../utils/grid-utils";
 import type { IGrid } from "../types/grid-types";
 
+/** Default number of particles. */
 const PARTICLE_COUNT = 5000;
+
+/** Particle lifetime range in frames. */
 const MIN_AGE = 60;
 const MAX_AGE = 90;
+
+/** Minimum speed (m/s) below which particles are respawned. */
 const MIN_SPEED = 0.001;
 
+/** Wrap column index to [0, COLS). */
 function wrapCol(c: number): number {
   return ((c % COLS) + COLS) % COLS;
 }
 
+/**
+ * Bilinearly sample the velocity field at fractional grid coordinates (x, y).
+ * x is column-space [0, COLS), y is row-space [0, ROWS). Wraps zonally, clamps at poles.
+ */
 export function sampleVelocity(x: number, y: number, grid: IGrid): { u: number; v: number } {
   const c0 = Math.floor(x);
   const r0 = Math.floor(y);
@@ -93,6 +103,8 @@ export class ParticleSystem {
       // Zonal wrapping
       this.x[i] = ((this.x[i] % COLS) + COLS) % COLS;
 
+      // Age is per render frame (not per sim step) so trail length is
+      // tied to frame count: ~60-90 frames = 2-3s at 30fps.
       this.age[i]++;
 
       const speed = Math.sqrt(u * u + v * v);
