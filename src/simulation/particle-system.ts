@@ -81,7 +81,7 @@ export class ParticleSystem {
     } while (grid.landMask[gridIndex(r, c)] === 1);
 
     this.x[i] = c + Math.random();
-    this.y[i] = r + Math.random();
+    this.y[i] = r - Math.random();
     this.age[i] = 0;
     this.maxAge[i] = MIN_AGE + Math.random() * (MAX_AGE - MIN_AGE);
   }
@@ -111,7 +111,7 @@ export class ParticleSystem {
       this.age[i]++;
 
       const speed = Math.sqrt(u * u + v * v);
-      const ri = Math.floor(this.y[i]);
+      const ri = Math.ceil(this.y[i]);
       const ci = Math.floor(this.x[i]);
       const onLand =
         ri >= 0 && ri < ROWS &&

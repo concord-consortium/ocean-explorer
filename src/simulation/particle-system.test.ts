@@ -65,7 +65,7 @@ describe("ParticleSystem", () => {
     }
     const ps = new ParticleSystem(grid);
     for (let i = 0; i < ps.count; i++) {
-      const r = Math.max(0, Math.min(ROWS - 1, Math.floor(ps.y[i])));
+      const r = Math.max(0, Math.min(ROWS - 1, Math.ceil(ps.y[i])));
       const c = wrapCol(Math.floor(ps.x[i]));
       expect(grid.landMask[gridIndex(r, c)]).toBe(0);
     }
@@ -95,7 +95,7 @@ describe("ParticleSystem", () => {
     ps.update(grid, 50);
 
     for (let i = 0; i < ps.count; i++) {
-      const r = Math.max(0, Math.min(ROWS - 1, Math.floor(ps.y[i])));
+      const r = Math.max(0, Math.min(ROWS - 1, Math.ceil(ps.y[i])));
       const c = wrapCol(Math.floor(ps.x[i]));
       expect(grid.landMask[gridIndex(r, c)]).toBe(0);
     }

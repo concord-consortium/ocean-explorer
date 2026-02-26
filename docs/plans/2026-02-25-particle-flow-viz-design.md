@@ -19,7 +19,9 @@ Owns particle state and advection logic. No rendering code. This separation allo
 globe particle rendering is added later.
 
 **Data layout:** Flat typed arrays — `Float32Array` for x, y (grid-space coordinates, 0–COLS
-and 0–ROWS) and age (frames since spawn). No per-particle objects.
+and 0–ROWS) and age (frames since spawn). No per-particle objects. Note: the y-axis is
+inverted between grid space (row 0 = south pole) and display space (top = north), so spawn
+offsets and land-check lookups must account for this (see revision 2).
 
 **Particle count:** ~5,000 (internal constant, not user-facing).
 
@@ -121,3 +123,13 @@ After initial implementation, tuned constants for visual clarity:
 - `PARTICLE_SIZE`: Reduced from 2 px to 1 px for finer, less blocky trails.
 - UI: Implemented as a `WaterViz` dropdown (Particles/Arrows/None) rather than two separate
   checkboxes, keeping `showWind` as a separate toggle.
+
+### Revision 2: Grid-to-display y-axis alignment
+
+Fixed two bugs where particle grid-space positions didn't match the display-space cell they
+visually occupied, causing particles to render over land:
+- **Spawn offset:** Changed from `r + Math.random()` to `r - Math.random()`. With the
+  y-axis inverted between grid and display, adding the offset placed particles in the visual
+  cell for grid row `r+1` instead of `r`.
+- **Land check:** Changed from `Math.floor(y)` to `Math.ceil(y)`. A particle at y=34.5
+  visually occupies grid row 35's cell, so the land lookup must use `ceil` to match.
