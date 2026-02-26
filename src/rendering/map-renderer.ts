@@ -2,14 +2,34 @@ import { Application, Graphics, GraphicsContext, Container, Text, TextStyle } fr
 import { Grid, ROWS, COLS, latitudeAtRow } from "../simulation/grid";
 import { TARGET_FPS, COLOR_MIN, COLOR_MAX, WIND_SCALE, WATER_SCALE, LAND_COLOR } from "../constants";
 import { windU, SimParams } from "../simulation/wind";
-import { temperature } from "../simulation/temperature";
 
-/** Maps a temperature to a 0xRRGGBB color on a blue-to-red scale. */
+
+/** Color stops for the temperature scale: blue → cyan → yellow → red. */
+const TEMP_STOPS: [number, number, number, number][] = [
+  [0.000,   0,   0, 180],  // deep blue
+  [0.333,   0, 220, 255],  // cyan
+  [0.667, 255, 255,   0],  // yellow
+  [1.000, 255,   0,   0],  // red
+];
+
+/** Maps a temperature to a 0xRRGGBB color on a blue-cyan-yellow-red scale. */
 export function tempToColor(t: number): number {
   const frac = Math.max(0, Math.min(1, (t - COLOR_MIN) / (COLOR_MAX - COLOR_MIN)));
-  const r = Math.round(255 * frac);
-  const b = Math.round(255 * (1 - frac));
-  const g = Math.round(100 * (1 - Math.abs(frac - 0.5) * 2));
+  // Find the two surrounding stops
+  let lo = TEMP_STOPS[0];
+  let hi = TEMP_STOPS[TEMP_STOPS.length - 1];
+  for (let i = 1; i < TEMP_STOPS.length; i++) {
+    if (frac <= TEMP_STOPS[i][0]) {
+      lo = TEMP_STOPS[i - 1];
+      hi = TEMP_STOPS[i];
+      break;
+    }
+  }
+  const span = hi[0] - lo[0];
+  const s = span > 0 ? (frac - lo[0]) / span : 0;
+  const r = Math.round(lo[1] + s * (hi[1] - lo[1]));
+  const g = Math.round(lo[2] + s * (hi[2] - lo[2]));
+  const b = Math.round(lo[3] + s * (hi[3] - lo[3]));
   return r * 65536 + g * 256 + b;
 }
 
@@ -197,7 +217,6 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
     // Draw background cells
     for (let r = 0; r < ROWS; r++) {
-      const lat = latitudeAtRow(r);
       const displayRow = ROWS - 1 - r;
 
       for (let c = 0; c < COLS; c++) {
@@ -211,8 +230,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
         } else if (opts.backgroundMode === "ssh") {
           bg.tint = sshToColor(grid.eta[cellIdx], minEta, maxEta);
         } else {
-          const t = temperature(lat, params.tempGradientRatio);
-          bg.tint = tempToColor(t);
+          bg.tint = tempToColor(grid.temperatureField[cellIdx]);
         }
       }
     }

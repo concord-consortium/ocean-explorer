@@ -1,8 +1,10 @@
 import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
 import { windU, SimParams } from "./wind";
-import { DT, WIND_DRAG_COEFFICIENT, DRAG, G_STIFFNESS } from "../constants";
+import { DT, WIND_DRAG_COEFFICIENT, DRAG, G_STIFFNESS, RELAXATION_TIMESCALE } from "../constants";
 import { coriolisParameter } from "./coriolis";
 import { pressureGradient, divergence } from "./spatial";
+import { advect } from "./advection";
+import { temperature } from "./temperature";
 
 export class Simulation {
   readonly grid = new Grid();
@@ -10,6 +12,7 @@ export class Simulation {
   windDragCoefficient = WIND_DRAG_COEFFICIENT;
   drag = DRAG;
   g = G_STIFFNESS;
+  relaxationTimescale = RELAXATION_TIMESCALE;
 
   /**
    * Advance one timestep.
@@ -72,6 +75,29 @@ export class Simulation {
     for (let i = 0; i < ROWS * COLS; i++) {
       if (landMask[i]) {
         grid.eta[i] = 0;
+      }
+    }
+
+    // Step 4: Temperature advection (first-order upwind)
+    const advFlux = advect(grid);
+    for (let i = 0; i < ROWS * COLS; i++) {
+      grid.temperatureField[i] -= advFlux[i] * dt;
+    }
+
+    // Step 4b: Newtonian relaxation toward solar equilibrium
+    for (let r = 0; r < ROWS; r++) {
+      const lat = latitudeAtRow(r);
+      const tSolar = temperature(lat, params.tempGradientRatio);
+      for (let c = 0; c < COLS; c++) {
+        const i = r * COLS + c;
+        grid.temperatureField[i] += (tSolar - grid.temperatureField[i]) / this.relaxationTimescale * dt;
+      }
+    }
+
+    // Step 4c: Mask land cell temperatures to zero
+    for (let i = 0; i < ROWS * COLS; i++) {
+      if (landMask[i]) {
+        grid.temperatureField[i] = 0;
       }
     }
   }

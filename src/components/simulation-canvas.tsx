@@ -4,6 +4,9 @@ import { Simulation } from "../simulation/simulation";
 import { SimulationStepper } from "../simulation/simulation-stepper";
 import { SimParams } from "../simulation/wind";
 import { LandPreset, createLandMask } from "../simulation/land-presets";
+import { temperature } from "../simulation/temperature";
+import { latitudeAtRow } from "../simulation/grid";
+import { ROWS, COLS } from "../constants";
 import { FrameHeadroomBenchmark } from "../benchmark/frame-headroom-benchmark";
 
 interface Props {
@@ -125,6 +128,15 @@ export const SimulationCanvas: React.FC<Props> = ({
     sim.grid.waterV.fill(0);
     sim.grid.eta.fill(0);
     sim.grid.landMask.set(createLandMask(landPreset));
+    // Initialize temperature to solar equilibrium
+    for (let r = 0; r < ROWS; r++) {
+      const lat = latitudeAtRow(r);
+      const tSolar = temperature(lat, paramsRef.current.tempGradientRatio);
+      for (let c = 0; c < COLS; c++) {
+        const i = r * COLS + c;
+        sim.grid.temperatureField[i] = sim.grid.landMask[i] ? 0 : tSolar;
+      }
+    }
   }, [landPreset]);
 
   // Resize the PixiJS renderer when dimensions change (no destroy/recreate)
