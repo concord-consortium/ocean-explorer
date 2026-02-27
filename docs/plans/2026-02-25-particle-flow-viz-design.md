@@ -75,7 +75,10 @@ via an offscreen Canvas 2D.
    longer visible trails.
 2. **Draw:** For each live particle, convert grid-space position to pixel coordinates and draw
    a 1 px filled rect in light blue.
-3. **Upload:** Update the PixiJS texture in place via `texture.source.update()`. A single
+3. **Threshold:** Read `ImageData`, zero out any RGB channel below `FADE_THRESHOLD` (13), and
+   write back. This eliminates ghost pixels left by the multiplicative fade, which gets stuck
+   at dim values due to 8-bit rounding (e.g. `round(6 × 0.96) = 6`).
+4. **Upload:** Update the PixiJS texture in place via `texture.source.update()`. A single
    `Sprite` displays the texture between the background cells and the arrows.
 
 **Resize:** On `MapRenderer.resize()`, recreate the offscreen canvas at the new dimensions and
@@ -150,3 +153,11 @@ visually occupied, causing particles to render over land:
 - **Respawn velocity check:** On kill, the respawn loop re-rolls (up to 100 attempts) if the
   new position has velocity below threshold, preventing particles from spawning into stagnant
   water.
+
+### Revision 4: Fade ghost elimination
+
+Added an `ImageData` threshold pass after drawing particles. The multiplicative fade
+(`fillRect` with `rgba(0,0,0,0.04)`) gets stuck at dim pixel values due to 8-bit rounding
+(e.g. `round(6 × 0.96) = 6`). The threshold pass zeroes any RGB channel below 13, ensuring
+trails fully disappear. Cost is ~2ms/frame; can be throttled to every Nth frame if profiling
+shows concern.

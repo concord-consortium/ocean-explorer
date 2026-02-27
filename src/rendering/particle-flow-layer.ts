@@ -11,6 +11,13 @@ const PARTICLE_COLOR = "rgba(200, 230, 255, 0.9)";
 /** Size of each particle dot in pixels. */
 const PARTICLE_SIZE = 1;
 
+/**
+ * Pixel threshold below which channels are zeroed. With FADE_ALPHA = 0.04
+ * the multiplicative fade gets stuck at dim values due to 8-bit rounding
+ * (e.g. round(6 * 0.96) = 6). This threshold clears those ghost pixels.
+ */
+const FADE_THRESHOLD = 13;
+
 export class ParticleFlowLayer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -58,6 +65,17 @@ export class ParticleFlowLayer {
       const py = displayY * cellH;
       ctx.fillRect(px, py, PARTICLE_SIZE, PARTICLE_SIZE);
     }
+
+    // Zero out dim pixels that the multiplicative fade can't reach due to
+    // 8-bit rounding (see FADE_THRESHOLD comment).
+    const imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] < FADE_THRESHOLD) data[i] = 0;
+      if (data[i + 1] < FADE_THRESHOLD) data[i + 1] = 0;
+      if (data[i + 2] < FADE_THRESHOLD) data[i + 2] = 0;
+    }
+    ctx.putImageData(imageData, 0, 0);
 
     this.texture.source.update();
   }
