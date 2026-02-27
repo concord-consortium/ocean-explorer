@@ -12,6 +12,8 @@ import { arrowSubset } from "../utils/arrow-utils";
 import { buildArrowGeometry, buildArrowMatrix } from "./globe-arrows";
 import type { IGrid } from "../types/grid-types";
 import type { Renderer, RendererOptions, RendererMetrics, GlobeCameraState } from "../types/renderer-types";
+import { ParticleSystem } from "../simulation/particle-system";
+import { GlobeParticleLayer } from "./globe-particle-layer";
 
 /** Reference arrow length in model units, used to scale arrow geometry. */
 const REF_ARROW_LEN = 0.06;
@@ -91,6 +93,10 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
   // EMA for scene-update timing
   let sceneUpdateTimeMs = 0;
   const emaAlpha = 0.05;
+
+  // Lazy particle flow state
+  let particleSystem: ParticleSystem | null = null;
+  let particleLayer: GlobeParticleLayer | null = null;
 
   // ── update ──────────────────────────────────────────────────────────────
 
@@ -192,6 +198,22 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
     windMesh.instanceMatrix.needsUpdate = true;
     waterMesh.instanceMatrix.needsUpdate = true;
 
+    // Particle flow visualization
+    if (opts.waterViz === "particles") {
+      if (!particleSystem || !particleLayer) {
+        particleSystem = new ParticleSystem(grid);
+        particleLayer = new GlobeParticleLayer();
+        scene.add(particleLayer.mesh);
+      }
+      if (opts.stepsThisFrame > 0) {
+        particleSystem.update(grid, opts.stepsThisFrame);
+        particleLayer.update(particleSystem);
+      }
+      particleLayer.mesh.visible = true;
+    } else if (particleLayer) {
+      particleLayer.mesh.visible = false;
+    }
+
     // Update controls and render
     controls.update();
     webglRenderer.render(scene, camera);
@@ -243,6 +265,10 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
     waterMat.dispose();
     windMesh.dispose();
     waterMesh.dispose();
+    if (particleLayer) {
+      scene.remove(particleLayer.mesh);
+      particleLayer.destroy();
+    }
     webglRenderer.dispose();
   }
 
