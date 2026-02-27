@@ -9,7 +9,7 @@
  * as a TypeScript constant.
  */
 
-import { RESOLUTION_DEG, COLS, ROWS } from "../src/constants";
+import { RESOLUTION_DEG, COLS, ROWS, GRID_SIZE } from "../src/constants";
 import { latitudeAtRow, longitudeAtCol } from "../src/utils/grid-utils";
 
 /**
@@ -61,7 +61,7 @@ async function main() {
   const geojson = await response.json();
   console.error(`Got ${geojson.features.length} features`);
 
-  const mask = new Uint8Array(ROWS * COLS);
+  const mask = new Uint8Array(GRID_SIZE);
 
   for (let r = 0; r < ROWS; r++) {
     const lat = latitudeAtRow(r);

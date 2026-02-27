@@ -1,11 +1,11 @@
 import { createLandMask } from "./land-presets";
-import { ROWS, COLS, RESOLUTION_DEG } from "../constants";
+import { ROWS, COLS, GRID_SIZE, RESOLUTION_DEG } from "../constants";
 import { latitudeAtRow, rowAtLatitude, colAtLongitude, gridIndex } from "../utils/grid-utils";
 
 describe("createLandMask", () => {
   it("water-world has no land cells", () => {
     const mask = createLandMask("water-world");
-    expect(mask.length).toBe(ROWS * COLS);
+    expect(mask.length).toBe(GRID_SIZE);
     for (const val of mask) {
       expect(val).toBe(0);
     }

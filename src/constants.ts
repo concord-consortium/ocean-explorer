@@ -9,6 +9,9 @@ export const COLS = 360 / RESOLUTION_DEG;   // 144
 /** Number of rows (latitude cells) in the simulation grid. */
 export const ROWS = 180 / RESOLUTION_DEG;   // 72
 
+/** Total number of cells in the simulation grid. */
+export const GRID_SIZE = ROWS * COLS;
+
 // ── Simulation ──
 
 /** Simulation timestep in seconds (~3.3 minutes). */

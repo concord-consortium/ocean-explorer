@@ -1,5 +1,5 @@
 import { Application, Graphics, GraphicsContext, Container } from "pixi.js";
-import { ROWS, COLS, WIND_SCALE, WATER_SCALE, LAND_COLOR, LEFT_MARGIN, RIGHT_MARGIN } from "../constants";
+import { ROWS, COLS, GRID_SIZE, WIND_SCALE, WATER_SCALE, LAND_COLOR, LEFT_MARGIN, RIGHT_MARGIN } from "../constants";
 import { ParticleSystem } from "../simulation/particle-system";
 import { windU, SimParams } from "../simulation/wind";
 import type { IGrid } from "../types/grid-types";
@@ -41,7 +41,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
   // Pre-allocate background cell graphics (shared context, per-instance tint)
   const bgCells: Graphics[] = [];
-  for (let i = 0; i < ROWS * COLS; i++) {
+  for (let i = 0; i < GRID_SIZE; i++) {
     const g = new Graphics(cellContext);
     bgContainer.addChild(g);
     bgCells.push(g);

@@ -1,20 +1,15 @@
-import { ROWS, COLS } from "../constants";
-import { gridIndex } from "../utils/grid-utils";
+import { ROWS, COLS, GRID_SIZE } from "../constants";
+import { gridIndex, wrapCol, clampRow } from "../utils/grid-utils";
 import { ParticleSystem, sampleVelocity } from "./particle-system";
 import type { IGrid } from "../types/grid-types";
 
-function wrapCol(c: number): number {
-  return ((c % COLS) + COLS) % COLS;
-}
-
 function makeGrid(): IGrid {
-  const size = ROWS * COLS;
   return {
-    waterU: new Float64Array(size),
-    waterV: new Float64Array(size),
-    eta: new Float64Array(size),
-    landMask: new Uint8Array(size),
-    temperatureField: new Float64Array(size),
+    waterU: new Float64Array(GRID_SIZE),
+    waterV: new Float64Array(GRID_SIZE),
+    eta: new Float64Array(GRID_SIZE),
+    landMask: new Uint8Array(GRID_SIZE),
+    temperatureField: new Float64Array(GRID_SIZE),
   };
 }
 
@@ -65,7 +60,7 @@ describe("ParticleSystem", () => {
     }
     const ps = new ParticleSystem(grid);
     for (let i = 0; i < ps.count; i++) {
-      const r = Math.max(0, Math.min(ROWS - 1, Math.ceil(ps.y[i])));
+      const r = clampRow(Math.ceil(ps.y[i]));
       const c = wrapCol(Math.floor(ps.x[i]));
       expect(grid.landMask[gridIndex(r, c)]).toBe(0);
     }
@@ -95,7 +90,7 @@ describe("ParticleSystem", () => {
     ps.update(grid, 50);
 
     for (let i = 0; i < ps.count; i++) {
-      const r = Math.max(0, Math.min(ROWS - 1, Math.ceil(ps.y[i])));
+      const r = clampRow(Math.ceil(ps.y[i]));
       const c = wrapCol(Math.floor(ps.x[i]));
       expect(grid.landMask[gridIndex(r, c)]).toBe(0);
     }

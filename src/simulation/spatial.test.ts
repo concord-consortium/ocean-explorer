@@ -1,6 +1,6 @@
 import { pressureGradient, divergence } from "./spatial";
 import { Grid } from "./grid";
-import { ROWS, COLS, R_EARTH, DELTA_RAD } from "../constants";
+import { ROWS, COLS, GRID_SIZE, R_EARTH, DELTA_RAD } from "../constants";
 import { latitudeAtRow, rowAtLatitude, colAtLongitude, gridIndex } from "../utils/grid-utils";
 
 const rEq = rowAtLatitude(0);      // equatorial row
@@ -10,7 +10,7 @@ describe("pressureGradient", () => {
   it("returns zero gradient for uniform eta", () => {
     const grid = new Grid();
     // Set all eta to 10.0
-    for (let i = 0; i < ROWS * COLS; i++) grid.eta[i] = 10.0;
+    for (let i = 0; i < GRID_SIZE; i++) grid.eta[i] = 10.0;
 
     const { dEtaDx, dEtaDy } = pressureGradient(grid);
     for (let r = 1; r < ROWS - 1; r++) {
@@ -122,7 +122,7 @@ describe("divergence", () => {
   it("returns zero for uniform zonal velocity with zero meridional", () => {
     const grid = new Grid();
     // Uniform u, v=0: ∂u/∂λ=0 and v·cosφ terms are zero → div=0
-    for (let i = 0; i < ROWS * COLS; i++) {
+    for (let i = 0; i < GRID_SIZE; i++) {
       grid.waterU[i] = 5.0;
     }
 

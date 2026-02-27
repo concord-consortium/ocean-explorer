@@ -161,3 +161,15 @@ Added an `ImageData` threshold pass after drawing particles. The multiplicative 
 (e.g. `round(6 × 0.96) = 6`). The threshold pass zeroes any RGB channel below 13, ensuring
 trails fully disappear. Cost is ~2ms/frame; can be throttled to every Nth frame if profiling
 shows concern.
+
+### Revision 5: Grid utility consolidation
+
+Extracted three repeated patterns into shared utilities:
+- **`GRID_SIZE`** (`src/constants.ts`): `ROWS * COLS` was used ~28 times across source and
+  test files. Replaced all occurrences with the named constant.
+- **`wrapCol`** (`src/utils/grid-utils.ts`): `((c % COLS) + COLS) % COLS` had three duplicate
+  local definitions (grid.ts, particle-system.ts, particle-system.test.ts) plus inline uses in
+  advection.ts. Consolidated into a single shared function.
+- **`clampRow`** (`src/utils/grid-utils.ts`): `Math.max(0, Math.min(ROWS - 1, r))` appeared
+  inline in particle-system.ts (3 sites) and particle-system.test.ts (2 sites). Extracted into
+  a shared function.

@@ -1,5 +1,5 @@
 import { ROWS, COLS, R_EARTH, DELTA_RAD, DT } from "../constants";
-import { gridIndex, latitudeAtRow } from "../utils/grid-utils";
+import { gridIndex, wrapCol, clampRow, latitudeAtRow } from "../utils/grid-utils";
 import type { IGrid } from "../types/grid-types";
 
 /** Default number of particles. */
@@ -16,11 +16,6 @@ const MIN_SPEED_SQUARED = MIN_SPEED * MIN_SPEED;
 /** Velocity scalar to make currents visible. */
 const VELOCITY_SCALE = 50;
 
-/** Wrap column index to [0, COLS). */
-function wrapCol(c: number): number {
-  return ((c % COLS) + COLS) % COLS;
-}
-
 /**
  * Bilinearly sample the velocity field at fractional grid coordinates (x, y).
  * x is column-space [0, COLS), y is row-space [0, ROWS). Wraps zonally, clamps at poles.
@@ -31,8 +26,8 @@ export function sampleVelocity(x: number, y: number, grid: IGrid): { u: number; 
   const fc = x - c0;
   const fr = y - r0;
 
-  const rr0 = Math.max(Math.min(r0, ROWS - 1), 0);
-  const rr1 = Math.max(Math.min(r0 + 1, ROWS - 1), 0);
+  const rr0 = clampRow(r0);
+  const rr1 = clampRow(r0 + 1);
   const cc0 = wrapCol(c0);
   const cc1 = wrapCol(c0 + 1);
 
@@ -105,7 +100,7 @@ export class ParticleSystem {
     for (let i = 0; i < this.count; i++) {
       const { u, v } = sampleVelocity(this.x[i], this.y[i], grid);
 
-      const row = Math.max(0, Math.min(ROWS - 1, Math.floor(this.y[i])));
+      const row = clampRow(Math.floor(this.y[i]));
       const lat = latitudeAtRow(row);
       const cosLat = Math.max(Math.cos(lat * Math.PI / 180), 0.01);
       const metersPerCellX = R_EARTH * cosLat * DELTA_RAD;
@@ -115,7 +110,7 @@ export class ParticleSystem {
       this.y[i] += v * dt / metersPerCellY;
 
       // Zonal wrapping
-      this.x[i] = ((this.x[i] % COLS) + COLS) % COLS;
+      this.x[i] = wrapCol(this.x[i]);
 
       // Age is per render frame (not per sim step) so trail length is
       // tied to frame count: ~60-90 frames = 2-3s at 30fps.
