@@ -1,11 +1,14 @@
 export { RESOLUTION_DEG, COLS, ROWS } from "../constants";
-import { RESOLUTION_DEG, COLS, ROWS } from "../constants";
+import { COLS, ROWS } from "../constants";
+import type { IGrid } from "../types/grid-types";
+
+export { latitudeAtRow } from "../utils/grid-utils";
 
 function wrapCol(c: number): number {
   return ((c % COLS) + COLS) % COLS;
 }
 
-export class Grid {
+export class Grid implements IGrid {
   readonly waterU: Float64Array;
   readonly waterV: Float64Array;
   readonly eta: Float64Array;
@@ -52,9 +55,4 @@ export class Grid {
   isLand(r: number, c: number): boolean {
     return this.landMask[this.idx(r, c)] === 1;
   }
-}
-
-/** Returns latitude in degrees for the center of the given row. Row 0 = -87.5, Row 35 = 87.5. */
-export function latitudeAtRow(row: number): number {
-  return -90 + RESOLUTION_DEG / 2 + row * RESOLUTION_DEG;
 }

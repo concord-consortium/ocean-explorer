@@ -7,6 +7,12 @@ jest.mock("./simulation-canvas", () => ({
   SimulationCanvas: () => <div data-testid="simulation-canvas" />,
 }));
 
+// Mock the color utilities to avoid importing pixi.js transitive deps in the test environment
+jest.mock("../utils/color-utils", () => ({
+  tempToColor: () => 0x000000,
+  sshToColor: () => 0xffffff,
+}));
+
 describe("App component", () => {
   it("renders controls and canvas", () => {
     render(<App />);

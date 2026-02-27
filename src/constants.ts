@@ -37,7 +37,7 @@ export const DEFAULT_STEPS_PER_SECOND = 60;
 
 // ── Rendering ──
 
-/** Target rendering frame rate, used for both PixiJS ticker.maxFPS and benchmark target. */
+/** Target rendering frame rate, used for rAF frame-rate capping and benchmark target. */
 export const TARGET_FPS = 30;
 
 /** Minimum temperature on the color scale in °C (blue end). */
@@ -51,6 +51,12 @@ export const WIND_SCALE = 20;
 
 /** Reference water speed in m/s used to normalize arrow lengths. */
 export const WATER_SCALE = 1.0;
+
+/** Left margin in pixels, reserving space for latitude labels. */
+export const LEFT_MARGIN = 32;
+
+/** Right margin in pixels, reserving space for the color scale. */
+export const RIGHT_MARGIN = 40;
 
 // ── Phase 3: Pressure gradients ──
 
@@ -72,3 +78,23 @@ export const LAND_COLOR = 0x8B7355;
 
 /** Newtonian relaxation timescale in seconds (60 days). */
 export const RELAXATION_TIMESCALE = 5_184_000;
+
+// ── Phase 6: Globe rendering ──
+
+/** Sphere geometry width segments (longitude subdivisions). */
+export const GLOBE_WIDTH_SEGMENTS = 64;
+
+/** Sphere geometry height segments (latitude subdivisions). */
+export const GLOBE_HEIGHT_SEGMENTS = 32;
+
+/** Globe scene background color (very dark blue). */
+export const GLOBE_BG_COLOR = 0x111122;
+
+/** Minimum camera distance from globe center (sphere radii). */
+export const GLOBE_MIN_DISTANCE = 1.3;
+
+/** Maximum camera distance from globe center (sphere radii). */
+export const GLOBE_MAX_DISTANCE = 4.0;
+
+/** Initial camera distance from globe center (sphere radii). */
+export const GLOBE_INITIAL_DISTANCE = 3.25;

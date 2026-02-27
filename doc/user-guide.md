@@ -2,9 +2,11 @@
 
 ## What you're looking at
 
-A 2D equirectangular map of a simplified water world. The background color shows either
-temperature advected by ocean currents (blue = cold, red = hot) or sea surface height (blue = low, white = neutral,
+An interactive 3D globe (default) or 2D equirectangular map of a simplified water world,
+switchable via the View toggle. The background color shows either temperature advected by
+ocean currents (blue = cold, red = hot) or sea surface height (blue = low, white = neutral,
 red = high), selectable via a dropdown. Two layers of arrows show wind and water velocity.
+In globe view, click-drag to rotate the globe and scroll to zoom.
 
 The simulation starts from rest. Wind pushes water, Coriolis deflection rotates the flow
 (rightward in the northern hemisphere, leftward in the southern), and friction slows it.
@@ -26,6 +28,7 @@ the flow into gyres.
 | **Arrow size** (0.5x–3x) | Scales the visual length of all arrows. Useful for seeing small arrows. |
 | **Show wind / Show water** | Toggle arrow layers on and off. |
 | **Background** (Temperature / Sea Surface Height) | Switches the background color layer between per-cell temperature (advected by currents, relaxed toward a latitude-dependent solar equilibrium) and SSH. SSH mode uses a diverging color scale that auto-scales to the current min/max range. |
+| **View** (Globe / Map) | Switches between a 3D globe (default) and a 2D equirectangular map. The globe can be rotated by click-dragging and zoomed with the scroll wheel. The simulation state is preserved when switching views. |
 | **Continents** (dropdown) | Selects the continental layout. **Water World** = no land (default). **Equatorial Continent** = rectangular landmass across the tropics. **North-South Continent** = pole-to-pole strip creating one enclosed basin. **Earth-Like** = simplified real-world continents. Changing the preset resets the simulation to rest. |
 | **Benchmark** | Measures how many milliseconds of frame-time headroom remain. Runs an automated test that gradually loads each frame until FPS drops, then reports the result (e.g., "Headroom: 30.2ms"). The button shows "Benchmarking..." while running. |
 
@@ -111,14 +114,29 @@ to the smooth solar baseline.
 **Reverse rotation and watch heat transport flip.** Uncheck Prograde rotation. Gyre
 directions reverse, and the warm poleward tongues shift to the opposite side of each basin.
 
+**Explore the globe.** Rotate the globe to see how currents connect across ocean basins —
+patterns that appeared as separate regions on the 2D map wrap continuously on the sphere.
+Zoom in on western boundary currents to see the warm tongue extending poleward.
+
+**Look at the poles on the globe.** Notice how the grid cells converge near the poles. This
+is an artifact of the lat/lon grid geometry, not the physics — cells become very narrow in
+longitude near the poles.
+
+**Compare globe and map views.** Switch to Map view to compare the same simulation state in
+both projections. The map is useful for side-by-side comparison with real ocean current
+charts.
+
 ## What's on screen
 
 - **Gray/white arrows** — wind (prescribed, not simulated)
 - **Blue arrows** — water velocity (simulated, includes wind-driven + geostrophic components)
 - **Color background** — either temperature by latitude or sea surface height (switchable)
 - **Top-left text** — described below under "Legend overlay"
-- **Left edge** — latitude labels every 30°
+- **Left edge** — latitude labels every 30° (map view only)
 - **Right edge** — temperature color scale (0°C to 35°C)
+
+In globe view, the same legend overlay and color scale are shown. Latitude labels are omitted
+since they would not correspond to fixed screen positions on a rotatable sphere.
 
 ### Legend overlay (top-left)
 
@@ -160,6 +178,11 @@ asymmetry rather than a sharp jet.
 equilibrium but does not feed back into the dynamics — it doesn't affect wind, pressure
 gradients, or currents. There are no thermal-driven density gradients or thermohaline
 circulation.
+
+**Pole distortion on globe.** The lat/lon grid produces cells that are much narrower near
+the poles than at the equator. On the 3D globe this is more visible than on the 2D map —
+cells and arrows bunch up near the poles. This is a grid geometry artifact, not a physics
+issue.
 
 **All cells at a given latitude are identical on Water World.** With the Water World preset
 (no land), wind depends only on latitude with no longitudinal variations, so every cell in

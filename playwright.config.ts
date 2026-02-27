@@ -71,7 +71,12 @@ export default defineConfig<PlaywrightCoverageOptions>({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: {
+          args: ["--use-gl=angle", "--use-angle=swiftshader"],
+        },
+      },
     },
   ],
   webServer: process.env.CI ? {
