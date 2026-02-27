@@ -1,4 +1,5 @@
-import { ROWS, COLS, latitudeAtRow } from "./grid";
+import { ROWS, COLS } from "../constants";
+import { latitudeAtRow, longitudeAtCol, colAtLongitude, gridIndex } from "../utils/grid-utils";
 import { EARTH_MASK_ROWS } from "./earth-land-mask";
 
 export type LandPreset = "water-world" | "equatorial-continent" | "north-south-continent" | "earth-like";
@@ -47,18 +48,18 @@ function fillDeadEnds(mask: Uint8Array): void {
     changed = false;
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
+        const i = gridIndex(r, c);
         if (mask[i]) continue; // already land
 
         let landNeighbors = 0;
         // East (wrapping)
-        if (mask[r * COLS + ((c + 1) % COLS)]) landNeighbors++;
+        if (mask[gridIndex(r, (c + 1) % COLS)]) landNeighbors++;
         // West (wrapping)
-        if (mask[r * COLS + ((c - 1 + COLS) % COLS)]) landNeighbors++;
+        if (mask[gridIndex(r, (c - 1 + COLS) % COLS)]) landNeighbors++;
         // North (treat out-of-bounds as open water for polar rows)
-        if (r < ROWS - 1 && mask[(r + 1) * COLS + c]) landNeighbors++;
+        if (r < ROWS - 1 && mask[gridIndex(r + 1, c)]) landNeighbors++;
         // South
-        if (r > 0 && mask[(r - 1) * COLS + c]) landNeighbors++;
+        if (r > 0 && mask[gridIndex(r - 1, c)]) landNeighbors++;
 
         if (landNeighbors >= 3) {
           mask[i] = 1;
@@ -71,29 +72,33 @@ function fillDeadEnds(mask: Uint8Array): void {
 
 /**
  * Rectangular continent centered on the equator, extending to ~35 deg N/S,
- * spanning ~60 deg of longitude (~12 cells wide), centered at ~90 deg E.
+ * spanning ~55 deg of longitude, in the western hemisphere.
  */
 function fillEquatorialContinent(mask: Uint8Array): void {
+  const cMin = colAtLongitude(-102.5);
+  const cMax = colAtLongitude(-47.5);
   for (let r = 0; r < ROWS; r++) {
     const lat = latitudeAtRow(r);
     if (Math.abs(lat) > 37.5) continue;
-    for (let c = 15; c <= 26; c++) {  // lon 75–135 deg (12 cells)
-      mask[r * COLS + c] = 1;
+    for (let c = cMin; c <= cMax; c++) {
+      mask[gridIndex(r, c)] = 1;
     }
   }
 }
 
 /**
- * North-south continent spanning ~80S to ~80N, 6 cells wide (~30 deg),
- * centered at 0 deg longitude. Appears as 3 cells on each edge of the map.
+ * North-south continent spanning ~80S to ~80N, ~30 deg wide,
+ * centered on the date line (±180°). Appears as cells on each edge of the map.
  */
 function fillNorthSouthContinent(mask: Uint8Array): void {
   for (let r = 0; r < ROWS; r++) {
     const lat = latitudeAtRow(r);
-    if (Math.abs(lat) > 77.5) continue;  // leave polar rows as water
-    // 3 cells at the right edge (cols 69, 70, 71) + 3 at left edge (cols 0, 1, 2)
-    for (const c of [69, 70, 71, 0, 1, 2]) {
-      mask[r * COLS + c] = 1;
+    if (Math.abs(lat) > 77.5) continue;
+    for (let c = 0; c < COLS; c++) {
+      const lon = longitudeAtCol(c);
+      if (lon >= 165 || lon <= -165) {
+        mask[gridIndex(r, c)] = 1;
+      }
     }
   }
 }
@@ -107,7 +112,7 @@ function fillEarthLike(mask: Uint8Array): void {
     const row = EARTH_MASK_ROWS[r];
     for (let c = 0; c < COLS; c++) {
       if (row[c] === "1") {
-        mask[r * COLS + c] = 1;
+        mask[gridIndex(r, c)] = 1;
       }
     }
   }

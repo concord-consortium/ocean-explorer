@@ -1,18 +1,18 @@
 // ── Grid ──
 
 /** Spatial resolution of the simulation grid, in degrees. */
-export const RESOLUTION_DEG = 5;
+export const RESOLUTION_DEG = 2.5;
 
 /** Number of columns (longitude cells) in the simulation grid. */
-export const COLS = 360 / RESOLUTION_DEG;   // 72
+export const COLS = 360 / RESOLUTION_DEG;   // 144
 
 /** Number of rows (latitude cells) in the simulation grid. */
-export const ROWS = 180 / RESOLUTION_DEG;   // 36
+export const ROWS = 180 / RESOLUTION_DEG;   // 72
 
 // ── Simulation ──
 
-/** Simulation timestep in seconds (15 minutes). */
-export const DT = 900;
+/** Simulation timestep in seconds (~3.3 minutes). */
+export const DT = 200;
 
 /** Fraction of wind speed transferred to water acceleration (s⁻¹). */
 export const WIND_DRAG_COEFFICIENT = 5e-6;
@@ -33,7 +33,7 @@ export const T_AVG = 15;
 export const DELTA_T_EARTH = 40;
 
 /** Default simulation steps executed per second of wall-clock time. */
-export const DEFAULT_STEPS_PER_SECOND = 60;
+export const DEFAULT_STEPS_PER_SECOND = 270;
 
 // ── Rendering ──
 
@@ -66,7 +66,7 @@ export const G_STIFFNESS = 500;
 /** Earth's mean radius in meters. Used for lat-lon metric terms. */
 export const R_EARTH = 6.371e6;
 
-/** Grid spacing in radians (5° converted). */
+/** Grid spacing in radians (2.5° converted). */
 export const DELTA_RAD = RESOLUTION_DEG * Math.PI / 180;
 
 // ── Phase 4: Continental boundaries ──
@@ -98,3 +98,17 @@ export const GLOBE_MAX_DISTANCE = 4.0;
 
 /** Initial camera distance from globe center (sphere radii). */
 export const GLOBE_INITIAL_DISTANCE = 3.25;
+
+// ── Stability clamping ──
+
+/** Maximum water velocity magnitude in m/s. Prevents runaway growth near complex coastlines. */
+export const MAX_VELOCITY = 10;
+
+/** Maximum sea surface height magnitude in meters. Prevents runaway growth near complex coastlines. */
+export const MAX_ETA = 10;
+
+/** Drag multiplier for coastal cells at high latitudes. Compensates for the pole problem. */
+export const COASTAL_DRAG_MULTIPLIER = 50;
+
+/** Minimum absolute latitude (degrees) at which coastal drag enhancement is applied. */
+export const COASTAL_DRAG_MIN_LAT = 60;

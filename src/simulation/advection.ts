@@ -1,5 +1,6 @@
-import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
-import { R_EARTH, DELTA_RAD } from "../constants";
+import { Grid } from "./grid";
+import { ROWS, COLS, R_EARTH, DELTA_RAD } from "../constants";
+import { latitudeAtRow, gridIndex } from "../utils/grid-utils";
 
 /**
  * Compute first-order upwind advection flux for the temperature field.
@@ -26,7 +27,7 @@ export function advect(grid: Grid): Float64Array {
     const dx = R_EARTH * cosLat * DELTA_RAD;
 
     for (let c = 0; c < COLS; c++) {
-      const i = r * COLS + c;
+      const i = gridIndex(r, c);
 
       // Skip land cells
       if (grid.landMask[i]) continue;
@@ -40,13 +41,13 @@ export function advect(grid: Grid): Float64Array {
       if (u >= 0) {
         // Upstream is west (c-1), wraps
         const cW = ((c - 1) % COLS + COLS) % COLS;
-        const iW = r * COLS + cW;
+        const iW = gridIndex(r, cW);
         const Tup = grid.landMask[iW] ? T : grid.temperatureField[iW];
         fluxX = u * (T - Tup) / dx;
       } else {
         // Upstream is east (c+1), wraps
         const cE = (c + 1) % COLS;
-        const iE = r * COLS + cE;
+        const iE = gridIndex(r, cE);
         const Tup = grid.landMask[iE] ? T : grid.temperatureField[iE];
         fluxX = u * (Tup - T) / dx;
       }
@@ -56,7 +57,7 @@ export function advect(grid: Grid): Float64Array {
       if (v >= 0) {
         // Upstream is south (r-1)
         if (r > 0) {
-          const iS = (r - 1) * COLS + c;
+          const iS = gridIndex(r - 1, c);
           const Tup = grid.landMask[iS] ? T : grid.temperatureField[iS];
           fluxY = v * (T - Tup) / dy;
         }
@@ -64,7 +65,7 @@ export function advect(grid: Grid): Float64Array {
       } else {
         // Upstream is north (r+1)
         if (r < ROWS - 1) {
-          const iN = (r + 1) * COLS + c;
+          const iN = gridIndex(r + 1, c);
           const Tup = grid.landMask[iN] ? T : grid.temperatureField[iN];
           fluxY = v * (Tup - T) / dy;
         }

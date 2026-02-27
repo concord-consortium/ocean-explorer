@@ -1,6 +1,10 @@
-import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
+import { Grid } from "./grid";
 import { windU, SimParams } from "./wind";
-import { DT, WIND_DRAG_COEFFICIENT, DRAG, G_STIFFNESS, RELAXATION_TIMESCALE } from "../constants";
+import {
+  ROWS, COLS, DT, WIND_DRAG_COEFFICIENT, DRAG, G_STIFFNESS, RELAXATION_TIMESCALE,
+  MAX_VELOCITY, MAX_ETA, COASTAL_DRAG_MULTIPLIER, COASTAL_DRAG_MIN_LAT,
+} from "../constants";
+import { latitudeAtRow, gridIndex } from "../utils/grid-utils";
 import { coriolisParameter } from "./coriolis";
 import { pressureGradient, divergence } from "./spatial";
 import { advect } from "./advection";
@@ -30,18 +34,33 @@ export class Simulation {
     const { dEtaDx, dEtaDy } = pressureGradient(grid);
 
     // Step 2: Update velocities (wind + pressure forcing, semi-implicit Coriolis+drag)
+    const { landMask } = grid;
     for (let r = 0; r < ROWS; r++) {
       const lat = latitudeAtRow(r);
       const windAccelU = windDragCoefficient * windU(lat, params);
 
       const effectiveRotation = params.prograde ? params.rotationRatio : -params.rotationRatio;
       const coriolisParam = coriolisParameter(lat, effectiveRotation);
-      const dragFactor = 1 + drag * dt;
       const coriolisFactor = coriolisParam * dt;
-      const determinant = dragFactor * dragFactor + coriolisFactor * coriolisFactor;
+
+      // Precompute open-ocean and coastal drag factors per row
+      const highLat = Math.abs(lat) >= COASTAL_DRAG_MIN_LAT;
+      const dfOpen = 1 + drag * dt;
+      const detOpen = dfOpen * dfOpen + coriolisFactor * coriolisFactor;
+      const dfCoastal = 1 + drag * COASTAL_DRAG_MULTIPLIER * dt;
+      const detCoastal = dfCoastal * dfCoastal + coriolisFactor * coriolisFactor;
 
       for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
+        const i = gridIndex(r, c);
+
+        // Enhanced drag for coastal cells at high latitudes (pole problem compensation)
+        const coastal = highLat && (
+          landMask[gridIndex(r, (c + 1) % COLS)] ||
+          landMask[gridIndex(r, (c - 1 + COLS) % COLS)] ||
+          (r < ROWS - 1 && landMask[gridIndex(r + 1, c)]) ||
+          (r > 0 && landMask[gridIndex(r - 1, c)]));
+        const df = coastal ? dfCoastal : dfOpen;
+        const det = coastal ? detCoastal : detOpen;
 
         // Explicit forcing: wind + pressure gradient
         const accelU = windAccelU - g * dEtaDx[i];
@@ -51,17 +70,19 @@ export class Simulation {
         const velocityFromForcingV = grid.waterV[i] + accelV * dt;
 
         // Implicit Coriolis + drag solve (same 2×2 system as Phase 2)
-        grid.waterU[i] = (dragFactor * velocityFromForcingU + coriolisFactor * velocityFromForcingV) / determinant;
-        grid.waterV[i] = (dragFactor * velocityFromForcingV - coriolisFactor * velocityFromForcingU) / determinant;
+        grid.waterU[i] = (df * velocityFromForcingU + coriolisFactor * velocityFromForcingV) / det;
+        grid.waterV[i] = (df * velocityFromForcingV - coriolisFactor * velocityFromForcingU) / det;
       }
     }
 
-    // Step 2b: Mask land cell velocities to zero (before divergence computation)
-    const { landMask } = grid;
+    // Step 2b: Mask land velocities to zero; clamp water velocities for stability
     for (let i = 0; i < ROWS * COLS; i++) {
       if (landMask[i]) {
         grid.waterU[i] = 0;
         grid.waterV[i] = 0;
+      } else {
+        grid.waterU[i] = Math.max(-MAX_VELOCITY, Math.min(MAX_VELOCITY, grid.waterU[i]));
+        grid.waterV[i] = Math.max(-MAX_VELOCITY, Math.min(MAX_VELOCITY, grid.waterV[i]));
       }
     }
 
@@ -71,10 +92,12 @@ export class Simulation {
       grid.eta[i] -= div[i] * dt;
     }
 
-    // Step 3b: Mask land cell eta to zero
+    // Step 3b: Mask land eta to zero; clamp water eta for stability
     for (let i = 0; i < ROWS * COLS; i++) {
       if (landMask[i]) {
         grid.eta[i] = 0;
+      } else {
+        grid.eta[i] = Math.max(-MAX_ETA, Math.min(MAX_ETA, grid.eta[i]));
       }
     }
 
@@ -89,7 +112,7 @@ export class Simulation {
       const lat = latitudeAtRow(r);
       const tSolar = temperature(lat, params.tempGradientRatio);
       for (let c = 0; c < COLS; c++) {
-        const i = r * COLS + c;
+        const i = gridIndex(r, c);
         grid.temperatureField[i] += (tSolar - grid.temperatureField[i]) / this.relaxationTimescale * dt;
       }
     }
