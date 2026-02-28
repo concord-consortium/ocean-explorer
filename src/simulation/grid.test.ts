@@ -1,5 +1,5 @@
 import { Grid } from "./grid";
-import { ROWS, COLS, RESOLUTION_DEG } from "../constants";
+import { ROWS, COLS, GRID_SIZE, RESOLUTION_DEG } from "../constants";
 import { latitudeAtRow, rowAtLatitude, colAtLongitude, longitudeAtCol, gridIndex } from "../utils/grid-utils";
 
 describe("Grid", () => {
@@ -71,7 +71,7 @@ describe("Grid", () => {
 
   it("initializes landMask to all water (zeros)", () => {
     const grid = new Grid();
-    for (let i = 0; i < ROWS * COLS; i++) {
+    for (let i = 0; i < GRID_SIZE; i++) {
       expect(grid.landMask[i]).toBe(0);
     }
   });
@@ -98,8 +98,8 @@ describe("Grid", () => {
 describe("temperatureField", () => {
   it("is initialized to all zeros", () => {
     const grid = new Grid();
-    expect(grid.temperatureField.length).toBe(ROWS * COLS);
-    for (let i = 0; i < ROWS * COLS; i++) {
+    expect(grid.temperatureField.length).toBe(GRID_SIZE);
+    for (let i = 0; i < GRID_SIZE; i++) {
       expect(grid.temperatureField[i]).toBe(0);
     }
   });

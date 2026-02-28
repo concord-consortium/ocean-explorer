@@ -1,11 +1,13 @@
 import { Application, Graphics, GraphicsContext, Container } from "pixi.js";
-import { ROWS, COLS, WIND_SCALE, WATER_SCALE, LAND_COLOR, LEFT_MARGIN, RIGHT_MARGIN } from "../constants";
+import { ROWS, COLS, GRID_SIZE, WIND_SCALE, WATER_SCALE, LAND_COLOR, LEFT_MARGIN, RIGHT_MARGIN } from "../constants";
+import { ParticleSystem } from "../simulation/particle-system";
 import { windU, SimParams } from "../simulation/wind";
 import type { IGrid } from "../types/grid-types";
 import type { Renderer, RendererOptions, RendererMetrics } from "../types/renderer-types";
 import { tempToColor, sshToColor } from "../utils/color-utils";
 import { latitudeAtRow, gridIndex, computeSshRange } from "../utils/grid-utils";
 import { arrowSubset, COL_SKIP, ROW_SKIP } from "../utils/arrow-utils";
+import { MapParticleLayer } from "./map-particle-layer";
 
 export async function createMapRenderer(canvas: HTMLCanvasElement, width: number, height: number):
     Promise<Renderer> {
@@ -16,7 +18,8 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
   const bgContainer = new Container();
   const windContainer = new Container();
   const waterContainer = new Container();
-  app.stage.addChild(bgContainer, windContainer, waterContainer);
+  const flowLayer = new MapParticleLayer(width, height);
+  app.stage.addChild(bgContainer, flowLayer.sprite, windContainer, waterContainer);
 
   // Shared arrow shape — horizontal arrow pointing right, centered at origin.
   // Each Graphics instance shares this context and varies only by transform + tint.
@@ -38,7 +41,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
   // Pre-allocate background cell graphics (shared context, per-instance tint)
   const bgCells: Graphics[] = [];
-  for (let i = 0; i < ROWS * COLS; i++) {
+  for (let i = 0; i < GRID_SIZE; i++) {
     const g = new Graphics(cellContext);
     bgContainer.addChild(g);
     bgCells.push(g);
@@ -64,6 +67,8 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
   // Scene-update timing tracked internally via EMA
   let sceneUpdateTimeMs = 0;
   const emaAlpha = 0.05;
+
+  let particleSystem: ParticleSystem | null = null;
 
   function update(grid: IGrid, params: SimParams, opts: RendererOptions): RendererMetrics {
     const sceneT0 = performance.now();
@@ -104,7 +109,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
 
     // Draw arrows (subsampled to ~36 per dimension)
     windContainer.visible = opts.showWind;
-    waterContainer.visible = opts.showWater;
+    waterContainer.visible = opts.waterViz === "arrows";
 
     let maxWaterSpeed = 0;
 
@@ -142,7 +147,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       const speed = Math.sqrt(uVal ** 2 + vVal ** 2);
       if (speed > maxWaterSpeed) maxWaterSpeed = speed;
 
-      if (opts.showWater && !grid.landMask[cellIdx]) {
+      if (opts.waterViz === "arrows" && !grid.landMask[cellIdx]) {
         const len = Math.min(speed / WATER_SCALE, 1) * maxArrowLen;
         if (len < 0.5) {
           wa.visible = false;
@@ -156,6 +161,20 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       } else {
         wa.visible = false;
       }
+    }
+
+    // Particle flow visualization
+    if (opts.waterViz === "particles") {
+      if (!particleSystem) {
+        particleSystem = new ParticleSystem(grid);
+      }
+      if (opts.stepsThisFrame > 0) {
+        particleSystem.update(grid, opts.stepsThisFrame);
+        flowLayer.update(particleSystem, opts.width, opts.height);
+      }
+      flowLayer.sprite.visible = true;
+    } else {
+      flowLayer.sprite.visible = false;
     }
 
     // Manually render since the ticker is stopped
@@ -182,10 +201,12 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     update,
     resize(w: number, h: number) {
       app.renderer.resize(w, h);
+      flowLayer.resize(w, h);
     },
     destroy() {
       cellContext.destroy();
       arrowContext.destroy();
+      flowLayer.destroy();
       app.destroy();
     },
     savesCameraState: () => false,

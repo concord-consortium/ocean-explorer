@@ -1,5 +1,5 @@
 import { Grid } from "./grid";
-import { ROWS, COLS, R_EARTH, DELTA_RAD } from "../constants";
+import { ROWS, COLS, GRID_SIZE, R_EARTH, DELTA_RAD } from "../constants";
 import { latitudeAtRow, gridIndex } from "../utils/grid-utils";
 
 /**
@@ -13,9 +13,8 @@ import { latitudeAtRow, gridIndex } from "../utils/grid-utils";
  * Longitude wraps via Grid.getEta.
  */
 export function pressureGradient(grid: Grid): { dEtaDx: Float64Array; dEtaDy: Float64Array } {
-  const size = ROWS * COLS;
-  const dEtaDx = new Float64Array(size);
-  const dEtaDy = new Float64Array(size);
+  const dEtaDx = new Float64Array(GRID_SIZE);
+  const dEtaDy = new Float64Array(GRID_SIZE);
 
   for (let r = 0; r < ROWS; r++) {
     const lat = latitudeAtRow(r);
@@ -68,8 +67,7 @@ export function pressureGradient(grid: Grid): { dEtaDx: Float64Array; dEtaDy: Fl
  * Central differences in interior, one-sided at polar boundaries.
  */
 export function divergence(grid: Grid): Float64Array {
-  const size = ROWS * COLS;
-  const div = new Float64Array(size);
+  const div = new Float64Array(GRID_SIZE);
 
   for (let r = 0; r < ROWS; r++) {
     const lat = latitudeAtRow(r);

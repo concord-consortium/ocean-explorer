@@ -1,0 +1,138 @@
+import { ROWS, COLS, R_EARTH, DELTA_RAD, DT } from "../constants";
+import { gridIndex, wrapCol, clampRow, latitudeAtRow } from "../utils/grid-utils";
+import type { IGrid } from "../types/grid-types";
+
+/** Default number of particles. */
+const PARTICLE_COUNT = 5000;
+
+/** Particle lifetime range in frames. */
+const MIN_AGE = 60;
+const MAX_AGE = 90;
+
+/** Minimum speed (m/s) below which particles are respawned. */
+const MIN_SPEED = 0.02;
+const MIN_SPEED_SQUARED = MIN_SPEED * MIN_SPEED;
+
+/** Velocity scalar to make currents visible. */
+const VELOCITY_SCALE = 50;
+
+/**
+ * Bilinearly sample the velocity field at fractional grid coordinates (x, y).
+ * x is column-space [0, COLS), y is row-space [0, ROWS). Wraps zonally, clamps at poles.
+ */
+export function sampleVelocity(x: number, y: number, grid: IGrid): { u: number; v: number } {
+  const c0 = Math.floor(x);
+  const r0 = Math.floor(y);
+  const fc = x - c0;
+  const fr = y - r0;
+
+  const rr0 = clampRow(r0);
+  const rr1 = clampRow(r0 + 1);
+  const cc0 = wrapCol(c0);
+  const cc1 = wrapCol(c0 + 1);
+
+  const i00 = gridIndex(rr0, cc0);
+  const i10 = gridIndex(rr0, cc1);
+  const i01 = gridIndex(rr1, cc0);
+  const i11 = gridIndex(rr1, cc1);
+
+  const u =
+    (1 - fr) * ((1 - fc) * grid.waterU[i00] + fc * grid.waterU[i10]) +
+    fr * ((1 - fc) * grid.waterU[i01] + fc * grid.waterU[i11]);
+  const v =
+    (1 - fr) * ((1 - fc) * grid.waterV[i00] + fc * grid.waterV[i10]) +
+    fr * ((1 - fc) * grid.waterV[i01] + fc * grid.waterV[i11]);
+
+  return { u, v };
+}
+
+export class ParticleSystem {
+  readonly x: Float32Array;
+  readonly y: Float32Array;
+  readonly age: Float32Array;
+  readonly maxAge: Float32Array;
+  readonly count: number;
+
+  constructor(grid: IGrid, count = PARTICLE_COUNT) {
+    this.count = count;
+    this.x = new Float32Array(count);
+    this.y = new Float32Array(count);
+    this.age = new Float32Array(count);
+    this.maxAge = new Float32Array(count);
+
+    for (let i = 0; i < count; i++) {
+      this.spawn(i, grid);
+      this.age[i] = Math.random() * this.maxAge[i];
+    }
+  }
+
+  private isLegalLocation(x: number, y: number, grid: IGrid): boolean {
+    // Not legal if on land or outside latitudinal bounds
+    const c = Math.floor(x);
+    const r = Math.ceil(y);
+    if (r < 0 || r >= ROWS) return false;
+    if (grid.landMask[gridIndex(r, wrapCol(c))] === 1) return false;
+
+    return true;
+  }
+
+  private spawn(i: number, grid: IGrid): void {
+    let r: number, c: number;
+    let attempts = 0;
+    do {
+      r = Math.floor(Math.random() * ROWS);
+      c = Math.floor(Math.random() * COLS);
+      attempts++;
+      if (attempts > 10000) break;
+    } while (!this.isLegalLocation(c, r, grid));
+
+    this.x[i] = c + Math.random();
+    this.y[i] = r - Math.random();
+    this.age[i] = 0;
+    this.maxAge[i] = MIN_AGE + Math.random() * (MAX_AGE - MIN_AGE);
+  }
+
+  update(grid: IGrid, stepsThisFrame: number): void {
+    if (stepsThisFrame <= 0) return;
+
+    const dt = stepsThisFrame * DT * VELOCITY_SCALE;
+
+    for (let i = 0; i < this.count; i++) {
+      const { u, v } = sampleVelocity(this.x[i], this.y[i], grid);
+
+      const row = clampRow(Math.floor(this.y[i]));
+      const lat = latitudeAtRow(row);
+      const cosLat = Math.max(Math.cos(lat * Math.PI / 180), 0.01);
+      const metersPerCellX = R_EARTH * cosLat * DELTA_RAD;
+      const metersPerCellY = R_EARTH * DELTA_RAD;
+
+      this.x[i] += u * dt / metersPerCellX;
+      this.y[i] += v * dt / metersPerCellY;
+
+      // Zonal wrapping
+      this.x[i] = wrapCol(this.x[i]);
+
+      // Age is per render frame (not per sim step) so trail length is
+      // tied to frame count: ~60-90 frames = 2-3s at 30fps.
+      this.age[i]++;
+
+      const speedSquared = u * u + v * v;
+      if (
+        this.age[i] >= this.maxAge[i] ||
+        !this.isLegalLocation(this.x[i], this.y[i], grid) || speedSquared < MIN_SPEED_SQUARED
+      ) {
+        let newSpeedSquared: number;
+        let attempts = 0;
+        do {
+          this.spawn(i, grid);
+
+          // Make sure the new particle has some visible velocity
+          const { u: newU, v: newV } = sampleVelocity(this.x[i], this.y[i], grid);
+          newSpeedSquared = newU * newU + newV * newV;
+          attempts++;
+          if (attempts > 100) break;
+        } while (newSpeedSquared < MIN_SPEED_SQUARED);
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { advect } from "./advection";
 import { Grid } from "./grid";
-import { ROWS, COLS, R_EARTH, DELTA_RAD } from "../constants";
+import { ROWS, COLS, GRID_SIZE, R_EARTH, DELTA_RAD } from "../constants";
 import { latitudeAtRow, rowAtLatitude, colAtLongitude, gridIndex } from "../utils/grid-utils";
 
 const rEq = rowAtLatitude(2.5);    // near equator (18 at 5°)
@@ -16,7 +16,7 @@ describe("advect", () => {
     // Set uniform temperature = 20 everywhere
     grid.temperatureField.fill(20);
     const flux = advect(grid);
-    for (let i = 0; i < ROWS * COLS; i++) {
+    for (let i = 0; i < GRID_SIZE; i++) {
       expect(flux[i]).toBe(0);
     }
   });

@@ -7,11 +7,14 @@ export interface GlobeCameraState {
   distance: number;
 }
 
+export type WaterViz = "particles" | "arrows" | "none";
+
 export interface RendererOptions {
   width: number;
   height: number;
   showWind: boolean;
-  showWater: boolean;
+  waterViz: WaterViz;
+  stepsThisFrame: number;
   arrowScale: number;
   stepTimeMs: number;
   actualStepsPerSecond: number;
