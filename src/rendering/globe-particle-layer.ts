@@ -1,8 +1,7 @@
 import * as THREE from "three";
-import {
-  ROWS, COLS, GLOBE_WIDTH_SEGMENTS, GLOBE_HEIGHT_SEGMENTS, PARTICLE_FADE_ALPHA, PARTICLE_COLOR, PARTICLE_FADE_THRESHOLD,
-} from "../constants";
+import { ROWS, COLS, GLOBE_WIDTH_SEGMENTS, GLOBE_HEIGHT_SEGMENTS, PARTICLE_COLOR } from "../constants";
 import type { ParticleSystem } from "../simulation/particle-system";
+import { createParticleCanvas, fadeTrail, clearGhostPixels } from "../utils/particle-utils";
 
 /** Radius of each particle dot in texture pixels. */
 const PARTICLE_RADIUS = 0.25;
@@ -26,17 +25,9 @@ export class GlobeParticleLayer {
     this.scaleX = width / COLS;
     this.scaleY = height / ROWS;
 
-    // Offscreen canvas for fade-trail rendering
-    this.canvas = document.createElement("canvas");
-    this.canvas.width = width;
-    this.canvas.height = height;
-    const ctx = this.canvas.getContext("2d");
-    if (!ctx) throw new Error("Failed to get 2D context for globe particle canvas");
+    const { canvas, ctx } = createParticleCanvas(width, height);
+    this.canvas = canvas;
     this.ctx = ctx;
-
-    // Initialize to opaque black
-    this.ctx.fillStyle = "rgb(0, 0, 0)";
-    this.ctx.fillRect(0, 0, width, height);
 
     // Three.js texture from offscreen canvas
     this.texture = new THREE.CanvasTexture(this.canvas);
@@ -63,11 +54,9 @@ export class GlobeParticleLayer {
 
   update(particles: ParticleSystem): void {
     const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
-    // Fade previous frame toward black
-    ctx.fillStyle = `rgba(0, 0, 0, ${PARTICLE_FADE_ALPHA})`;
-    ctx.fillRect(0, 0, w, h);
+    const { height, width } = this.canvas;
+
+    fadeTrail(ctx, width, height);
 
     // Draw each particle as a small anti-aliased circle
     ctx.fillStyle = PARTICLE_COLOR;
@@ -83,16 +72,7 @@ export class GlobeParticleLayer {
     }
     ctx.fill();
 
-    // Zero out dim pixels that the multiplicative fade can't reach due to
-    // 8-bit rounding (see PARTICLE_FADE_THRESHOLD comment).
-    const imageData = ctx.getImageData(0, 0, w, h);
-    const data = imageData.data;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] < PARTICLE_FADE_THRESHOLD) data[i] = 0;
-      if (data[i + 1] < PARTICLE_FADE_THRESHOLD) data[i + 1] = 0;
-      if (data[i + 2] < PARTICLE_FADE_THRESHOLD) data[i + 2] = 0;
-    }
-    ctx.putImageData(imageData, 0, 0);
+    clearGhostPixels(ctx, width, height);
 
     this.texture.needsUpdate = true;
   }

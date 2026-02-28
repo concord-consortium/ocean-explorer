@@ -105,3 +105,7 @@ smoother trails but increase the cost of the ghost pixel threshold pass
    `ParticleFlowLayer` to `MapParticleLayer` to match `globe-particle-layer.ts` /
    `GlobeParticleLayer` naming. Extracted shared constants (`PARTICLE_FADE_ALPHA`,
    `PARTICLE_COLOR`, `PARTICLE_FADE_THRESHOLD`) into `constants.ts`.
+6. **Shared utilities** — Extracted duplicated Canvas 2D operations into
+   `src/utils/particle-utils.ts`: `createParticleCanvas()`, `fadeTrail()`, and
+   `clearGhostPixels()`. Both particle layers now import these instead of inlining
+   the same logic.

@@ -1,8 +1,7 @@
 import { Sprite, Texture } from "pixi.js";
-import {
-  ROWS, COLS, LEFT_MARGIN, RIGHT_MARGIN, PARTICLE_FADE_ALPHA, PARTICLE_COLOR, PARTICLE_FADE_THRESHOLD,
-} from "../constants";
+import { ROWS, COLS, LEFT_MARGIN, RIGHT_MARGIN, PARTICLE_COLOR } from "../constants";
 import type { ParticleSystem } from "../simulation/particle-system";
+import { createParticleCanvas, fadeTrail, clearGhostPixels } from "../utils/particle-utils";
 
 /** Size of each particle dot in pixels. */
 const PARTICLE_SIZE = 1;
@@ -14,16 +13,9 @@ export class MapParticleLayer {
   private texture: Texture;
 
   constructor(width: number, height: number) {
-    this.canvas = document.createElement("canvas");
-    this.canvas.width = width;
-    this.canvas.height = height;
-    const ctx = this.canvas.getContext("2d");
-    if (!ctx) throw new Error("Failed to get 2D context for particle canvas");
+    const { canvas, ctx } = createParticleCanvas(width, height);
+    this.canvas = canvas;
     this.ctx = ctx;
-
-    // Initialize to opaque black (additive blending makes black invisible)
-    this.ctx.fillStyle = "rgb(0, 0, 0)";
-    this.ctx.fillRect(0, 0, width, height);
 
     this.texture = Texture.from({
       resource: this.canvas,
@@ -40,9 +32,7 @@ export class MapParticleLayer {
     const cellW = mapWidth / COLS;
     const cellH = mapHeight / ROWS;
 
-    // Fade previous frame toward black
-    ctx.fillStyle = `rgba(0, 0, 0, ${PARTICLE_FADE_ALPHA})`;
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    fadeTrail(ctx, this.canvas.width, this.canvas.height);
 
     // Draw each particle
     ctx.fillStyle = PARTICLE_COLOR;
@@ -55,16 +45,7 @@ export class MapParticleLayer {
       ctx.fillRect(px, py, PARTICLE_SIZE, PARTICLE_SIZE);
     }
 
-    // Zero out dim pixels that the multiplicative fade can't reach due to
-    // 8-bit rounding (see PARTICLE_FADE_THRESHOLD comment).
-    const imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-    const data = imageData.data;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] < PARTICLE_FADE_THRESHOLD) data[i] = 0;
-      if (data[i + 1] < PARTICLE_FADE_THRESHOLD) data[i + 1] = 0;
-      if (data[i + 2] < PARTICLE_FADE_THRESHOLD) data[i + 2] = 0;
-    }
-    ctx.putImageData(imageData, 0, 0);
+    clearGhostPixels(ctx, this.canvas.width, this.canvas.height);
 
     this.texture.source.update();
   }
