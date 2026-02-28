@@ -202,7 +202,7 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
     if (opts.waterViz === "particles") {
       if (!particleSystem || !particleLayer) {
         particleSystem = new ParticleSystem(grid);
-        particleLayer = new GlobeParticleLayer();
+        particleLayer = new GlobeParticleLayer(opts.width, opts.height);
         scene.add(particleLayer.mesh);
       }
       if (opts.stepsThisFrame > 0) {

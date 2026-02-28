@@ -8,8 +8,10 @@ const FADE_ALPHA = 0.04;
 /** CSS color for particle dots. */
 const PARTICLE_COLOR = "rgba(200, 230, 255, 0.9)";
 
-/** Size of each particle dot in texture pixels. */
-const PARTICLE_SIZE = 1;
+/** Radius of each particle dot in texture pixels. */
+const PARTICLE_RADIUS = 0.25;
+
+const TWO_PI = Math.PI * 2;
 
 /**
  * Pixel threshold below which channels are zeroed. With FADE_ALPHA = 0.04
@@ -30,7 +32,7 @@ export class GlobeParticleLayer {
   private scaleX: number;
   private scaleY: number;
 
-  constructor(width = COLS, height = ROWS) {
+  constructor(width: number, height: number) {
     this.scaleX = width / COLS;
     this.scaleY = height / ROWS;
 
@@ -48,8 +50,8 @@ export class GlobeParticleLayer {
 
     // Three.js texture from offscreen canvas
     this.texture = new THREE.CanvasTexture(this.canvas);
-    this.texture.magFilter = THREE.NearestFilter;
-    this.texture.minFilter = THREE.NearestFilter;
+    this.texture.magFilter = THREE.LinearFilter;
+    this.texture.minFilter = THREE.LinearFilter;
 
     // Transparent material with additive blending
     this.material = new THREE.MeshBasicMaterial({
@@ -73,23 +75,26 @@ export class GlobeParticleLayer {
     const ctx = this.ctx;
     const w = this.canvas.width;
     const h = this.canvas.height;
-
     // Fade previous frame toward black
     ctx.fillStyle = `rgba(0, 0, 0, ${FADE_ALPHA})`;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw each particle in equirectangular UV space
+    // Draw each particle as a small anti-aliased circle
     ctx.fillStyle = PARTICLE_COLOR;
+    ctx.beginPath();
     for (let i = 0; i < particles.count; i++) {
       const x = particles.x[i];
       const y = particles.y[i];
       // Flip y: grid row 0 = south pole = texture bottom
       const texX = x * this.scaleX;
       const texY = (ROWS - 1 - y) * this.scaleY;
-      ctx.fillRect(texX, texY, PARTICLE_SIZE, PARTICLE_SIZE);
+      ctx.moveTo(texX + PARTICLE_RADIUS, texY);
+      ctx.arc(texX, texY, PARTICLE_RADIUS, 0, TWO_PI);
     }
+    ctx.fill();
 
-    // Zero out dim ghost pixels from 8-bit rounding
+    // Zero out dim pixels that the multiplicative fade can't reach due to
+    // 8-bit rounding (see FADE_THRESHOLD comment).
     const imageData = ctx.getImageData(0, 0, w, h);
     const data = imageData.data;
     for (let i = 0; i < data.length; i += 4) {
