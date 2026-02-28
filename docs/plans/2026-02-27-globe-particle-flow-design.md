@@ -101,3 +101,7 @@ smoother trails but increase the cost of the ghost pixel threshold pass
    is the main performance cost and scales with canvas resolution. At very high
    resolutions this pass may need to be amortized (run every Nth frame) or removed if
    additive blending makes ghost pixels invisible enough.
+5. **Refactoring** — Renamed `particle-flow-layer.ts` to `map-particle-layer.ts` and
+   `ParticleFlowLayer` to `MapParticleLayer` to match `globe-particle-layer.ts` /
+   `GlobeParticleLayer` naming. Extracted shared constants (`PARTICLE_FADE_ALPHA`,
+   `PARTICLE_COLOR`, `PARTICLE_FADE_THRESHOLD`) into `constants.ts`.

@@ -7,7 +7,7 @@ import type { Renderer, RendererOptions, RendererMetrics } from "../types/render
 import { tempToColor, sshToColor } from "../utils/color-utils";
 import { latitudeAtRow, gridIndex, computeSshRange } from "../utils/grid-utils";
 import { arrowSubset, COL_SKIP, ROW_SKIP } from "../utils/arrow-utils";
-import { ParticleFlowLayer } from "./particle-flow-layer";
+import { MapParticleLayer } from "./map-particle-layer";
 
 export async function createMapRenderer(canvas: HTMLCanvasElement, width: number, height: number):
     Promise<Renderer> {
@@ -18,7 +18,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
   const bgContainer = new Container();
   const windContainer = new Container();
   const waterContainer = new Container();
-  const flowLayer = new ParticleFlowLayer(width, height);
+  const flowLayer = new MapParticleLayer(width, height);
   app.stage.addChild(bgContainer, flowLayer.sprite, windContainer, waterContainer);
 
   // Shared arrow shape — horizontal arrow pointing right, centered at origin.
