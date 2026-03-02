@@ -82,11 +82,11 @@ export const LAND_COLOR = 0x8B7355;
 
 // ── Phase 5: Temperature advection ──
 
-/** Newtonian relaxation timescale in seconds (12 days). */
-export const RELAXATION_TIMESCALE = 1_036_800;
+/** Newtonian relaxation timescale in seconds (3 days). */
+export const RELAXATION_TIMESCALE = 259_200;
 
 /** Multiplier applied to advection flux so temperature anomalies develop faster. */
-export const ADVECTION_SCALE = 5;
+export const ADVECTION_SCALE = 20;
 
 // ── Phase 6: Globe rendering ──
 

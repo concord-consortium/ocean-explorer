@@ -122,5 +122,5 @@ smoother trails but increase the cost of the ghost pixel threshold pass
    (`CELL_DY * cosLat`) also uses the new constant where applicable.
 9. **Faster temperature dynamics** — Added `ADVECTION_SCALE = 5` multiplier on the
    advection flux so temperature anomalies develop visibly faster. Reduced
-   `RELAXATION_TIMESCALE` from 60 days to 12 days so the system reaches equilibrium
+   `RELAXATION_TIMESCALE` from 60 days to 3 days so the system reaches equilibrium
    sooner without temperature spreading indefinitely.
