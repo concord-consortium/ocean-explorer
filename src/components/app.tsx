@@ -8,6 +8,7 @@ import {
   WIND_SCALE, ROWS, LEFT_MARGIN, RIGHT_MARGIN,
 } from "../constants";
 import { tempToColor, sshToColor } from "../utils/color-utils";
+import { rowAtLatitude } from "../utils/grid-utils";
 import type { RendererMetrics } from "../types/renderer-types";
 
 import "./app.scss";
@@ -64,7 +65,7 @@ export const App = () => {
     tempGradientRatio,
   };
 
-  const speedOptions = [6, 15, 30, 60, 120, 300, 600];
+  const speedOptions = [30, 60, 120, 270, 540, 1080];
 
   // Build performance metrics string
   const perfParts: string[] = [];
@@ -117,7 +118,7 @@ export const App = () => {
   // Compute latitude label positions
   const cellH = mapHeight / ROWS;
   const latLabelPositions = LAT_LABELS.map(lat => {
-    const row = (lat + 87.5) / 5;
+    const row = rowAtLatitude(lat);
     const displayRow = ROWS - 1 - row;
     const y = displayRow * cellH + cellH / 2;
     return { lat, y };

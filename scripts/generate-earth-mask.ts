@@ -9,17 +9,8 @@
  * as a TypeScript constant.
  */
 
-const RESOLUTION_DEG = 5;
-const COLS = 360 / RESOLUTION_DEG; // 72
-const ROWS = 180 / RESOLUTION_DEG; // 36
-
-function latitudeAtRow(row: number): number {
-  return -90 + RESOLUTION_DEG / 2 + row * RESOLUTION_DEG;
-}
-
-function longitudeAtCol(col: number): number {
-  return col * RESOLUTION_DEG + RESOLUTION_DEG / 2;
-}
+import { RESOLUTION_DEG, COLS, ROWS } from "../src/constants";
+import { latitudeAtRow, longitudeAtCol } from "../src/utils/grid-utils";
 
 /**
  * Ray-casting point-in-polygon test.
@@ -75,10 +66,7 @@ async function main() {
   for (let r = 0; r < ROWS; r++) {
     const lat = latitudeAtRow(r);
     for (let c = 0; c < COLS; c++) {
-      let lon = longitudeAtCol(c);
-      // GeoJSON uses -180 to 180; convert if needed
-      if (lon > 180) lon -= 360;
-
+      const lon = longitudeAtCol(c);
       for (const feature of geojson.features) {
         if (pointInFeature(lon, lat, feature.geometry)) {
           mask[r * COLS + c] = 1;
@@ -96,10 +84,14 @@ async function main() {
 
   // Output as TypeScript array of strings (one per row, 0=water 1=land)
   console.log("/**");
-  console.log(" * Earth-like land mask at 5° resolution.");
+  console.log(` * Earth-like land mask at ${RESOLUTION_DEG}\u00b0 resolution.`);
   console.log(" * Generated from Natural Earth 110m land polygons.");
-  console.log(" * Row 0 = -87.5° lat, Row 35 = 87.5° lat.");
-  console.log(" * Col 0 = 2.5° lon, Col 71 = 357.5° lon.");
+  const latMin = latitudeAtRow(0).toFixed(1);
+  const latMax = latitudeAtRow(ROWS - 1).toFixed(1);
+  const lonMin = (RESOLUTION_DEG / 2).toFixed(1);
+  const lonMax = (360 - RESOLUTION_DEG / 2).toFixed(1);
+  console.log(` * Row 0 = ${latMin}\u00b0 lat, Row ${ROWS - 1} = ${latMax}\u00b0 lat.`);
+  console.log(` * Col 0 = ${lonMin}\u00b0 lon, Col ${COLS - 1} = ${lonMax}\u00b0 lon.`);
   console.log(" */");
   console.log("export const EARTH_MASK_ROWS: string[] = [");
   for (let r = 0; r < ROWS; r++) {

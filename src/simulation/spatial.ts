@@ -1,5 +1,6 @@
-import { Grid, ROWS, COLS, latitudeAtRow } from "./grid";
-import { R_EARTH, DELTA_RAD } from "../constants";
+import { Grid } from "./grid";
+import { ROWS, COLS, R_EARTH, DELTA_RAD } from "../constants";
+import { latitudeAtRow, gridIndex } from "../utils/grid-utils";
 
 /**
  * Compute pressure gradient (∂η/∂x, ∂η/∂y) at every cell center using central
@@ -22,7 +23,7 @@ export function pressureGradient(grid: Grid): { dEtaDx: Float64Array; dEtaDy: Fl
     const dxFactor = 2 * R_EARTH * cosLat * DELTA_RAD;
 
     for (let c = 0; c < COLS; c++) {
-      const i = r * COLS + c;
+      const i = gridIndex(r, c);
 
       // Skip land cells — no pressure gradient needed
       if (grid.isLand(r, c)) continue;
@@ -76,7 +77,7 @@ export function divergence(grid: Grid): Float64Array {
     const invRcosLat = 1 / (R_EARTH * cosLat);
 
     for (let c = 0; c < COLS; c++) {
-      const i = r * COLS + c;
+      const i = gridIndex(r, c);
 
       // Skip land cells
       if (grid.isLand(r, c)) continue;

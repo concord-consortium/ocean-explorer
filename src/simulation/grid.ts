@@ -1,8 +1,6 @@
-export { RESOLUTION_DEG, COLS, ROWS } from "../constants";
 import { COLS, ROWS } from "../constants";
+import { gridIndex } from "../utils/grid-utils";
 import type { IGrid } from "../types/grid-types";
-
-export { latitudeAtRow } from "../utils/grid-utils";
 
 function wrapCol(c: number): number {
   return ((c % COLS) + COLS) % COLS;
@@ -25,7 +23,7 @@ export class Grid implements IGrid {
   }
 
   private idx(r: number, c: number): number {
-    return r * COLS + wrapCol(c);
+    return gridIndex(r, wrapCol(c));
   }
 
   getU(r: number, c: number): number {

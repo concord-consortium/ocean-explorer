@@ -1,11 +1,11 @@
 import { Application, Graphics, GraphicsContext, Container } from "pixi.js";
-import { ROWS, COLS } from "../simulation/grid";
-import { WIND_SCALE, WATER_SCALE, LAND_COLOR, LEFT_MARGIN, RIGHT_MARGIN } from "../constants";
+import { ROWS, COLS, WIND_SCALE, WATER_SCALE, LAND_COLOR, LEFT_MARGIN, RIGHT_MARGIN } from "../constants";
 import { windU, SimParams } from "../simulation/wind";
 import type { IGrid } from "../types/grid-types";
 import type { Renderer, RendererOptions, RendererMetrics } from "../types/renderer-types";
 import { tempToColor, sshToColor } from "../utils/color-utils";
-import { latitudeAtRow, computeSshRange } from "../utils/grid-utils";
+import { latitudeAtRow, gridIndex, computeSshRange } from "../utils/grid-utils";
+import { arrowSubset, COL_SKIP, ROW_SKIP } from "../utils/arrow-utils";
 
 export async function createMapRenderer(canvas: HTMLCanvasElement, width: number, height: number):
     Promise<Renderer> {
@@ -47,7 +47,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
   // Pre-allocate arrow graphics (shared context, per-instance tint)
   const windArrows: Graphics[] = [];
   const waterArrows: Graphics[] = [];
-  for (let i = 0; i < ROWS * COLS; i++) {
+  arrowSubset.forEach(() => {
     const wg = new Graphics(arrowContext);
     wg.tint = 0xcccccc;
     wg.visible = false;
@@ -59,7 +59,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     wa.visible = false;
     waterContainer.addChild(wa);
     waterArrows.push(wa);
-  }
+  });
 
   // Scene-update timing tracked internally via EMA
   let sceneUpdateTimeMs = 0;
@@ -85,7 +85,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       const displayRow = ROWS - 1 - r;
 
       for (let c = 0; c < COLS; c++) {
-        const cellIdx = r * COLS + c;
+        const cellIdx = gridIndex(r, c);
         const bg = bgCells[cellIdx];
         bg.position.set(LEFT_MARGIN + c * cellW, displayRow * cellH);
         bg.scale.set(cellW + 0.5, cellH + 0.5);
@@ -100,66 +100,61 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
       }
     }
 
-    const maxArrowLen = Math.min(cellW * 2, cellH) * 0.9 * opts.arrowScale; // cellW*2 since we skip columns
+    const maxArrowLen = Math.min(cellW * COL_SKIP, cellH * ROW_SKIP) * 0.9 * opts.arrowScale;
 
-    // Draw arrows (skip every other column to reduce density)
+    // Draw arrows (subsampled to ~36 per dimension)
     windContainer.visible = opts.showWind;
     waterContainer.visible = opts.showWater;
 
     let maxWaterSpeed = 0;
 
-    for (let r = 0; r < ROWS; r++) {
+    for (let ai = 0; ai < arrowSubset.length; ai++) {
+      const { r, c } = arrowSubset[ai];
       const lat = latitudeAtRow(r);
       const wU = windU(lat, params);
       const displayRow = ROWS - 1 - r;
       const cy = displayRow * cellH + cellH / 2;
+      const cx = LEFT_MARGIN + c * cellW + cellW * COL_SKIP / 2;
+      const cellIdx = gridIndex(r, c);
 
-      for (let c = 0; c < COLS; c++) {
-        const arrowIdx = r * COLS + c;
-        const showArrowAtCol = c % 2 === 0;
-        // Center arrow between the two cells it spans
-        const cx = LEFT_MARGIN + c * cellW + cellW;
-
-        // Wind arrows
-        const wg = windArrows[arrowIdx];
-        if (opts.showWind && showArrowAtCol) {
-          const windSpeed = Math.abs(wU);
-          const windLen = Math.min(windSpeed / WIND_SCALE, 1) * maxArrowLen;
-          if (windLen < 0.5) {
-            wg.visible = false;
-          } else {
-            const windAngle = wU >= 0 ? 0 : Math.PI; // east or west
-            wg.position.set(cx, cy);
-            wg.rotation = windAngle;
-            wg.scale.set(windLen / REF_ARROW_LEN);
-            wg.visible = true;
-          }
-        } else {
+      // Wind arrow
+      const wg = windArrows[ai];
+      if (opts.showWind) {
+        const windSpeed = Math.abs(wU);
+        const windLen = Math.min(windSpeed / WIND_SCALE, 1) * maxArrowLen;
+        if (windLen < 0.5) {
           wg.visible = false;
-        }
-
-        // Water arrows
-        const wa = waterArrows[arrowIdx];
-        const uVal = grid.waterU[arrowIdx];
-        const vVal = grid.waterV[arrowIdx];
-        const speed = Math.sqrt(uVal ** 2 + vVal ** 2);
-        if (speed > maxWaterSpeed) maxWaterSpeed = speed;
-
-        if (opts.showWater && showArrowAtCol && !grid.landMask[arrowIdx]) {
-          const len = Math.min(speed / WATER_SCALE, 1) * maxArrowLen;
-          if (len < 0.5) {
-            wa.visible = false;
-          } else {
-            // atan2(-vVal, uVal): negative V because screen Y is flipped
-            const angle = Math.atan2(-vVal, uVal);
-            wa.position.set(cx, cy);
-            wa.rotation = angle;
-            wa.scale.set(len / REF_ARROW_LEN);
-            wa.visible = true;
-          }
         } else {
-          wa.visible = false;
+          const windAngle = wU >= 0 ? 0 : Math.PI;
+          wg.position.set(cx, cy);
+          wg.rotation = windAngle;
+          wg.scale.set(windLen / REF_ARROW_LEN);
+          wg.visible = true;
         }
+      } else {
+        wg.visible = false;
+      }
+
+      // Water arrow
+      const wa = waterArrows[ai];
+      const uVal = grid.waterU[cellIdx];
+      const vVal = grid.waterV[cellIdx];
+      const speed = Math.sqrt(uVal ** 2 + vVal ** 2);
+      if (speed > maxWaterSpeed) maxWaterSpeed = speed;
+
+      if (opts.showWater && !grid.landMask[cellIdx]) {
+        const len = Math.min(speed / WATER_SCALE, 1) * maxArrowLen;
+        if (len < 0.5) {
+          wa.visible = false;
+        } else {
+          const angle = Math.atan2(-vVal, uVal);
+          wa.position.set(cx, cy);
+          wa.rotation = angle;
+          wa.scale.set(len / REF_ARROW_LEN);
+          wa.visible = true;
+        }
+      } else {
+        wa.visible = false;
       }
     }
 
