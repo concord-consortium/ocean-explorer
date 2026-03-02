@@ -80,7 +80,7 @@ describe("ParticleSystem", () => {
     }
     grid.waterU.fill(1.0);
 
-    const ps = new ParticleSystem(grid, 100);
+    const ps = new ParticleSystem(grid, { count: 100 });
     for (let i = 0; i < ps.count; i++) {
       ps.x[i] = 9.5;
       ps.y[i] = Math.floor(Math.random() * ROWS);
@@ -99,7 +99,7 @@ describe("ParticleSystem", () => {
   it("does not advance particles when stepsThisFrame is 0", () => {
     const grid = makeGrid();
     grid.waterU.fill(1.0);
-    const ps = new ParticleSystem(grid, 100);
+    const ps = new ParticleSystem(grid, { count: 100 });
     const xBefore = Float32Array.from(ps.x);
     ps.update(grid, 0);
     expect(ps.x).toEqual(xBefore);
