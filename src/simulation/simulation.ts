@@ -2,7 +2,7 @@ import { Grid } from "./grid";
 import { windU, SimParams } from "./wind";
 import {
   ROWS, COLS, GRID_SIZE, DT, WIND_DRAG_COEFFICIENT, DRAG, G_STIFFNESS, RELAXATION_TIMESCALE,
-  MAX_VELOCITY, MAX_ETA, COASTAL_DRAG_MULTIPLIER, COASTAL_DRAG_MIN_LAT,
+  MAX_VELOCITY, MAX_ETA, COASTAL_DRAG_MULTIPLIER, COASTAL_DRAG_MIN_LAT, ADVECTION_SCALE,
 } from "../constants";
 import { latitudeAtRow, gridIndex } from "../utils/grid-utils";
 import { coriolisParameter } from "./coriolis";
@@ -104,7 +104,7 @@ export class Simulation {
     // Step 4: Temperature advection (first-order upwind)
     const advFlux = advect(grid);
     for (let i = 0; i < GRID_SIZE; i++) {
-      grid.temperatureField[i] -= advFlux[i] * dt;
+      grid.temperatureField[i] -= advFlux[i] * dt * ADVECTION_SCALE;
     }
 
     // Step 4b: Newtonian relaxation toward solar equilibrium
