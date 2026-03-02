@@ -1,4 +1,4 @@
-import { ROWS, COLS, R_EARTH, DELTA_RAD, DT } from "../constants";
+import { ROWS, COLS, CELL_DY, DT } from "../constants";
 import { gridIndex, wrapCol, clampRow, latitudeAtRow } from "../utils/grid-utils";
 import type { IGrid } from "../types/grid-types";
 
@@ -46,15 +46,28 @@ export function sampleVelocity(x: number, y: number, grid: IGrid): { u: number; 
   return { u, v };
 }
 
+interface IParticleSystemOptions {
+  count?: number;
+  // When true, velocity is scaled based on latitude, making particles appear to move faster near the poles.
+  scaleVelocity?: boolean;
+}
+const defaultOptions = {
+  count: PARTICLE_COUNT,
+  scaleVelocity: true,
+};
+
 export class ParticleSystem {
   readonly x: Float32Array;
   readonly y: Float32Array;
   readonly age: Float32Array;
   readonly maxAge: Float32Array;
   readonly count: number;
+  readonly scaleVelocity: boolean;
 
-  constructor(grid: IGrid, count = PARTICLE_COUNT) {
+  constructor(grid: IGrid, options: IParticleSystemOptions = {}) {
+    const { count, scaleVelocity } = { ...defaultOptions, ...options };
     this.count = count;
+    this.scaleVelocity = scaleVelocity;
     this.x = new Float32Array(count);
     this.y = new Float32Array(count);
     this.age = new Float32Array(count);
@@ -100,11 +113,14 @@ export class ParticleSystem {
     for (let i = 0; i < this.count; i++) {
       const { u, v } = sampleVelocity(this.x[i], this.y[i], grid);
 
-      const row = clampRow(Math.floor(this.y[i]));
-      const lat = latitudeAtRow(row);
-      const cosLat = Math.max(Math.cos(lat * Math.PI / 180), 0.01);
-      const metersPerCellX = R_EARTH * cosLat * DELTA_RAD;
-      const metersPerCellY = R_EARTH * DELTA_RAD;
+      let metersPerCellX = CELL_DY;
+      if (this.scaleVelocity) {
+        const row = clampRow(Math.floor(this.y[i]));
+        const lat = latitudeAtRow(row);
+        const cosLat = Math.max(Math.cos(lat * Math.PI / 180), 0.01);
+        metersPerCellX *= cosLat;
+      }
+      const metersPerCellY = CELL_DY;
 
       this.x[i] += u * dt / metersPerCellX;
       this.y[i] += v * dt / metersPerCellY;

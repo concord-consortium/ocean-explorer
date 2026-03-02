@@ -1,5 +1,5 @@
 import { Grid } from "./grid";
-import { ROWS, COLS, GRID_SIZE, R_EARTH, DELTA_RAD } from "../constants";
+import { ROWS, COLS, GRID_SIZE, CELL_DY } from "../constants";
 import { latitudeAtRow, gridIndex, wrapCol } from "../utils/grid-utils";
 
 /**
@@ -18,12 +18,12 @@ import { latitudeAtRow, gridIndex, wrapCol } from "../utils/grid-utils";
  */
 export function advect(grid: Grid): Float64Array {
   const flux = new Float64Array(GRID_SIZE);
-  const dy = R_EARTH * DELTA_RAD;
+  const dy = CELL_DY;
 
   for (let r = 0; r < ROWS; r++) {
     const lat = latitudeAtRow(r);
     const cosLat = Math.cos(lat * Math.PI / 180);
-    const dx = R_EARTH * cosLat * DELTA_RAD;
+    const dx = CELL_DY * cosLat;
 
     for (let c = 0; c < COLS; c++) {
       const i = gridIndex(r, c);

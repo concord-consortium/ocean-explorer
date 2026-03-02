@@ -166,7 +166,7 @@ export async function createMapRenderer(canvas: HTMLCanvasElement, width: number
     // Particle flow visualization
     if (opts.waterViz === "particles") {
       if (!particleSystem) {
-        particleSystem = new ParticleSystem(grid);
+        particleSystem = new ParticleSystem(grid, { scaleVelocity: false });
       }
       if (opts.stepsThisFrame > 0) {
         particleSystem.update(grid, opts.stepsThisFrame);

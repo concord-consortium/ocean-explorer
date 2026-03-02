@@ -111,8 +111,12 @@ smoother trails but increase the cost of the ghost pixel threshold pass
    the same logic.
 7. **Latitude-dependent velocity scaling** — `ParticleSystem` now accepts a
    `scaleVelocity` option (default `true`). When enabled, the zonal displacement
-   divides by `R_EARTH * cos(lat) * DELTA_RAD` so particles traverse more grid cells
-   near the poles, compensating for the sphere geometry compressing those cells
-   visually. The globe renderer uses the default (`true`); the map renderer passes
+   divides by `CELL_DY * cos(lat)` so particles traverse more grid cells near the
+   poles, compensating for the sphere geometry compressing those cells visually. The
+   globe renderer uses the default (`true`); the map renderer passes
    `{ scaleVelocity: false }` for uniform visual speed on the equirectangular
    projection.
+8. **CELL_DY constant** — Extracted `R_EARTH * DELTA_RAD` (meridional grid spacing in
+   meters) into `CELL_DY` in `constants.ts`. Replaced all occurrences in
+   `particle-system.ts`, `spatial.ts`, `advection.ts`, and their tests. Zonal spacing
+   (`CELL_DY * cosLat`) also uses the new constant where applicable.

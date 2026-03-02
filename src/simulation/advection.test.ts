@@ -1,6 +1,6 @@
 import { advect } from "./advection";
 import { Grid } from "./grid";
-import { ROWS, COLS, GRID_SIZE, R_EARTH, DELTA_RAD } from "../constants";
+import { ROWS, COLS, GRID_SIZE, CELL_DY } from "../constants";
 import { latitudeAtRow, rowAtLatitude, colAtLongitude, gridIndex } from "../utils/grid-utils";
 
 const rEq = rowAtLatitude(2.5);    // near equator (18 at 5°)
@@ -35,7 +35,7 @@ describe("advect", () => {
     // Upwind with u>0: flux_x = u * (T[c] - T[c-1]) / dx
     // At cMid: T=cMid, T[c-1]=cMid-1, so flux_x = 1.0 * 1 / dx > 0
     const lat = latitudeAtRow(rEq);
-    const dx = R_EARTH * Math.cos(lat * Math.PI / 180) * DELTA_RAD;
+    const dx = CELL_DY * Math.cos(lat * Math.PI / 180);
     const expected = 1.0 * (cMid - (cMid - 1)) / dx;
     expect(flux[gridIndex(rEq, cMid)]).toBeCloseTo(expected, 10);
   });
@@ -52,7 +52,7 @@ describe("advect", () => {
     }
     const flux = advect(grid);
     // Upwind with v>0: flux_y = v * (T[r] - T[r-1]) / dy
-    const dy = R_EARTH * DELTA_RAD;
+    const dy = CELL_DY;
     const expected = 1.0 * (rEq - (rEq - 1)) / dy;
     expect(flux[gridIndex(rEq, cMid)]).toBeCloseTo(expected, 10);
   });
@@ -79,7 +79,7 @@ describe("advect", () => {
     const flux = advect(grid);
     // u<0: flux_x = u * (T[c+1] - T[c]) / dx = -1 * (30 - 10) / dx
     const lat = latitudeAtRow(rEq);
-    const dx = R_EARTH * Math.cos(lat * Math.PI / 180) * DELTA_RAD;
+    const dx = CELL_DY * Math.cos(lat * Math.PI / 180);
     const expected = -1.0 * (30 - 10) / dx;
     expect(flux[gridIndex(rEq, 0)]).toBeCloseTo(expected, 10);
   });

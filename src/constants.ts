@@ -72,6 +72,9 @@ export const R_EARTH = 6.371e6;
 /** Grid spacing in radians (2.5° converted). */
 export const DELTA_RAD = RESOLUTION_DEG * Math.PI / 180;
 
+/** Meridional grid spacing in meters (R_EARTH × DELTA_RAD). */
+export const CELL_DY = R_EARTH * DELTA_RAD;
+
 // ── Phase 4: Continental boundaries ──
 
 /** Color for land cells (gray-brown). */
