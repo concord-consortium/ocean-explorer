@@ -1,4 +1,4 @@
-import { ROWS, COLS } from "../constants";
+import { ROWS, COLS, GRID_SIZE } from "../constants";
 import { latitudeAtRow, longitudeAtCol, colAtLongitude, gridIndex } from "../utils/grid-utils";
 import { EARTH_MASK_ROWS } from "./earth-land-mask";
 
@@ -9,7 +9,7 @@ export type LandPreset = "water-world" | "equatorial-continent" | "north-south-c
  * Returns a Uint8Array of ROWS*COLS (0 = water, 1 = land).
  */
 export function createLandMask(preset: LandPreset): Uint8Array {
-  const mask = new Uint8Array(ROWS * COLS);
+  const mask = new Uint8Array(GRID_SIZE);
 
   switch (preset) {
     case "water-world":

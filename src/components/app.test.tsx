@@ -21,7 +21,7 @@ describe("App component", () => {
     expect(screen.getByText(/Play/)).toBeDefined();
     expect(screen.getByText(/Speed:/)).toBeDefined();
     expect(screen.getByText(/Show wind/)).toBeDefined();
-    expect(screen.getByText(/Show water/)).toBeDefined();
+    expect(screen.getByText(/Water:/)).toBeDefined();
     expect(screen.getByTestId("simulation-canvas")).toBeDefined();
   });
 });

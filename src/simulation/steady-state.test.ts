@@ -1,5 +1,5 @@
 import { Simulation } from "./simulation";
-import { ROWS, COLS } from "../constants";
+import { ROWS, COLS, GRID_SIZE } from "../constants";
 import { latitudeAtRow, rowAtLatitude, gridIndex } from "../utils/grid-utils";
 import { SimParams } from "./wind";
 import { coriolisParameter } from "./coriolis";
@@ -75,7 +75,7 @@ describe.skip("Steady-state with pressure gradients", () => {
     // Velocity field is approximately non-divergent (dη/dt ≈ 0 → ∇·v ≈ 0)
     const div = divergence(sim.grid);
     let maxDiv = 0;
-    for (let i = 0; i < ROWS * COLS; i++) {
+    for (let i = 0; i < GRID_SIZE; i++) {
       if (Math.abs(div[i]) > maxDiv) maxDiv = Math.abs(div[i]);
     }
     expect(maxDiv).toBeLessThan(1e-4);
@@ -123,7 +123,7 @@ describe("Steady-state with continents", () => {
     expect(steps).toBeGreaterThan(10);
     expect(steps).toBeLessThan(50000);
 
-    for (let i = 0; i < ROWS * COLS; i++) {
+    for (let i = 0; i < GRID_SIZE; i++) {
       if (!mask[i]) continue;
       expect(sim.grid.waterU[i]).toBe(0);
       expect(sim.grid.waterV[i]).toBe(0);
@@ -154,7 +154,7 @@ describe("Steady-state with continents", () => {
     expect(steps).toBeLessThan(50000);
 
     // Check all water cell temperatures are finite and within physical range
-    for (let i = 0; i < ROWS * COLS; i++) {
+    for (let i = 0; i < GRID_SIZE; i++) {
       if (sim.grid.landMask[i]) continue;
       const t = sim.grid.temperatureField[i];
       expect(isFinite(t)).toBe(true);

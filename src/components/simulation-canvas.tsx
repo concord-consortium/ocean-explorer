@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import { createMapRenderer } from "../rendering/map-renderer";
 import { createGlobeRenderer } from "../rendering/globe-renderer";
-import type { Renderer, RendererMetrics, GlobeCameraState } from "../types/renderer-types";
+import type { Renderer, RendererMetrics, GlobeCameraState, WaterViz } from "../types/renderer-types";
 import { Simulation } from "../simulation/simulation";
 import { SimulationStepper } from "../simulation/simulation-stepper";
 import { SimParams } from "../simulation/wind";
@@ -16,7 +16,7 @@ interface Props {
   height: number;
   params: SimParams;
   showWind: boolean;
-  showWater: boolean;
+  waterViz: WaterViz;
   targetStepsPerSecond: number;
   paused: boolean;
   arrowScale: number;
@@ -28,7 +28,7 @@ interface Props {
 }
 
 export const SimulationCanvas: React.FC<Props> = ({
-  width, height, params, showWind, showWater, targetStepsPerSecond,
+  width, height, params, showWind, waterViz, targetStepsPerSecond,
   paused, arrowScale, backgroundMode, landPreset, viewMode, benchmarkRef, onMetrics,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,8 +39,8 @@ export const SimulationCanvas: React.FC<Props> = ({
   paramsRef.current = params;
   const showWindRef = useRef(showWind);
   showWindRef.current = showWind;
-  const showWaterRef = useRef(showWater);
-  showWaterRef.current = showWater;
+  const waterVizRef = useRef(waterViz);
+  waterVizRef.current = waterViz;
   const targetStepsPerSecondRef = useRef(targetStepsPerSecond);
   targetStepsPerSecondRef.current = targetStepsPerSecond;
   const pausedRef = useRef(paused);
@@ -123,7 +123,8 @@ export const SimulationCanvas: React.FC<Props> = ({
           width: sizeRef.current.width,
           height: sizeRef.current.height,
           showWind: showWindRef.current,
-          showWater: showWaterRef.current,
+          waterViz: waterVizRef.current,
+          stepsThisFrame: stepper.lastStepsThisFrame,
           arrowScale: arrowScaleRef.current,
           stepTimeMs: stepper.stepTimeMs,
           actualStepsPerSecond: stepper.actualStepsPerSecond,

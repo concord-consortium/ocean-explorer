@@ -1,9 +1,19 @@
-import { RESOLUTION_DEG, COLS, ROWS } from "../constants";
+import { RESOLUTION_DEG, COLS, ROWS, GRID_SIZE } from "../constants";
 import type { IGrid } from "../types/grid-types";
 
 /** Convert (row, col) to linear index in row-major grid arrays. */
 export function gridIndex(r: number, c: number): number {
   return r * COLS + c;
+}
+
+/** Wrap column index to [0, COLS). Handles negatives and floats. */
+export function wrapCol(c: number): number {
+  return ((c % COLS) + COLS) % COLS;
+}
+
+/** Clamp row index to [0, ROWS - 1]. */
+export function clampRow(r: number): number {
+  return Math.max(0, Math.min(ROWS - 1, r));
 }
 
 /** Returns latitude in degrees for the center of the given row.
@@ -33,7 +43,7 @@ export function colAtLongitude(lon: number): number {
 export function computeSshRange(grid: IGrid): { sshMin: number; sshMax: number } {
   let sshMin = 0;
   let sshMax = 0;
-  for (let i = 0; i < ROWS * COLS; i++) {
+  for (let i = 0; i < GRID_SIZE; i++) {
     if (grid.landMask[i]) continue;
     if (grid.eta[i] < sshMin) sshMin = grid.eta[i];
     if (grid.eta[i] > sshMax) sshMax = grid.eta[i];

@@ -1,5 +1,5 @@
 import { Simulation } from "./simulation";
-import { ROWS, COLS } from "../constants";
+import { ROWS, COLS, GRID_SIZE } from "../constants";
 import { latitudeAtRow, rowAtLatitude, colAtLongitude, gridIndex } from "../utils/grid-utils";
 import { windU, SimParams } from "./wind";
 import { temperature } from "./temperature";
@@ -211,7 +211,7 @@ describe("Pressure gradient integration", () => {
 
   it("uniform velocity field does not change eta", () => {
     const sim = new Simulation();
-    for (let i = 0; i < ROWS * COLS; i++) {
+    for (let i = 0; i < GRID_SIZE; i++) {
       sim.grid.waterU[i] = 0.1;
     }
     // Use zero wind and rotation so step only applies uniform drag
@@ -220,7 +220,7 @@ describe("Pressure gradient integration", () => {
     const etaBefore = new Float64Array(sim.grid.eta);
     sim.step(params);
     // Eta should not change from non-divergent flow
-    for (let i = 0; i < ROWS * COLS; i++) {
+    for (let i = 0; i < GRID_SIZE; i++) {
       expect(Math.abs(sim.grid.eta[i] - etaBefore[i])).toBeLessThan(1e-10);
     }
   });
@@ -271,7 +271,7 @@ describe("Temperature in simulation step", () => {
     }
     const before = new Float64Array(sim.grid.temperatureField);
     sim.step(params);
-    for (let i = 0; i < ROWS * COLS; i++) {
+    for (let i = 0; i < GRID_SIZE; i++) {
       expect(sim.grid.temperatureField[i]).toBeCloseTo(before[i], 6);
     }
   });

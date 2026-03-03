@@ -9,7 +9,7 @@ import {
 } from "../constants";
 import { tempToColor, sshToColor } from "../utils/color-utils";
 import { rowAtLatitude } from "../utils/grid-utils";
-import type { RendererMetrics } from "../types/renderer-types";
+import type { RendererMetrics, WaterViz } from "../types/renderer-types";
 
 import "./app.scss";
 
@@ -29,7 +29,7 @@ export const App = () => {
   const [prograde, setPrograde] = useState(true);
   const [tempGradientRatio, setTempGradientRatio] = useState(1.0);
   const [showWind, setShowWind] = useState(true);
-  const [showWater, setShowWater] = useState(true);
+  const [waterViz, setWaterViz] = useState<WaterViz>("particles");
   const [targetStepsPerSecond, setTargetStepsPerSecond] = useState(DEFAULT_STEPS_PER_SECOND);
   const [paused, setPaused] = useState(true);
   const [arrowScale, setArrowScale] = useState(1.0);
@@ -163,9 +163,12 @@ export const App = () => {
           Show wind
         </label>
         <label>
-          <input type="checkbox" checked={showWater}
-            onChange={e => setShowWater(e.target.checked)} />
-          Show water
+          Water:
+          <select value={waterViz} onChange={e => setWaterViz(e.target.value as WaterViz)}>
+            <option value="particles">Particles</option>
+            <option value="arrows">Arrows</option>
+            <option value="none">None</option>
+          </select>
         </label>
         <label>
           Background:
@@ -215,7 +218,7 @@ export const App = () => {
           height={canvasSize.height}
           params={params}
           showWind={showWind}
-          showWater={showWater}
+          waterViz={waterViz}
           targetStepsPerSecond={targetStepsPerSecond}
           paused={paused}
           arrowScale={arrowScale}
@@ -228,7 +231,7 @@ export const App = () => {
         {/* Legend overlay */}
         <div className="legend-overlay">
           {showWind && <div>Wind scale: {WIND_SCALE} m/s</div>}
-          {showWater && metrics && <div>Water max: {metrics.waterMax.toFixed(1)} m/s</div>}
+          {waterViz !== "none" && metrics && <div>Water max: {metrics.waterMax.toFixed(1)} m/s</div>}
           {perfParts.length > 0 && <div>{perfParts.join(" | ")}</div>}
         </div>
         {/* Latitude labels (map view only) */}

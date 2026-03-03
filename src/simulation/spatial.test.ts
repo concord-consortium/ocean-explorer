@@ -1,6 +1,6 @@
 import { pressureGradient, divergence } from "./spatial";
 import { Grid } from "./grid";
-import { ROWS, COLS, R_EARTH, DELTA_RAD } from "../constants";
+import { ROWS, COLS, GRID_SIZE, CELL_DY } from "../constants";
 import { latitudeAtRow, rowAtLatitude, colAtLongitude, gridIndex } from "../utils/grid-utils";
 
 const rEq = rowAtLatitude(0);      // equatorial row
@@ -10,7 +10,7 @@ describe("pressureGradient", () => {
   it("returns zero gradient for uniform eta", () => {
     const grid = new Grid();
     // Set all eta to 10.0
-    for (let i = 0; i < ROWS * COLS; i++) grid.eta[i] = 10.0;
+    for (let i = 0; i < GRID_SIZE; i++) grid.eta[i] = 10.0;
 
     const { dEtaDx, dEtaDy } = pressureGradient(grid);
     for (let r = 1; r < ROWS - 1; r++) {
@@ -35,7 +35,7 @@ describe("pressureGradient", () => {
     // At equator: dEta/dx = 1.0 / (R * cos(lat) * Δλ)
     const lat = latitudeAtRow(rEq);
     const cosLat = Math.cos(lat * Math.PI / 180);
-    const expectedGrad = 1.0 / (R_EARTH * cosLat * DELTA_RAD);
+    const expectedGrad = 1.0 / (CELL_DY * cosLat);
     const i = gridIndex(rEq, cMid); // mid-column, away from wrap
     expect(dEtaDx[i]).toBeCloseTo(expectedGrad, 10);
   });
@@ -66,7 +66,7 @@ describe("pressureGradient", () => {
 
     const { dEtaDy } = pressureGradient(grid);
     // dEta/dy = 1.0 / (R * Δφ)
-    const expectedGrad = 1.0 / (R_EARTH * DELTA_RAD);
+    const expectedGrad = 1.0 / CELL_DY;
     // Check interior row (not boundary)
     const i = gridIndex(rEq, 0);
     expect(dEtaDy[i]).toBeCloseTo(expectedGrad, 10);
@@ -98,7 +98,7 @@ describe("pressureGradient with land", () => {
     // dEtaDx = (2.0 - 1.0) / (2 * R * cos(lat) * delta)
     const lat = latitudeAtRow(rEq);
     const cosLat = Math.cos(lat * Math.PI / 180);
-    const expected = (2.0 - 1.0) / (2 * R_EARTH * cosLat * DELTA_RAD);
+    const expected = (2.0 - 1.0) / (2 * CELL_DY * cosLat);
     expect(dEtaDx[gridIndex(rEq, cMid)]).toBeCloseTo(expected, 10);
   });
 
@@ -113,7 +113,7 @@ describe("pressureGradient with land", () => {
     const { dEtaDy } = pressureGradient(grid);
     // North neighbor is land → one-sided backward difference
     // dEtaDy = (etaHere - etaSouth) / (R * delta)
-    const expected = (2.0 - 1.0) / (R_EARTH * DELTA_RAD);
+    const expected = (2.0 - 1.0) / CELL_DY;
     expect(dEtaDy[gridIndex(rEq, cMid)]).toBeCloseTo(expected, 10);
   });
 });
@@ -122,7 +122,7 @@ describe("divergence", () => {
   it("returns zero for uniform zonal velocity with zero meridional", () => {
     const grid = new Grid();
     // Uniform u, v=0: ∂u/∂λ=0 and v·cosφ terms are zero → div=0
-    for (let i = 0; i < ROWS * COLS; i++) {
+    for (let i = 0; i < GRID_SIZE; i++) {
       grid.waterU[i] = 5.0;
     }
 

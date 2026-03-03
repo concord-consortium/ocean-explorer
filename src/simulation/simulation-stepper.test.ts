@@ -56,6 +56,26 @@ describe("SimulationStepper", () => {
     expect(stepper.stepTimeMs).toBeGreaterThanOrEqual(0);
   });
 
+  it("exposes lastStepsThisFrame after advance", () => {
+    let count = 0;
+    const stepper = new SimulationStepper(() => { count++; });
+    stepper.targetStepsPerSecond = 60;
+    stepper.advance(100); // 100ms at 60 steps/s = 6 steps
+    expect(stepper.lastStepsThisFrame).toBe(6);
+    expect(count).toBe(6);
+  });
+
+  it("sets lastStepsThisFrame to 0 when paused", () => {
+    const stepper = new SimulationStepper(stepFn);
+    stepper.targetStepsPerSecond = 60;
+    stepper.advance(100);
+    expect(stepper.lastStepsThisFrame).toBe(6);
+
+    stepper.paused = true;
+    stepper.advance(100);
+    expect(stepper.lastStepsThisFrame).toBe(0);
+  });
+
   it("computes actual steps per second using EMA", () => {
     const stepper = new SimulationStepper(stepFn);
     stepper.targetStepsPerSecond = 60;

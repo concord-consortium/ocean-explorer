@@ -1,10 +1,6 @@
-import { COLS, ROWS } from "../constants";
-import { gridIndex } from "../utils/grid-utils";
+import { GRID_SIZE } from "../constants";
+import { gridIndex, wrapCol } from "../utils/grid-utils";
 import type { IGrid } from "../types/grid-types";
-
-function wrapCol(c: number): number {
-  return ((c % COLS) + COLS) % COLS;
-}
 
 export class Grid implements IGrid {
   readonly waterU: Float64Array;
@@ -14,12 +10,11 @@ export class Grid implements IGrid {
   readonly temperatureField: Float64Array;
 
   constructor() {
-    const size = ROWS * COLS;
-    this.waterU = new Float64Array(size);
-    this.waterV = new Float64Array(size);
-    this.eta = new Float64Array(size);
-    this.landMask = new Uint8Array(size);
-    this.temperatureField = new Float64Array(size);
+    this.waterU = new Float64Array(GRID_SIZE);
+    this.waterV = new Float64Array(GRID_SIZE);
+    this.eta = new Float64Array(GRID_SIZE);
+    this.landMask = new Uint8Array(GRID_SIZE);
+    this.temperatureField = new Float64Array(GRID_SIZE);
   }
 
   private idx(r: number, c: number): number {

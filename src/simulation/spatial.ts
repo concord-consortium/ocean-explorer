@@ -1,5 +1,5 @@
 import { Grid } from "./grid";
-import { ROWS, COLS, R_EARTH, DELTA_RAD } from "../constants";
+import { ROWS, COLS, GRID_SIZE, R_EARTH, DELTA_RAD, CELL_DY } from "../constants";
 import { latitudeAtRow, gridIndex } from "../utils/grid-utils";
 
 /**
@@ -13,14 +13,13 @@ import { latitudeAtRow, gridIndex } from "../utils/grid-utils";
  * Longitude wraps via Grid.getEta.
  */
 export function pressureGradient(grid: Grid): { dEtaDx: Float64Array; dEtaDy: Float64Array } {
-  const size = ROWS * COLS;
-  const dEtaDx = new Float64Array(size);
-  const dEtaDy = new Float64Array(size);
+  const dEtaDx = new Float64Array(GRID_SIZE);
+  const dEtaDy = new Float64Array(GRID_SIZE);
 
   for (let r = 0; r < ROWS; r++) {
     const lat = latitudeAtRow(r);
     const cosLat = Math.cos(lat * Math.PI / 180);
-    const dxFactor = 2 * R_EARTH * cosLat * DELTA_RAD;
+    const dxFactor = 2 * CELL_DY * cosLat;
 
     for (let c = 0; c < COLS; c++) {
       const i = gridIndex(r, c);
@@ -37,21 +36,21 @@ export function pressureGradient(grid: Grid): { dEtaDx: Float64Array; dEtaDy: Fl
       // North-south gradient: handle land AND polar boundaries
       if (r === 0) {
         const etaN = grid.isLand(r + 1, c) ? etaHere : grid.getEta(r + 1, c);
-        dEtaDy[i] = (etaN - etaHere) / (R_EARTH * DELTA_RAD);
+        dEtaDy[i] = (etaN - etaHere) / CELL_DY;
       } else if (r === ROWS - 1) {
         const etaS = grid.isLand(r - 1, c) ? etaHere : grid.getEta(r - 1, c);
-        dEtaDy[i] = (etaHere - etaS) / (R_EARTH * DELTA_RAD);
+        dEtaDy[i] = (etaHere - etaS) / CELL_DY;
       } else {
         const northIsLand = grid.isLand(r + 1, c);
         const southIsLand = grid.isLand(r - 1, c);
         if (northIsLand && southIsLand) {
           dEtaDy[i] = 0;
         } else if (northIsLand) {
-          dEtaDy[i] = (etaHere - grid.getEta(r - 1, c)) / (R_EARTH * DELTA_RAD);
+          dEtaDy[i] = (etaHere - grid.getEta(r - 1, c)) / CELL_DY;
         } else if (southIsLand) {
-          dEtaDy[i] = (grid.getEta(r + 1, c) - etaHere) / (R_EARTH * DELTA_RAD);
+          dEtaDy[i] = (grid.getEta(r + 1, c) - etaHere) / CELL_DY;
         } else {
-          dEtaDy[i] = (grid.getEta(r + 1, c) - grid.getEta(r - 1, c)) / (2 * R_EARTH * DELTA_RAD);
+          dEtaDy[i] = (grid.getEta(r + 1, c) - grid.getEta(r - 1, c)) / (2 * CELL_DY);
         }
       }
     }
@@ -68,8 +67,7 @@ export function pressureGradient(grid: Grid): { dEtaDx: Float64Array; dEtaDy: Fl
  * Central differences in interior, one-sided at polar boundaries.
  */
 export function divergence(grid: Grid): Float64Array {
-  const size = ROWS * COLS;
-  const div = new Float64Array(size);
+  const div = new Float64Array(GRID_SIZE);
 
   for (let r = 0; r < ROWS; r++) {
     const lat = latitudeAtRow(r);

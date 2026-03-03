@@ -9,6 +9,9 @@ export const COLS = 360 / RESOLUTION_DEG;   // 144
 /** Number of rows (latitude cells) in the simulation grid. */
 export const ROWS = 180 / RESOLUTION_DEG;   // 72
 
+/** Total number of cells in the simulation grid. */
+export const GRID_SIZE = ROWS * COLS;
+
 // ── Simulation ──
 
 /** Simulation timestep in seconds (~3.3 minutes). */
@@ -69,6 +72,9 @@ export const R_EARTH = 6.371e6;
 /** Grid spacing in radians (2.5° converted). */
 export const DELTA_RAD = RESOLUTION_DEG * Math.PI / 180;
 
+/** Meridional grid spacing in meters (R_EARTH × DELTA_RAD). */
+export const CELL_DY = R_EARTH * DELTA_RAD;
+
 // ── Phase 4: Continental boundaries ──
 
 /** Color for land cells (gray-brown). */
@@ -76,8 +82,11 @@ export const LAND_COLOR = 0x8B7355;
 
 // ── Phase 5: Temperature advection ──
 
-/** Newtonian relaxation timescale in seconds (60 days). */
-export const RELAXATION_TIMESCALE = 5_184_000;
+/** Newtonian relaxation timescale in seconds (3 days). */
+export const RELAXATION_TIMESCALE = 259_200;
+
+/** Multiplier applied to advection flux so temperature anomalies develop faster. */
+export const ADVECTION_SCALE = 20;
 
 // ── Phase 6: Globe rendering ──
 
@@ -112,3 +121,18 @@ export const COASTAL_DRAG_MULTIPLIER = 50;
 
 /** Minimum absolute latitude (degrees) at which coastal drag enhancement is applied. */
 export const COASTAL_DRAG_MIN_LAT = 60;
+
+// ── Particle rendering ──
+
+/** Alpha value for the per-frame fade rect. Lower = longer trails. */
+export const PARTICLE_FADE_ALPHA = 0.04;
+
+/** CSS color for particle dots. */
+export const PARTICLE_COLOR = "rgba(200, 230, 255, 0.9)";
+
+/**
+ * Pixel threshold below which channels are zeroed. With PARTICLE_FADE_ALPHA = 0.04
+ * the multiplicative fade gets stuck at dim values due to 8-bit rounding
+ * (e.g. round(6 * 0.96) = 6). This threshold clears those ghost pixels.
+ */
+export const PARTICLE_FADE_THRESHOLD = 13;

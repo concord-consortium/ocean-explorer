@@ -8,6 +8,9 @@ export class SimulationStepper {
   targetStepsPerSecond = DEFAULT_STEPS_PER_SECOND;
   paused = false;
 
+  /** Number of simulation steps executed in the most recent advance() call. */
+  lastStepsThisFrame = 0;
+
   /** EMA-smoothed actual steps per second. */
   actualStepsPerSecond = 0;
 
@@ -32,6 +35,7 @@ export class SimulationStepper {
    */
   advance(deltaMs: number): void {
     if (this.paused) {
+      this.lastStepsThisFrame = 0;
       this.stepTimeMs = 0;
       // Don't update actualStepsPerSecond — keep last value frozen while paused
       return;
@@ -44,6 +48,8 @@ export class SimulationStepper {
     this.accumulator += this.targetStepsPerSecond * deltaSeconds;
     const stepsThisFrame = Math.floor(this.accumulator);
     this.accumulator -= stepsThisFrame;
+
+    this.lastStepsThisFrame = stepsThisFrame;
 
     const t0 = performance.now();
     for (let i = 0; i < stepsThisFrame; i++) {

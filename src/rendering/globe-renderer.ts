@@ -12,6 +12,8 @@ import { arrowSubset } from "../utils/arrow-utils";
 import { buildArrowGeometry, buildArrowMatrix } from "./globe-arrows";
 import type { IGrid } from "../types/grid-types";
 import type { Renderer, RendererOptions, RendererMetrics, GlobeCameraState } from "../types/renderer-types";
+import { ParticleSystem } from "../simulation/particle-system";
+import { GlobeParticleLayer } from "./globe-particle-layer";
 
 /** Reference arrow length in model units, used to scale arrow geometry. */
 const REF_ARROW_LEN = 0.06;
@@ -92,6 +94,10 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
   let sceneUpdateTimeMs = 0;
   const emaAlpha = 0.05;
 
+  // Lazy particle flow state
+  let particleSystem: ParticleSystem | null = null;
+  let particleLayer: GlobeParticleLayer | null = null;
+
   // ── update ──────────────────────────────────────────────────────────────
 
   function update(grid: IGrid, params: SimParams, opts: RendererOptions): RendererMetrics {
@@ -142,7 +148,7 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
 
     // Update arrows (subsampled to ~36 per dimension)
     windMesh.visible = opts.showWind;
-    waterMesh.visible = opts.showWater;
+    waterMesh.visible = opts.waterViz === "arrows";
 
     let waterMax = 0;
 
@@ -175,7 +181,7 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
       const speed = Math.sqrt(uVal * uVal + vVal * vVal);
       if (speed > waterMax) waterMax = speed;
 
-      if (opts.showWater && !isLand) {
+      if (opts.waterViz === "arrows" && !isLand) {
         const scaledLen = Math.min(speed / WATER_SCALE, 1) * REF_ARROW_LEN * opts.arrowScale;
 
         if (speed < SPEED_THRESHOLD) {
@@ -191,6 +197,22 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
 
     windMesh.instanceMatrix.needsUpdate = true;
     waterMesh.instanceMatrix.needsUpdate = true;
+
+    // Particle flow visualization
+    if (opts.waterViz === "particles") {
+      if (!particleSystem || !particleLayer) {
+        particleSystem = new ParticleSystem(grid);
+        particleLayer = new GlobeParticleLayer(opts.width, opts.height);
+        scene.add(particleLayer.mesh);
+      }
+      if (opts.stepsThisFrame > 0) {
+        particleSystem.update(grid, opts.stepsThisFrame);
+        particleLayer.update(particleSystem);
+      }
+      particleLayer.mesh.visible = true;
+    } else if (particleLayer) {
+      particleLayer.mesh.visible = false;
+    }
 
     // Update controls and render
     controls.update();
@@ -243,6 +265,10 @@ export function createGlobeRenderer(savedCamera?: GlobeCameraState): Renderer {
     waterMat.dispose();
     windMesh.dispose();
     waterMesh.dispose();
+    if (particleLayer) {
+      scene.remove(particleLayer.mesh);
+      particleLayer.destroy();
+    }
     webglRenderer.dispose();
   }
 
