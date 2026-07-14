@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-node@v4
       - name: Install Dependencies
         run: npm ci
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::612297603577:role/ocean-explorer
           aws-region: us-east-1
